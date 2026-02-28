@@ -1,3 +1,4 @@
+import EmptyState from '@/components/EmptyState';
 import LeadCard from '@/components/LeadCard';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { Lead, LeadActivity, LeadStatus } from '@/types/lead';
@@ -204,6 +205,13 @@ export default function LeadsListScreen() {
                         tintColor={colors.accent}
                     />
                 }
+                ListEmptyComponent={
+                    <EmptyState
+                        icon="search-outline"
+                        title="No leads found"
+                        subtitle={search.trim() ? `No results for "${search}"` : 'No leads match this filter'}
+                    />
+                }
                 renderItem={({ item }) => {
                     const activities = MOCK_ACTIVITIES[item.id] || [];
                     const lastAct = activities.length > 0
@@ -217,15 +225,6 @@ export default function LeadsListScreen() {
                         />
                     );
                 }}
-                ListEmptyComponent={() => (
-                    <View style={styles.emptyContainer}>
-                        <Ionicons name="search-outline" size={48} color={colors.textTertiary} />
-                        <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>No leads found</Text>
-                        <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>
-                            {search ? 'Try a different search term' : 'Tap + Add to create your first lead'}
-                        </Text>
-                    </View>
-                )}
             />
         </SafeAreaView>
     );

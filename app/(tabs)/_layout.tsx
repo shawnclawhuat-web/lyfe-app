@@ -6,6 +6,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 
 const TAB_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  home: 'home-outline',
   leads: 'people-outline',
   exams: 'school-outline',
   team: 'briefcase-outline',
@@ -15,6 +16,7 @@ const TAB_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 const TAB_ICONS_FOCUSED: Record<string, keyof typeof Ionicons.glyphMap> = {
+  home: 'home',
   leads: 'people',
   exams: 'school',
   team: 'briefcase',
@@ -24,6 +26,7 @@ const TAB_ICONS_FOCUSED: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 const TAB_LABELS: Record<string, string> = {
+  home: 'Home',
   leads: 'Leads',
   exams: 'Exams',
   team: 'Team',
@@ -61,6 +64,20 @@ export default function TabLayout() {
         },
       }}
     >
+      <Tabs.Screen
+        name="home"
+        options={{
+          title: TAB_LABELS.home,
+          href: visibleTabs.includes('home') ? '/home' : null,
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons
+              name={focused ? TAB_ICONS_FOCUSED.home : TAB_ICONS.home}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="leads"
         options={{

@@ -1,6 +1,7 @@
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
@@ -27,7 +28,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       router.replace('/(auth)/login');
     } else if (isAuthenticated && inAuthGroup) {
       // Already authenticated → redirect to main app
-      router.replace('/(tabs)/profile');
+      router.replace('/(tabs)/home');
     }
   }, [isAuthenticated, isLoading, segments]);
 
@@ -35,10 +36,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 function RootLayoutContent() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   return (
     <AuthGate>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,

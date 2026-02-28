@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "lyfe-app",
+    "name": "Lyfe",
     "slug": "lyfe-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,12 +10,14 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#E8614D"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lyfe.app"
     },
     "android": {
+      "package": "com.lyfe.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

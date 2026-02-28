@@ -17,10 +17,10 @@ export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'proposed' | 'won' 
 
 /** Tabs each role can see */
 export const ROLE_TABS: Record<UserRole, string[]> = {
-    admin: ['admin', 'profile'],
-    director: ['leads', 'team', 'profile'],
-    manager: ['leads', 'team', 'profile'],
-    agent: ['leads', 'profile'],
+    admin: ['home', 'admin', 'profile'],
+    director: ['home', 'leads', 'team', 'profile'],
+    manager: ['home', 'leads', 'team', 'profile'],
+    agent: ['home', 'leads', 'profile'],
     pa: ['pa', 'profile'],
     candidate: ['exams', 'profile'],
 };
@@ -67,6 +67,7 @@ export function canViewTeam(role: UserRole): boolean {
 
 /** Tab display configuration */
 export const TAB_CONFIG: Record<string, { label: string; icon: string }> = {
+    home: { label: 'Home', icon: 'home' },
     leads: { label: 'Leads', icon: 'people' },
     exams: { label: 'Exams', icon: 'school' },
     team: { label: 'Team', icon: 'business' },
