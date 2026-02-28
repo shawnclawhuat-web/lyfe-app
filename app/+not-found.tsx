@@ -12,7 +12,7 @@ export default function NotFoundScreen() {
         <Text style={[styles.title, { color: colors.textPrimary }]}>
           This screen doesn't exist.
         </Text>
-        <Link href="/" style={[styles.link, { color: colors.accent }]}>
+        <Link href="/profile" style={[styles.link, { color: colors.accent }]}>
           Go to home screen
         </Link>
       </SafeAreaView>
