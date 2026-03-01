@@ -27,7 +27,7 @@ const MOCK_ACTIVITIES = [
     { id: '2', type: 'note' as const, leadName: 'David Lim', detail: 'Added follow-up note', time: '3h ago', icon: 'create' as const },
     { id: '3', type: 'call' as const, leadName: 'Amanda Lee', detail: 'Outbound call (5 min)', time: '5h ago', icon: 'call' as const },
     { id: '4', type: 'new_lead' as const, leadName: 'Michael Wong', detail: 'New lead from referral', time: '1d ago', icon: 'person-add' as const },
-    { id: '5', type: 'status_change' as const, leadName: 'Jessica Ng', detail: 'Proposed → Won 🎉', time: '2d ago', icon: 'trophy' as const },
+    { id: '5', type: 'status_change' as const, leadName: 'Jessica Ng', detail: 'Proposed → Won', time: '2d ago', icon: 'trophy' as const },
 ];
 
 const LEAD_PIPELINE: { status: LeadStatus; count: number }[] = [
@@ -75,7 +75,7 @@ export default function HomeScreen() {
                 <View style={styles.header}>
                     <View>
                         <Text style={[styles.greeting, { color: colors.textSecondary }]}>{greeting},</Text>
-                        <Text style={[styles.name, { color: colors.textPrimary }]}>{firstName} 👋</Text>
+                        <Text style={[styles.name, { color: colors.textPrimary }]}>{firstName}</Text>
                     </View>
                     <TouchableOpacity
                         style={[styles.avatarCircle, { backgroundColor: colors.accentLight }]}

@@ -1,6 +1,7 @@
 import LyfeLogo from '@/components/LyfeLogo';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -131,7 +132,7 @@ export default function LoginScreen() {
                                         },
                                     ]}
                                 >
-                                    <Text style={[styles.phonePrefix, { color: colors.textSecondary }]}>📱</Text>
+                                    <Ionicons name="phone-portrait-outline" size={18} color={colors.textSecondary} style={{ marginRight: 12 }} />
                                     <TextInput
                                         style={[styles.phoneInput, { color: colors.textPrimary }]}
                                         value={phone}
