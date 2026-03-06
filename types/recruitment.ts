@@ -53,6 +53,36 @@ export interface Interview {
     created_at: string;
 }
 
+// ── Candidate Activity ──
+export type CandidateOutcome = 'reached' | 'no_answer' | 'sent';
+
+export interface CandidateActivity {
+    id: string;
+    candidate_id: string;
+    user_id: string;
+    type: 'call' | 'whatsapp' | 'note';
+    outcome: CandidateOutcome | null;
+    note: string | null;
+    created_at: string;
+    actor_name?: string;
+}
+
+// ── Candidate Document ──
+export const DOCUMENT_LABELS = [
+    'Resume', 'RES5', 'M5', 'M9', 'M9A', 'HI', 'M8', 'M8A', 'ComGI', 'BCP', 'PGI', 'Other',
+] as const;
+
+export type DocumentLabel = typeof DOCUMENT_LABELS[number];
+
+export interface CandidateDocument {
+    id: string;
+    candidate_id: string;
+    label: string;
+    file_url: string;
+    file_name: string;
+    created_at: string;
+}
+
 // ── Candidate ──
 export interface RecruitmentCandidate {
     id: string;
@@ -65,6 +95,7 @@ export interface RecruitmentCandidate {
     created_by_id: string;
     invite_token: string | null;
     notes: string | null;
+    resume_url: string | null;
     interviews: Interview[];
     created_at: string;
     updated_at: string;

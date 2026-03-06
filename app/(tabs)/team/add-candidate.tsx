@@ -1,6 +1,9 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { createCandidate, type CreateCandidateInput } from '@/lib/recruitment';
+import { createCandidate, uploadCandidateDocument, type CreateCandidateInput } from '@/lib/recruitment';
+
+let DocumentPicker: typeof import('expo-document-picker') | null = null;
+try { DocumentPicker = require('expo-document-picker'); } catch { /* native module not yet compiled */ }
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -29,6 +32,7 @@ export default function AddCandidateScreen() {
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
     const [notes, setNotes] = useState('');
+    const [resumeFile, setResumeFile] = useState<{ uri: string; name: string } | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [showSuccess, setShowSuccess] = useState(false);
     const [inviteLink, setInviteLink] = useState('');
@@ -68,14 +72,18 @@ export default function AddCandidateScreen() {
             notes: notes.trim() || null,
         };
 
-        const { inviteToken, error } = await createCandidate(input, user.id);
-        setIsSaving(false);
-
-        if (error) {
-            setSaveError(error);
+        const { data: newCandidate, inviteToken, error } = await createCandidate(input, user.id);
+        if (error || !newCandidate) {
+            setIsSaving(false);
+            setSaveError(error ?? 'Failed to create candidate');
             return;
         }
 
+        if (resumeFile) {
+            uploadCandidateDocument(newCandidate.id, 'Resume', resumeFile.uri, resumeFile.name);
+        }
+
+        setIsSaving(false);
         setInviteLink(`https://lyfe.app/invite/${inviteToken}`);
         setShowSuccess(true);
     };
@@ -152,6 +160,38 @@ export default function AddCandidateScreen() {
                                 multiline
                                 numberOfLines={3}
                             />
+                        </View>
+                        <View style={[styles.fieldDivider, { backgroundColor: colors.border }]} />
+                        <View style={styles.fieldContainer}>
+                            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+                                Resume <Text style={{ color: colors.textTertiary, fontWeight: '400' }}>(optional)</Text>
+                            </Text>
+                            {resumeFile ? (
+                                <View style={[styles.resumeAttached, { backgroundColor: colors.background }]}>
+                                    <Ionicons name="document-text" size={20} color={colors.accent} />
+                                    <Text style={[styles.resumeName, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1}>
+                                        {resumeFile.name}
+                                    </Text>
+                                    <TouchableOpacity onPress={() => setResumeFile(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                        <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
+                                    </TouchableOpacity>
+                                </View>
+                            ) : (
+                                <TouchableOpacity
+                                    style={[styles.resumePickerBtn, { borderColor: colors.border, opacity: DocumentPicker ? 1 : 0.4 }]}
+                                    onPress={async () => {
+                                        if (!DocumentPicker) return;
+                                        const r = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
+                                        if (!r.canceled && r.assets[0]) setResumeFile({ uri: r.assets[0].uri, name: r.assets[0].name });
+                                    }}
+                                    activeOpacity={0.7}
+                                    disabled={!DocumentPicker}
+                                >
+                                    <Ionicons name="cloud-upload-outline" size={18} color={colors.accent} />
+                                    <Text style={[styles.resumePickerText, { color: colors.accent }]}>Attach PDF</Text>
+                                    <Text style={[styles.resumePickerHint, { color: colors.textTertiary }]}>Up to 10 MB</Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
                     </View>
 
@@ -295,6 +335,30 @@ const styles = StyleSheet.create({
         paddingTop: 12,
         textAlign: 'center',
     },
+    resumePickerBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderStyle: 'dashed',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        marginTop: 4,
+    },
+    resumePickerText: { fontSize: 15, fontWeight: '500', flex: 1 },
+    resumePickerHint: { fontSize: 12 },
+    resumeAttached: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        marginTop: 4,
+    },
+    resumeName: { fontSize: 14, fontWeight: '500' },
+    resumeSize: { fontSize: 12, marginTop: 1 },
 
     // Submit
     submitContainer: {

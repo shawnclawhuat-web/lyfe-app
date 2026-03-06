@@ -26,7 +26,9 @@ function getActivityDescription(activity: LeadActivity): string {
             return `Reassigned to ${to}`;
         }
         case 'call':
-            return 'Phone call logged';
+            return activity.metadata?.phone ? `Called ${activity.metadata.phone}` : 'Phone call logged';
+        case 'whatsapp':
+            return activity.metadata?.phone ? `Sent WhatsApp to ${activity.metadata.phone}` : 'WhatsApp message sent';
         case 'email':
             return 'Email sent';
         case 'meeting':
@@ -58,7 +60,7 @@ export default function LeadActivityItem({ activity, isLast }: LeadActivityItemP
                     {getActivityDescription(activity)}
                 </Text>
                 <Text style={[styles.time, { color: colors.textTertiary }]}>
-                    {timeAgo(activity.created_at)}
+                    {activity.actor_name ? `${activity.actor_name} · ` : ''}{timeAgo(activity.created_at)}
                 </Text>
             </View>
         </View>

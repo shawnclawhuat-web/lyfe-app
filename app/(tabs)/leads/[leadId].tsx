@@ -6,15 +6,17 @@ import StatusBadge from '@/components/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useViewMode } from '@/contexts/ViewModeContext';
-import { addLeadNote, fetchLead, fetchLeadActivities, updateLeadStatus } from '@/lib/leads';
+import { addLeadActivity, addLeadNote, fetchLead, fetchLeadActivities, fetchTeamAgents, reassignLead, updateLeadStatus } from '@/lib/leads';
 import type { Lead } from '@/types/lead';
 import { PRODUCT_LABELS, SOURCE_LABELS, STATUS_CONFIG, type LeadActivity, type LeadStatus } from '@/types/lead';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+    AppState,
     KeyboardAvoidingView,
     Linking,
+    Modal,
     Platform,
     SafeAreaView,
     ScrollView,
@@ -27,6 +29,19 @@ import {
 
 import { isMockMode } from '@/lib/mockMode';
 import { MOCK_ACTIVITIES, MOCK_LEADS } from './index';
+
+const MOCK_AGENTS: { id: string; full_name: string }[] = [
+    { id: 'agent-alice', full_name: 'Alice Tan' },
+    { id: 'agent-bob', full_name: 'Bob Lee' },
+    { id: 'agent-charlie', full_name: 'Charlie Lim' },
+];
+
+const MOCK_AGENT_NAME: Record<string, string> = {
+    'me': 'You',
+    'agent-alice': 'Alice Tan',
+    'agent-bob': 'Bob Lee',
+    'agent-charlie': 'Charlie Lim',
+};
 
 const STATUS_ORDER: LeadStatus[] = ['new', 'contacted', 'qualified', 'proposed', 'won', 'lost'];
 
@@ -48,6 +63,27 @@ export default function LeadDetailScreen() {
     const [showStatusPicker, setShowStatusPicker] = useState(false);
     const [isSavingNote, setIsSavingNote] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+    const [showReassignModal, setShowReassignModal] = useState(false);
+    const [reassignAgents, setReassignAgents] = useState<{ id: string; full_name: string }[]>([]);
+    const [isReassigning, setIsReassigning] = useState(false);
+
+    // Contact confirmation (AppState-based)
+    const [pendingContact, setPendingContact] = useState<{ type: 'call' | 'whatsapp'; phone: string } | null>(null);
+    const [showContactConfirm, setShowContactConfirm] = useState(false);
+    const hasPendingContact = useRef(false);
+    const wentToBackground = useRef(false);
+
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', (nextState) => {
+            if (nextState === 'background') {
+                wentToBackground.current = true;
+            } else if (nextState === 'active' && wentToBackground.current && hasPendingContact.current) {
+                wentToBackground.current = false;
+                setShowContactConfirm(true);
+            }
+        });
+        return () => subscription.remove();
+    }, []);
 
     const loadData = useCallback(async () => {
         if (!leadId) return;
@@ -58,6 +94,10 @@ export default function LeadDetailScreen() {
             setLead(mockLead);
             setCurrentStatus(mockLead?.status || 'new');
             const mockActs = (MOCK_ACTIVITIES[leadId] || [])
+                .map((a) => ({
+                    ...a,
+                    actor_name: a.user_id === 'me' ? (user?.full_name || 'You') : (MOCK_AGENT_NAME[a.user_id] || a.user_id),
+                }))
                 .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
             setActivities(mockActs);
             setIsLoading(false);
@@ -107,16 +147,98 @@ export default function LeadDetailScreen() {
         );
     }
 
-    const handleCall = () => {
-        if (lead.phone) {
-            Linking.openURL(`tel:${lead.phone.replace(/\s/g, '')}`);
+    const logActivity = (type: 'call' | 'whatsapp', description: string, metadata: Record<string, any>) => {
+        const optimistic: LeadActivity = {
+            id: `a_${Date.now()}`,
+            lead_id: lead.id,
+            user_id: user?.id || 'me',
+            type,
+            description,
+            metadata,
+            created_at: new Date().toISOString(),
+            actor_name: user?.full_name || undefined,
+        };
+        setActivities((prev) => [optimistic, ...prev]);
+        if (!MOCK_OTP && user?.id) {
+            addLeadActivity(lead.id, user.id, type, description, metadata);
         }
     };
 
+    const handleCall = () => {
+        if (!lead.phone) return;
+        hasPendingContact.current = true;
+        setPendingContact({ type: 'call', phone: lead.phone });
+        Linking.openURL(`tel:${lead.phone.replace(/\s/g, '')}`);
+    };
+
     const handleWhatsApp = () => {
-        if (lead.phone) {
-            const phone = lead.phone.replace(/[\s+]/g, '');
-            Linking.openURL(`https://wa.me/${phone}`);
+        if (!lead.phone) return;
+        hasPendingContact.current = true;
+        setPendingContact({ type: 'whatsapp', phone: lead.phone });
+        const phone = lead.phone.replace(/[\s+]/g, '');
+        Linking.openURL(`https://wa.me/${phone}`);
+    };
+
+    const handleContactConfirm = (outcome: 'reached' | 'no_answer' | 'sent' | 'skip') => {
+        const pc = pendingContact;
+        hasPendingContact.current = false;
+        setPendingContact(null);
+        setShowContactConfirm(false);
+        if (!pc || outcome === 'skip') return;
+
+        const description = pc.type === 'call'
+            ? outcome === 'reached' ? `Called ${pc.phone} — reached` : `Called ${pc.phone} — no answer`
+            : `Sent WhatsApp to ${pc.phone}`;
+
+        logActivity(pc.type, description, { phone: pc.phone, outcome });
+
+        // Auto-advance: New → Contacted on any logged contact attempt
+        if (currentStatus === 'new') {
+            handleChangeStatus('contacted');
+        }
+    };
+
+    const handleOpenReassign = async () => {
+        if (MOCK_OTP) {
+            setReassignAgents(MOCK_AGENTS.filter((a) => a.id !== lead.assigned_to));
+        } else if (user?.id) {
+            const { data } = await fetchTeamAgents(user.id);
+            setReassignAgents(data.filter((a) => a.id !== lead.assigned_to));
+        }
+        setShowReassignModal(true);
+    };
+
+    const handleReassign = async (toAgent: { id: string; full_name: string }) => {
+        if (!lead) return;
+        const fromId = lead.assigned_to;
+        const fromName = MOCK_OTP ? (MOCK_AGENT_NAME[fromId] || fromId) : fromId;
+
+        const newActivity: LeadActivity = {
+            id: `a_${Date.now()}`,
+            lead_id: lead.id,
+            user_id: user?.id || 'me',
+            type: 'reassignment',
+            description: null,
+            metadata: { from_agent_id: fromId, to_agent_id: toAgent.id, from_agent_name: fromName, to_agent_name: toAgent.full_name },
+            created_at: new Date().toISOString(),
+            actor_name: user?.full_name || undefined,
+        };
+
+        setShowReassignModal(false);
+
+        if (MOCK_OTP) {
+            setActivities((prev) => [newActivity, ...prev]);
+            return;
+        }
+
+        if (!user?.id) return;
+        setIsReassigning(true);
+        const { error } = await reassignLead(lead.id, toAgent.id, fromId, fromName, toAgent.full_name, user.id);
+        setIsReassigning(false);
+        if (!error) {
+            setActivities((prev) => [newActivity, ...prev]);
+        } else {
+            console.error('Failed to reassign:', error);
         }
     };
 
@@ -133,6 +255,7 @@ export default function LeadDetailScreen() {
                 description: noteText.trim(),
                 metadata: {},
                 created_at: new Date().toISOString(),
+                actor_name: user?.full_name || undefined,
             };
             setActivities((prev) => [newActivity, ...prev]);
             setNoteText('');
@@ -169,6 +292,7 @@ export default function LeadDetailScreen() {
                 description: null,
                 metadata: { from_status: previousStatus, to_status: newStatus },
                 created_at: new Date().toISOString(),
+                actor_name: user?.full_name || undefined,
             };
             setCurrentStatus(newStatus);
             setShowStatusPicker(false);
@@ -287,7 +411,8 @@ export default function LeadDetailScreen() {
                                 label="Reassign"
                                 color="#7C3AED"
                                 bgColor="#EDE9FE"
-                                onPress={() => { }}
+                                onPress={handleOpenReassign}
+                                disabled={isReassigning}
                             />
                         ) : (
                             <>
@@ -400,6 +525,106 @@ export default function LeadDetailScreen() {
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            {/* Contact Confirm Modal */}
+            <Modal
+                visible={showContactConfirm}
+                transparent
+                animationType="fade"
+                onRequestClose={() => handleContactConfirm('skip')}
+            >
+                <View style={styles.confirmOverlay}>
+                    <View style={[styles.confirmSheet, { backgroundColor: colors.cardBackground }]}>
+                        {pendingContact?.type === 'call' ? (
+                            <>
+                                <View style={[styles.confirmIconWrap, { backgroundColor: '#DCFCE7' }]}>
+                                    <Ionicons name="call" size={26} color="#16A34A" />
+                                </View>
+                                <Text style={[styles.confirmTitle, { color: colors.textPrimary }]}>How did the call go?</Text>
+                                <Text style={[styles.confirmSubtitle, { color: colors.textSecondary }]}>With {lead.full_name}</Text>
+                                <TouchableOpacity
+                                    style={[styles.confirmBtn, { backgroundColor: '#16A34A' }]}
+                                    onPress={() => handleContactConfirm('reached')}
+                                >
+                                    <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
+                                    <Text style={styles.confirmBtnText}>Reached them</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.confirmBtn, { backgroundColor: colors.surfacePrimary, borderWidth: 0.5, borderColor: colors.borderLight }]}
+                                    onPress={() => handleContactConfirm('no_answer')}
+                                >
+                                    <Ionicons name="close-circle-outline" size={18} color={colors.textSecondary} />
+                                    <Text style={[styles.confirmBtnText, { color: colors.textSecondary }]}>No answer</Text>
+                                </TouchableOpacity>
+                            </>
+                        ) : (
+                            <>
+                                <View style={[styles.confirmIconWrap, { backgroundColor: '#D1FAE5' }]}>
+                                    <Ionicons name="logo-whatsapp" size={26} color="#25D366" />
+                                </View>
+                                <Text style={[styles.confirmTitle, { color: colors.textPrimary }]}>Did you send the message?</Text>
+                                <Text style={[styles.confirmSubtitle, { color: colors.textSecondary }]}>To {lead.full_name}</Text>
+                                <TouchableOpacity
+                                    style={[styles.confirmBtn, { backgroundColor: '#25D366' }]}
+                                    onPress={() => handleContactConfirm('sent')}
+                                >
+                                    <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
+                                    <Text style={styles.confirmBtnText}>Yes, sent</Text>
+                                </TouchableOpacity>
+                            </>
+                        )}
+                        <TouchableOpacity onPress={() => handleContactConfirm('skip')}>
+                            <Text style={[styles.confirmSkip, { color: colors.textTertiary }]}>Skip — don't log</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Reassign Modal */}
+            <Modal
+                visible={showReassignModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowReassignModal(false)}
+            >
+                <TouchableOpacity
+                    style={[styles.modalOverlay]}
+                    activeOpacity={1}
+                    onPress={() => setShowReassignModal(false)}
+                >
+                    <View style={[styles.reassignSheet, { backgroundColor: colors.cardBackground }]}>
+                        <Text style={[styles.reassignTitle, { color: colors.textPrimary }]}>Reassign Lead</Text>
+                        <Text style={[styles.reassignSubtitle, { color: colors.textSecondary }]}>
+                            Select an agent to reassign {lead.full_name} to
+                        </Text>
+                        {reassignAgents.length === 0 ? (
+                            <Text style={[styles.reassignEmpty, { color: colors.textTertiary }]}>No agents available</Text>
+                        ) : (
+                            reassignAgents.map((agent) => (
+                                <TouchableOpacity
+                                    key={agent.id}
+                                    style={[styles.agentRow, { borderColor: colors.borderLight }]}
+                                    onPress={() => handleReassign(agent)}
+                                >
+                                    <View style={[styles.agentAvatar, { backgroundColor: colors.accentLight }]}>
+                                        <Text style={[styles.agentAvatarText, { color: colors.accent }]}>
+                                            {agent.full_name.charAt(0).toUpperCase()}
+                                        </Text>
+                                    </View>
+                                    <Text style={[styles.agentName, { color: colors.textPrimary }]}>{agent.full_name}</Text>
+                                    <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                                </TouchableOpacity>
+                            ))
+                        )}
+                        <TouchableOpacity
+                            style={[styles.reassignCancel, { borderColor: colors.borderLight }]}
+                            onPress={() => setShowReassignModal(false)}
+                        >
+                            <Text style={[styles.reassignCancelText, { color: colors.textSecondary }]}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -560,4 +785,80 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     notFoundText: { fontSize: 16, fontWeight: '600' },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.45)',
+        justifyContent: 'flex-end',
+    },
+    reassignSheet: {
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 24,
+        paddingBottom: 40,
+        gap: 0,
+    },
+    reassignTitle: { fontSize: 17, fontWeight: '700', marginBottom: 4 },
+    reassignSubtitle: { fontSize: 13, marginBottom: 20 },
+    reassignEmpty: { fontSize: 14, textAlign: 'center', paddingVertical: 12 },
+    agentRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingVertical: 12,
+        borderBottomWidth: 0.5,
+    },
+    agentAvatar: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    agentAvatarText: { fontSize: 15, fontWeight: '700' },
+    agentName: { flex: 1, fontSize: 15, fontWeight: '600' },
+    reassignCancel: {
+        marginTop: 16,
+        paddingVertical: 12,
+        borderRadius: 10,
+        borderWidth: 0.5,
+        alignItems: 'center',
+    },
+    reassignCancelText: { fontSize: 15, fontWeight: '600' },
+    confirmOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.45)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 32,
+    },
+    confirmSheet: {
+        width: '100%',
+        maxWidth: 340,
+        borderRadius: 20,
+        padding: 24,
+        alignItems: 'center',
+        gap: 0,
+    },
+    confirmIconWrap: {
+        width: 56,
+        height: 56,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 14,
+    },
+    confirmTitle: { fontSize: 17, fontWeight: '700', textAlign: 'center', marginBottom: 4 },
+    confirmSubtitle: { fontSize: 13, textAlign: 'center', marginBottom: 20 },
+    confirmBtn: {
+        width: '100%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 13,
+        borderRadius: 12,
+        marginBottom: 10,
+    },
+    confirmBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+    confirmSkip: { fontSize: 13, marginTop: 4, fontWeight: '500' },
 });

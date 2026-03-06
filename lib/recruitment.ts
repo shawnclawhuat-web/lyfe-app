@@ -2,6 +2,7 @@
  * Recruitment service — Supabase CRUD for candidates & interviews
  */
 import type {
+    CandidateDocument,
     CandidateStatus,
     Interview,
     RecruitmentCandidate,
@@ -81,6 +82,7 @@ export async function fetchCandidates(
         created_by_id: r.created_by_id,
         invite_token: r.invite_token,
         notes: r.notes,
+        resume_url: r.resume_url || null,
         interviews: interviewMap[r.id] || [],
         created_at: r.created_at,
         updated_at: r.updated_at,
@@ -132,6 +134,7 @@ export async function fetchCandidate(
         created_by_id: row.created_by_id,
         invite_token: row.invite_token,
         notes: row.notes,
+        resume_url: row.resume_url || null,
         interviews: (interviews || []) as Interview[],
         created_at: row.created_at,
         updated_at: row.updated_at,
@@ -187,6 +190,7 @@ export async function createCandidate(
         created_by_id: row.created_by_id,
         invite_token: row.invite_token,
         notes: row.notes,
+        resume_url: row.resume_url || null,
         interviews: [],
         created_at: row.created_at,
         updated_at: row.updated_at,
@@ -207,6 +211,141 @@ export async function updateCandidateStatus(
         .update({ status: newStatus })
         .eq('id', candidateId);
 
+    if (error) return { error: error.message };
+    return { error: null };
+}
+
+// ── Resume ───────────────────────────────────────────────────
+
+/**
+ * Upload a PDF resume for a candidate and save the URL to the candidate record.
+ * Returns the public URL on success.
+ */
+export async function uploadCandidateResume(
+    candidateId: string,
+    fileUri: string,
+    fileName: string,
+): Promise<{ url: string | null; error: string | null }> {
+    try {
+        const response = await fetch(fileUri);
+        const arrayBuffer = await response.arrayBuffer();
+
+        const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const filePath = `${candidateId}/${Date.now()}_${safeName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('candidate-resumes')
+            .upload(filePath, arrayBuffer, { contentType: 'application/pdf', upsert: true });
+
+        if (uploadError) return { url: null, error: uploadError.message };
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('candidate-resumes')
+            .getPublicUrl(filePath);
+
+        const { data: updated, error: updateError } = await supabase
+            .from('candidates')
+            .update({ resume_url: publicUrl })
+            .eq('id', candidateId)
+            .select('id');
+
+        if (updateError) return { url: null, error: updateError.message };
+        if (!updated || updated.length === 0) return { url: null, error: 'Permission denied: could not save resume URL' };
+
+        return { url: publicUrl, error: null };
+    } catch (err: any) {
+        return { url: null, error: err?.message || 'Upload failed' };
+    }
+}
+
+// ── Candidate Activities ─────────────────────────────────────
+
+/**
+ * Log a call or WhatsApp activity against a candidate.
+ */
+export async function addCandidateActivity(
+    candidateId: string,
+    userId: string,
+    type: 'call' | 'whatsapp' | 'note',
+    outcome: string | null,
+    note: string | null,
+): Promise<{ error: string | null }> {
+    const { error } = await supabase
+        .from('candidate_activities')
+        .insert({ candidate_id: candidateId, user_id: userId, type, outcome: outcome || null, note });
+    if (error) return { error: error.message };
+    return { error: null };
+}
+
+/**
+ * Schedule an interview for a candidate.
+ */
+export async function scheduleInterview(input: {
+    candidateId: string;
+    managerId: string;
+    scheduledById: string;
+    roundNumber: number;
+    type: 'zoom' | 'in_person';
+    datetime: string;
+    location: string | null;
+    zoomLink: string | null;
+    notes: string | null;
+}): Promise<{ data: Interview | null; error: string | null }> {
+    const { data: row, error } = await supabase
+        .from('interviews')
+        .insert({
+            candidate_id: input.candidateId,
+            manager_id: input.managerId,
+            scheduled_by_id: input.scheduledById,
+            round_number: input.roundNumber,
+            type: input.type,
+            datetime: input.datetime,
+            location: input.location,
+            zoom_link: input.zoomLink,
+            notes: input.notes,
+            status: 'scheduled',
+        })
+        .select()
+        .single();
+
+    if (error) return { data: null, error: error.message };
+    return { data: row as Interview, error: null };
+}
+
+/**
+ * Update an existing interview.
+ */
+export async function updateInterview(
+    interviewId: string,
+    input: {
+        type: 'zoom' | 'in_person';
+        datetime: string;
+        location: string | null;
+        zoomLink: string | null;
+        notes: string | null;
+        status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
+    },
+): Promise<{ data: Interview | null; error: string | null }> {
+    const { data: row, error } = await supabase
+        .from('interviews')
+        .update({
+            type: input.type,
+            datetime: input.datetime,
+            location: input.location,
+            zoom_link: input.zoomLink,
+            notes: input.notes,
+            status: input.status,
+        })
+        .eq('id', interviewId)
+        .select()
+        .single();
+
+    if (error) return { data: null, error: error.message };
+    return { data: row as Interview, error: null };
+}
+
+export async function deleteInterview(interviewId: string): Promise<{ error: string | null }> {
+    const { error } = await supabase.from('interviews').delete().eq('id', interviewId);
     if (error) return { error: error.message };
     return { error: null };
 }
@@ -262,4 +401,68 @@ export async function syncAgentToMKTR(candidate: {
         console.error('❌ MKTR sync error:', err.message);
         return { success: false, error: err.message };
     }
+}
+
+// ── Candidate Documents ──────────────────────────────────────
+
+export async function fetchCandidateDocuments(
+    candidateId: string,
+): Promise<{ data: CandidateDocument[]; error: string | null }> {
+    const { data, error } = await supabase
+        .from('candidate_documents')
+        .select('*')
+        .eq('candidate_id', candidateId)
+        .order('created_at', { ascending: false });
+
+    if (error) return { data: [], error: error.message };
+    return { data: (data || []) as CandidateDocument[], error: null };
+}
+
+export async function uploadCandidateDocument(
+    candidateId: string,
+    label: string,
+    fileUri: string,
+    fileName: string,
+): Promise<{ data: CandidateDocument | null; error: string | null }> {
+    try {
+        const response = await fetch(fileUri);
+        const arrayBuffer = await response.arrayBuffer();
+
+        const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const filePath = `${candidateId}/docs/${Date.now()}_${safeName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('candidate-resumes')
+            .upload(filePath, arrayBuffer, { contentType: 'application/pdf', upsert: true });
+
+        if (uploadError) return { data: null, error: uploadError.message };
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('candidate-resumes')
+            .getPublicUrl(filePath);
+
+        const { data: row, error: insertError } = await supabase
+            .from('candidate_documents')
+            .insert({ candidate_id: candidateId, label, file_url: publicUrl, file_name: fileName })
+            .select()
+            .single();
+
+        if (insertError || !row) return { data: null, error: insertError?.message ?? 'Failed to save document' };
+
+        return { data: row as CandidateDocument, error: null };
+    } catch (err: any) {
+        return { data: null, error: err?.message || 'Upload failed' };
+    }
+}
+
+export async function deleteCandidateDocument(
+    documentId: string,
+): Promise<{ error: string | null }> {
+    const { error } = await supabase
+        .from('candidate_documents')
+        .delete()
+        .eq('id', documentId);
+
+    if (error) return { error: error.message };
+    return { error: null };
 }

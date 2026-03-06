@@ -5,7 +5,7 @@
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'proposed' | 'won' | 'lost';
 export type LeadSource = 'referral' | 'walk_in' | 'online' | 'event' | 'cold_call' | 'other';
 export type ProductInterest = 'life' | 'health' | 'ilp' | 'general';
-export type LeadActivityType = 'created' | 'note' | 'call' | 'status_change' | 'reassignment' | 'email' | 'meeting' | 'follow_up';
+export type LeadActivityType = 'created' | 'note' | 'call' | 'whatsapp' | 'status_change' | 'reassignment' | 'email' | 'meeting' | 'follow_up';
 
 export interface Lead {
     id: string;
@@ -30,6 +30,7 @@ export interface LeadActivity {
     description: string | null;
     metadata: Record<string, any>;
     created_at: string;
+    actor_name?: string;
 }
 
 /** Status display config */
@@ -65,6 +66,7 @@ export const ACTIVITY_ICONS: Record<LeadActivityType, { icon: string; color: str
     created: { icon: 'add-circle', color: '#007AFF' },
     note: { icon: 'document-text', color: '#8E8E93' },
     call: { icon: 'call', color: '#34C759' },
+    whatsapp: { icon: 'logo-whatsapp', color: '#25D366' },
     status_change: { icon: 'swap-horizontal', color: '#FF9500' },
     reassignment: { icon: 'people', color: '#AF52DE' },
     email: { icon: 'mail', color: '#007AFF' },
