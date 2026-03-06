@@ -1,4 +1,5 @@
 import ExamCard from '@/components/ExamCard';
+import LoadingState from '@/components/LoadingState';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -8,7 +9,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
     RefreshControl,
     SafeAreaView,
     ScrollView,
@@ -17,8 +17,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-
-const MOCK_OTP = process.env.EXPO_PUBLIC_MOCK_OTP === 'true';
+import { isMockMode } from '@/lib/mockMode';
 
 // Mock data for development
 const MOCK_PAPERS: ExamPaper[] = [
@@ -29,6 +28,7 @@ const MOCK_PAPERS: ExamPaper[] = [
 ];
 
 export default function ExamsListScreen() {
+    const MOCK_OTP = isMockMode();
     const { colors } = useTheme();
     const { user } = useAuth();
     const router = useRouter();
@@ -118,10 +118,8 @@ export default function ExamsListScreen() {
     if (isLoading) {
         return (
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.accent} />
-                    <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading exams...</Text>
-                </View>
+                <ScreenHeader title="Exams" subtitle="Complete all 4 mandatory papers to get licensed" />
+                <LoadingState rows={3} />
             </SafeAreaView>
         );
     }
@@ -218,13 +216,6 @@ const styles = StyleSheet.create({
         paddingBottom: 32,
         paddingTop: 12,
     },
-    loadingContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 12,
-    },
-    loadingText: { fontSize: 14 },
     progressCard: {
         borderRadius: 12,
         borderWidth: 0.5,

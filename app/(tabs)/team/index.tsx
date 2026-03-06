@@ -17,8 +17,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-
-const MOCK_OTP = process.env.EXPO_PUBLIC_MOCK_OTP === 'true';
+import { isMockMode } from '@/lib/mockMode';
 
 // ── Mock Data (dev only) ──
 const MOCK_AGENTS: TeamMember[] = [
@@ -41,6 +40,7 @@ const AVATAR_COLORS = ['#6366F1', '#0D9488', '#E11D48', '#F59E0B', '#8B5CF6', '#
 type FilterKey = 'all' | 'manager' | 'agent';
 
 export default function TeamScreen() {
+    const MOCK_OTP = isMockMode();
     const { colors } = useTheme();
     const { user } = useAuth();
     const router = useRouter();
@@ -154,15 +154,15 @@ export default function TeamScreen() {
                         <View style={styles.metaRow}>
                             <View style={[
                                 styles.roleBadge,
-                                { backgroundColor: isManager ? '#6366F118' : colors.accentLight }
+                                { backgroundColor: isManager ? colors.managerColorLight : colors.accentLight }
                             ]}>
                                 <View style={[
                                     styles.roleDot,
-                                    { backgroundColor: isManager ? '#6366F1' : colors.accent }
+                                    { backgroundColor: isManager ? colors.managerColor : colors.accent }
                                 ]} />
                                 <Text style={[
                                     styles.roleText,
-                                    { color: isManager ? '#6366F1' : colors.accent }
+                                    { color: isManager ? colors.managerColor : colors.accent }
                                 ]}>
                                     {isManager ? 'Manager' : 'Agent'}
                                 </Text>
@@ -262,12 +262,12 @@ export default function TeamScreen() {
                         {/* Error Banner */}
                         {error && (
                             <TouchableOpacity
-                                style={[styles.errorBanner, { backgroundColor: '#FEE2E2' }]}
+                                style={[styles.errorBanner, { backgroundColor: colors.dangerLight }]}
                                 onPress={loadMembers}
                             >
-                                <Ionicons name="alert-circle" size={16} color="#DC2626" />
-                                <Text style={styles.errorText}>{error}</Text>
-                                <Text style={styles.retryText}>Tap to retry</Text>
+                                <Ionicons name="alert-circle" size={16} color={colors.danger} />
+                                <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
+                                <Text style={[styles.retryText, { color: colors.danger }]}>Tap to retry</Text>
                             </TouchableOpacity>
                         )}
 
@@ -288,6 +288,9 @@ export default function TeamScreen() {
                                                 },
                                             ]}
                                             onPress={() => setFilter(f.key)}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={`Filter by ${f.label}`}
+                                            accessibilityState={{ selected: isActive }}
                                         >
                                             <Text style={[styles.filterText, { color: isActive ? '#FFF' : colors.textSecondary }]}>
                                                 {f.label}
@@ -383,8 +386,8 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         marginBottom: 12,
     },
-    errorText: { flex: 1, fontSize: 13, color: '#DC2626' },
-    retryText: { fontSize: 12, fontWeight: '600', color: '#DC2626' },
+    errorText: { flex: 1, fontSize: 13 },
+    retryText: { fontSize: 12, fontWeight: '600' },
 
     // ── Filters ──
     filterRow: {

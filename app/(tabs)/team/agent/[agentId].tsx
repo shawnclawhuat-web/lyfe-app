@@ -17,8 +17,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-
-const MOCK_OTP = process.env.EXPO_PUBLIC_MOCK_OTP === 'true';
+import { isMockMode } from '@/lib/mockMode';
 
 const AVATAR_COLORS = ['#6366F1', '#0D9488', '#E11D48', '#F59E0B', '#8B5CF6', '#06B6D4'];
 const PIPELINE_STATUSES: LeadStatus[] = ['new', 'contacted', 'qualified', 'proposed', 'won', 'lost'];
@@ -28,6 +27,7 @@ function formatDate(dateStr: string) {
 }
 
 export default function AgentDetailScreen() {
+    const MOCK_OTP = isMockMode();
     const { colors } = useTheme();
     const router = useRouter();
     const { agentId } = useLocalSearchParams<{ agentId: string }>();
@@ -130,9 +130,9 @@ export default function AgentDetailScreen() {
                         <View style={styles.profileInfo}>
                             <Text style={[styles.profileName, { color: colors.textPrimary }]}>{agent.name}</Text>
                             <View style={styles.profileMeta}>
-                                <View style={[styles.roleBadge, { backgroundColor: isManager ? '#6366F118' : colors.accentLight }]}>
-                                    <View style={[styles.roleDot, { backgroundColor: isManager ? '#6366F1' : colors.accent }]} />
-                                    <Text style={[styles.roleText, { color: isManager ? '#6366F1' : colors.accent }]}>
+                                <View style={[styles.roleBadge, { backgroundColor: isManager ? colors.managerColorLight : colors.accentLight }]}>
+                                    <View style={[styles.roleDot, { backgroundColor: isManager ? colors.managerColor : colors.accent }]} />
+                                    <Text style={[styles.roleText, { color: isManager ? colors.managerColor : colors.accent }]}>
                                         {isManager ? 'Manager' : 'Agent'}
                                     </Text>
                                 </View>

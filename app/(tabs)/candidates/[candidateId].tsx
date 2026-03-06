@@ -15,8 +15,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { isMockMode } from '@/lib/mockMode';
 
-const MOCK_OTP = process.env.EXPO_PUBLIC_MOCK_OTP === 'true';
 
 // ── Helpers ──
 
@@ -136,6 +136,7 @@ function InterviewCard({ interview, colors }: { interview: Interview; colors: an
 // ── Main Screen ──
 
 export default function CandidateDetailScreen() {
+    const MOCK_OTP = isMockMode();
     const { candidateId } = useLocalSearchParams<{ candidateId: string }>();
     const { colors } = useTheme();
     const router = useRouter();

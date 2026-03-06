@@ -1,5 +1,6 @@
 import StatusBadge from '@/components/StatusBadge';
 import { useTheme } from '@/contexts/ThemeContext';
+import { timeAgo } from '@/lib/utils';
 import { PRODUCT_LABELS, type Lead } from '@/types/lead';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
@@ -10,19 +11,6 @@ interface LeadCardProps {
     onPress: () => void;
     lastActivity?: string;
     agentName?: string;
-}
-
-function timeAgo(dateStr: string): string {
-    const now = Date.now();
-    const diff = now - new Date(dateStr).getTime();
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d ago`;
-    return new Date(dateStr).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
 }
 
 export default function LeadCard({ lead, onPress, lastActivity, agentName }: LeadCardProps) {
@@ -41,7 +29,7 @@ export default function LeadCard({ lead, onPress, lastActivity, agentName }: Lea
                 <View style={styles.nameRow}>
                     <View style={[styles.avatar, { backgroundColor: colors.accentLight }]}>
                         <Text style={[styles.avatarText, { color: colors.accent }]}>
-                            {lead.full_name.charAt(0).toUpperCase()}
+                            {(lead.full_name || '?').charAt(0).toUpperCase()}
                         </Text>
                     </View>
                     <View style={styles.nameCol}>

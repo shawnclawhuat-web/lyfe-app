@@ -18,11 +18,11 @@ export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'proposed' | 'won' 
 /** Tabs each role can see (base configuration — use getVisibleTabs() for view-mode-aware tabs) */
 export const ROLE_TABS: Record<UserRole, string[]> = {
     admin: ['home', 'admin', 'profile'],
-    director: ['home', 'leads', 'team', 'profile'],
-    manager: ['home', 'leads', 'team', 'profile'],
-    agent: ['home', 'leads', 'profile'],
-    pa: ['home', 'team', 'exams', 'profile'],
-    candidate: ['home', 'exams', 'profile'],
+    director: ['home', 'leads', 'team', 'events', 'profile'],
+    manager: ['home', 'leads', 'team', 'events', 'profile'],
+    agent: ['home', 'leads', 'events', 'profile'],
+    pa: ['home', 'pa', 'events', 'profile'],
+    candidate: ['home', 'exams', 'events', 'profile'],
 };
 
 /** View-mode-aware tab resolver (FM-01, FM-03 mitigation) */
@@ -30,10 +30,10 @@ export function getVisibleTabs(role: UserRole, viewMode?: 'agent' | 'manager'): 
     // Only manager/director have dual modes
     if ((role === 'manager' || role === 'director') && viewMode) {
         if (viewMode === 'agent') {
-            return ['home', 'leads', 'profile'];
+            return ['home', 'leads', 'events', 'profile'];
         }
         // manager view
-        return ['home', 'leads', 'team', 'candidates', 'profile'];
+        return ['home', 'leads', 'team', 'candidates', 'events', 'profile'];
     }
     return ROLE_TABS[role] || ['profile'];
 }
@@ -85,6 +85,7 @@ export const TAB_CONFIG: Record<string, { label: string; icon: string }> = {
     exams: { label: 'Exams', icon: 'school' },
     candidates: { label: 'Candidates', icon: 'document-text' },
     team: { label: 'Team', icon: 'business' },
+    events: { label: 'Events', icon: 'calendar' },
     pa: { label: 'PA', icon: 'clipboard' },
     admin: { label: 'Admin', icon: 'settings' },
     profile: { label: 'Profile', icon: 'person' },

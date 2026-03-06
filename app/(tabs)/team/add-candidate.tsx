@@ -18,10 +18,10 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-
-const MOCK_OTP = process.env.EXPO_PUBLIC_MOCK_OTP === 'true';
+import { isMockMode } from '@/lib/mockMode';
 
 export default function AddCandidateScreen() {
+    const MOCK_OTP = isMockMode();
     const { colors } = useTheme();
     const { user } = useAuth();
     const router = useRouter();

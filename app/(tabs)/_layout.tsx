@@ -12,6 +12,7 @@ const TAB_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   exams: 'school-outline',
   candidates: 'document-text-outline',
   team: 'briefcase-outline',
+  events: 'calendar-outline',
   pa: 'clipboard-outline',
   admin: 'settings-outline',
   profile: 'person-outline',
@@ -23,6 +24,7 @@ const TAB_ICONS_FOCUSED: Record<string, keyof typeof Ionicons.glyphMap> = {
   exams: 'school',
   candidates: 'document-text',
   team: 'briefcase',
+  events: 'calendar',
   pa: 'clipboard',
   admin: 'settings',
   profile: 'person',
@@ -34,6 +36,7 @@ const TAB_LABELS: Record<string, string> = {
   exams: 'Exams',
   candidates: 'Candidates',
   team: 'Team',
+  events: 'Events',
   pa: 'PA',
   admin: 'Admin',
   profile: 'Profile',
@@ -133,6 +136,20 @@ export default function TabLayout() {
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons
               name={focused ? TAB_ICONS_FOCUSED.team : TAB_ICONS.team}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="events"
+        options={{
+          title: TAB_LABELS.events,
+          href: visibleTabs.includes('events') ? '/events' : null,
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons
+              name={focused ? TAB_ICONS_FOCUSED.events : TAB_ICONS.events}
               size={size}
               color={color}
             />

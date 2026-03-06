@@ -60,6 +60,10 @@ export const Colors = {
     inputBackground: '#FFFFFF',
     inputBorder: '#E5E5EA',
 
+    // Manager role
+    managerColor: '#6366F1',
+    managerColorLight: '#EEF2FF',
+
     // Status pills — muted tones
     statusNew: '#007AFF',
     statusContacted: '#FF9500',
@@ -116,6 +120,10 @@ export const Colors = {
     tabBarBorder: '#38383A',
     inputBackground: '#2C2C2E',
     inputBorder: '#38383A',
+
+    // Manager role
+    managerColor: '#818CF8',
+    managerColorLight: '#312E81',
 
     // Status pills
     statusNew: '#0A84FF',

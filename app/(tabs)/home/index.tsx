@@ -1,14 +1,24 @@
+import Avatar from '@/components/Avatar';
 import LyfeLogo from '@/components/LyfeLogo';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useViewMode } from '@/contexts/ViewModeContext';
-import { fetchLeadStats, fetchRecentActivities, type LeadPipelineStats } from '@/lib/leads';
-import { STATUS_CONFIG, type LeadStatus } from '@/types/lead';
+import {
+    getBiometryType,
+    hasShownBiometricsPrompt,
+    isBiometricsAvailable,
+    isBiometricsEnabled,
+    markBiometricsPromptShown,
+    type BiometryType,
+} from '@/lib/biometrics';
+import { fetchLeadStats, fetchManagerDashboardStats, fetchRecentActivities, type LeadPipelineStats, type ManagerDashboardStats } from '@/lib/leads';
+import { STATUS_CONFIG, type LeadActivity, type LeadActivityType, type LeadStatus } from '@/types/lead';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+    Modal,
     RefreshControl,
     SafeAreaView,
     ScrollView,
@@ -17,8 +27,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-
-const MOCK_OTP = process.env.EXPO_PUBLIC_MOCK_OTP === 'true';
+import { isMockMode } from '@/lib/mockMode';
 
 // ── Mock Data — Agent View ──
 const AGENT_STATS = {
@@ -67,30 +76,120 @@ function getGreeting(): string {
     return 'Good evening';
 }
 
+// Map LeadActivity type → icon name
+const ACTIVITY_ICONS: Record<LeadActivityType, string> = {
+    created: 'person-add',
+    note: 'create',
+    call: 'call',
+    status_change: 'swap-horizontal',
+    reassignment: 'swap-horizontal',
+    email: 'mail',
+    meeting: 'calendar',
+    follow_up: 'time',
+};
+
+/** Convert Supabase LeadActivity (+ lead_name) → render shape */
+function formatActivities(activities: (LeadActivity & { lead_name?: string })[]): { id: string; type: string; leadName: string; detail: string; time: string; icon: string }[] {
+    return activities.map((a) => {
+        // Build detail string
+        let detail = a.description || '';
+        if (a.type === 'status_change' && a.metadata) {
+            const from = a.metadata.from_status || '?';
+            const to = a.metadata.to_status || '?';
+            detail = `${from.charAt(0).toUpperCase() + from.slice(1)} → ${to.charAt(0).toUpperCase() + to.slice(1)}`;
+        } else if (a.type === 'created') {
+            detail = detail || 'Lead created';
+        } else if (a.type === 'note') {
+            detail = a.description ? `Note: ${a.description.substring(0, 40)}${a.description.length > 40 ? '...' : ''}` : 'Added a note';
+        }
+
+        // Time ago
+        const diffMs = Date.now() - new Date(a.created_at).getTime();
+        const diffMin = Math.floor(diffMs / 60000);
+        let time: string;
+        if (diffMin < 1) time = 'now';
+        else if (diffMin < 60) time = `${diffMin}m ago`;
+        else if (diffMin < 1440) time = `${Math.floor(diffMin / 60)}h ago`;
+        else time = `${Math.floor(diffMin / 1440)}d ago`;
+
+        return {
+            id: a.id,
+            type: a.type,
+            leadName: a.lead_name || 'Unknown',
+            detail,
+            time,
+            icon: ACTIVITY_ICONS[a.type] || 'ellipse',
+        };
+    });
+}
+
+
 export default function HomeScreen() {
+    const MOCK_OTP = isMockMode();
     const { colors } = useTheme();
-    const { user } = useAuth();
+    const { user, enableBiometrics } = useAuth();
     const { viewMode, canToggle } = useViewMode();
     const router = useRouter();
     const [refreshing, setRefreshing] = useState(false);
     const isManagerView = canToggle && viewMode === 'manager';
 
+    // Biometrics setup prompt (one-time, shown after first OTP login)
+    const [showBiometricsPrompt, setShowBiometricsPrompt] = useState(false);
+    const [biometryType, setBiometryType] = useState<BiometryType>('none');
+    const [isEnablingBiometrics, setIsEnablingBiometrics] = useState(false);
+
+    useEffect(() => {
+        const checkBiometricsPrompt = async () => {
+            const available = await isBiometricsAvailable();
+            if (!available) return;
+            const enabled = await isBiometricsEnabled();
+            if (enabled) return;
+            const shown = await hasShownBiometricsPrompt();
+            if (shown) return;
+            const type = await getBiometryType();
+            setBiometryType(type);
+            setShowBiometricsPrompt(true);
+        };
+        checkBiometricsPrompt();
+    }, []);
+
+    const handleEnableBiometrics = async () => {
+        setIsEnablingBiometrics(true);
+        const success = await enableBiometrics();
+        setIsEnablingBiometrics(false);
+        if (success) {
+            setShowBiometricsPrompt(false);
+            // setBiometricsEnabled already calls markBiometricsPromptShown internally
+        }
+    };
+
+    const handleDismissBiometricsPrompt = async () => {
+        await markBiometricsPromptShown();
+        setShowBiometricsPrompt(false);
+    };
+
     // Real data state
     const [stats, setStats] = useState<LeadPipelineStats | null>(null);
-    const [recentActivities, setRecentActivities] = useState<any[]>([]);
+    const [recentActivities, setRecentActivities] = useState<(LeadActivity & { lead_name?: string })[]>([]);
+    const [managerStats, setManagerStats] = useState<ManagerDashboardStats | null>(null);
 
     const greeting = useMemo(() => getGreeting(), []);
     const firstName = user?.full_name?.split(' ')[0] || 'there';
 
     const loadDashboardData = useCallback(async () => {
         if (MOCK_OTP || !user?.id) return;
-        const [statsResult, activitiesResult] = await Promise.all([
+        const promises: Promise<any>[] = [
             fetchLeadStats(user.id, isManagerView),
             fetchRecentActivities(user.id, isManagerView, 5),
-        ]);
-        if (statsResult.data) setStats(statsResult.data);
-        if (activitiesResult.data) setRecentActivities(activitiesResult.data);
-    }, [user?.id, isManagerView]);
+        ];
+        if (isManagerView && user.role) {
+            promises.push(fetchManagerDashboardStats(user.id, user.role));
+        }
+        const results = await Promise.all(promises);
+        if (results[0].data) setStats(results[0].data);
+        if (results[1].data) setRecentActivities(results[1].data);
+        if (results[2]?.data) setManagerStats(results[2].data);
+    }, [user?.id, isManagerView, user?.role]);
 
     useEffect(() => {
         loadDashboardData();
@@ -106,6 +205,11 @@ export default function HomeScreen() {
     const agentStats = stats || AGENT_STATS;
     const pipeline = stats?.pipeline || LEAD_PIPELINE;
 
+    // Normalize recent activities for display
+    const displayActivities = (!MOCK_OTP && recentActivities.length > 0)
+        ? formatActivities(recentActivities)
+        : (isManagerView ? MANAGER_ACTIVITIES : MOCK_ACTIVITIES);
+
     const totalPipeline = pipeline.reduce((n, s) => n + s.count, 0);
 
     const role = user?.role;
@@ -119,13 +223,19 @@ export default function HomeScreen() {
                 titleElement={<LyfeLogo size="sm" />}
                 rightAction={
                     <TouchableOpacity
-                        style={[styles.avatarCircle, { backgroundColor: colors.accentLight }]}
+                        style={styles.avatarBtn}
                         onPress={() => router.push('/(tabs)/profile' as any)}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel="Go to profile"
                     >
-                        <Text style={[styles.avatarText, { color: colors.accent }]}>
-                            {user?.full_name?.charAt(0)?.toUpperCase() || '?'}
-                        </Text>
+                        <Avatar
+                            name={user?.full_name || '?'}
+                            avatarUrl={user?.avatar_url}
+                            size={44}
+                            backgroundColor={colors.accentLight}
+                            textColor={colors.accent}
+                        />
                     </TouchableOpacity>
                 }
             />
@@ -144,7 +254,7 @@ export default function HomeScreen() {
                     {isCandidate ? (
                         <>
                             <View style={styles.statsRow}>
-                                <View style={[styles.heroCardPrimary, { backgroundColor: '#FF9500' }]}>
+                                <View style={[styles.heroCardPrimary, { backgroundColor: colors.warning }]}>
                                     <Ionicons name="school" size={80} color="rgba(255,255,255,0.15)" style={styles.heroIconBg} />
                                     <Text style={[styles.heroStatValue, { color: '#FFFFFF' }]}>2</Text>
                                     <Text style={[styles.heroStatLabel, { color: 'rgba(255,255,255,0.9)' }]}>Exams to Pass</Text>
@@ -164,8 +274,8 @@ export default function HomeScreen() {
                                     <Text style={[styles.heroStatLabel, { color: 'rgba(255,255,255,0.9)' }]}>Team Leads</Text>
                                 </View>
                                 <View style={styles.statsColumn}>
-                                    <StatCardSmall label="Candidates" value={(MANAGER_STATS.activeCandidates).toString()} colors={colors} />
-                                    <StatCardSmall label="Agents" value={(MANAGER_STATS.agentsManaged).toString()} colors={colors} />
+                                    <StatCardSmall label="Candidates" value={(managerStats?.activeCandidates ?? MANAGER_STATS.activeCandidates).toString()} colors={colors} />
+                                    <StatCardSmall label="Agents" value={(managerStats?.agentsManaged ?? MANAGER_STATS.agentsManaged).toString()} colors={colors} />
                                 </View>
                             </View>
                         </>
@@ -219,7 +329,7 @@ export default function HomeScreen() {
                 {!isCandidate && (
                     <View style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
                         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Lead Pipeline</Text>
-                        <View style={styles.pipelineWrapper}>
+                        <View style={[styles.pipelineWrapper, { backgroundColor: colors.borderLight }]}>
                             <View style={styles.pipelineBar}>
                                 {pipeline.filter(s => s.count > 0).map((seg) => (
                                     <View
@@ -257,28 +367,90 @@ export default function HomeScreen() {
                     <View style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
                         <View style={styles.sectionHeaderRow}>
                             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Recent Activity</Text>
-                            <TouchableOpacity>
+                            <TouchableOpacity
+                                accessibilityRole="button"
+                                accessibilityLabel="See all recent activity"
+                            >
                                 <Text style={[styles.seeAllText, { color: colors.accent }]}>See All</Text>
                             </TouchableOpacity>
                         </View>
 
                         <View style={styles.activityFeed}>
-                            {(isManagerView ? MANAGER_ACTIVITIES : MOCK_ACTIVITIES).map((activity, index) => (
-                                <View key={activity.id} style={styles.activityRow}>
-                                    <View style={[styles.activityIconCircle, { backgroundColor: colors.accent + '15' }]}>
-                                        <Ionicons name={activity.icon as any} size={18} color={colors.accent} />
+                            {displayActivities.length === 0 ? (
+                                <Text style={[styles.emptyActivityText, { color: colors.textTertiary }]}>
+                                    No recent activity
+                                </Text>
+                            ) : (
+                                displayActivities.map((activity) => (
+                                    <View key={activity.id} style={styles.activityRow}>
+                                        <View style={[styles.activityIconCircle, { backgroundColor: colors.accentLight }]}>
+                                            <Ionicons name={activity.icon as any} size={18} color={colors.accent} />
+                                        </View>
+                                        <View style={styles.activityContent}>
+                                            <Text style={[styles.activityLeadName, { color: colors.textPrimary }]}>{activity.leadName}</Text>
+                                            <Text style={[styles.activityDetail, { color: colors.textSecondary }]}>{activity.detail}</Text>
+                                        </View>
+                                        <Text style={[styles.activityTime, { color: colors.textTertiary }]}>{activity.time}</Text>
                                     </View>
-                                    <View style={styles.activityContent}>
-                                        <Text style={[styles.activityLeadName, { color: colors.textPrimary }]}>{activity.leadName}</Text>
-                                        <Text style={[styles.activityDetail, { color: colors.textSecondary }]}>{activity.detail}</Text>
-                                    </View>
-                                    <Text style={[styles.activityTime, { color: colors.textTertiary }]}>{activity.time}</Text>
-                                </View>
-                            ))}
+                                ))
+                            )}
                         </View>
                     </View>
                 )}
             </ScrollView>
+
+            {/* ── Biometrics Setup Prompt (one-time) ── */}
+            <Modal
+                visible={showBiometricsPrompt}
+                transparent
+                animationType="slide"
+                onRequestClose={handleDismissBiometricsPrompt}
+                accessibilityViewIsModal
+            >
+                <View style={styles.biometricOverlay}>
+                    <View style={[styles.biometricSheet, { backgroundColor: colors.cardBackground }]}>
+                        <View style={[styles.biometricIconCircle, { backgroundColor: colors.accentLight }]}>
+                            <Ionicons
+                                name={biometryType === 'faceid' ? 'scan' : 'finger-print'}
+                                size={40}
+                                color={colors.accent}
+                            />
+                        </View>
+                        <Text style={[styles.biometricTitle, { color: colors.textPrimary }]}>
+                            Sign in with {biometryType === 'faceid' ? 'Face ID' : 'Touch ID'}
+                        </Text>
+                        <Text style={[styles.biometricSubtitle, { color: colors.textSecondary }]}>
+                            Skip the OTP next time — use {biometryType === 'faceid' ? 'Face ID' : 'Touch ID'} to sign in instantly.
+                        </Text>
+                        <TouchableOpacity
+                            style={[styles.biometricEnableBtn, { backgroundColor: colors.accent }]}
+                            onPress={handleEnableBiometrics}
+                            disabled={isEnablingBiometrics}
+                            activeOpacity={0.8}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Enable ${biometryType === 'faceid' ? 'Face ID' : 'Touch ID'}`}
+                        >
+                            <Ionicons
+                                name={biometryType === 'faceid' ? 'scan' : 'finger-print'}
+                                size={20}
+                                color="#FFFFFF"
+                            />
+                            <Text style={styles.biometricEnableBtnText}>
+                                Enable {biometryType === 'faceid' ? 'Face ID' : 'Touch ID'}
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.biometricDismissBtn}
+                            onPress={handleDismissBiometricsPrompt}
+                            activeOpacity={0.7}
+                            accessibilityRole="button"
+                            accessibilityLabel="Not now"
+                        >
+                            <Text style={[styles.biometricDismissText, { color: colors.textTertiary }]}>Not Now</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -296,8 +468,8 @@ function StatCardSmall({ label, value, colors }: { label: string; value: string;
 
 function QuickActionBtn({ icon, label, colors, onPress }: { icon: string; label: string; colors: any; onPress: () => void }) {
     return (
-        <TouchableOpacity style={[styles.quickActionSurface, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]} onPress={onPress} activeOpacity={0.7}>
-            <View style={[styles.quickActionIconWrapper, { backgroundColor: colors.accent + '12' }]}>
+        <TouchableOpacity style={[styles.quickActionSurface, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]} onPress={onPress} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={label}>
+            <View style={[styles.quickActionIconWrapper, { backgroundColor: colors.accentLight }]}>
                 <Ionicons name={icon as any} size={22} color={colors.accent} />
             </View>
             <Text style={[styles.quickActionLabel, { color: colors.textPrimary }]}>{label}</Text>
@@ -312,14 +484,10 @@ const styles = StyleSheet.create({
     greetingText: { fontSize: 15, fontWeight: '400', paddingHorizontal: 20, marginBottom: 4 },
 
     // Header
-    avatarCircle: {
-        width: 44,
-        height: 44,
+    avatarBtn: {
         borderRadius: 22,
-        alignItems: 'center',
-        justifyContent: 'center',
+        overflow: 'hidden',
     },
-    avatarText: { fontSize: 18, fontWeight: '700' },
 
     // Shared Section Styles
     section: {
@@ -426,7 +594,6 @@ const styles = StyleSheet.create({
 
     // Pipeline
     pipelineWrapper: {
-        backgroundColor: 'rgba(0,0,0,0.02)',
         borderRadius: 10,
         padding: 4,
         marginBottom: 16,
@@ -464,6 +631,7 @@ const styles = StyleSheet.create({
     activityFeed: {
         gap: 16,
     },
+    emptyActivityText: { fontSize: 14, textAlign: 'center', paddingVertical: 8 },
     activityRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -480,4 +648,61 @@ const styles = StyleSheet.create({
     activityLeadName: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
     activityDetail: { fontSize: 13, fontWeight: '400' },
     activityTime: { fontSize: 12, alignSelf: 'flex-start', marginTop: 2 },
+
+    // Biometrics prompt sheet
+    biometricOverlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    biometricSheet: {
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        padding: 32,
+        paddingBottom: 48,
+        alignItems: 'center',
+    },
+    biometricIconCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 20,
+    },
+    biometricTitle: {
+        fontSize: 22,
+        fontWeight: '700',
+        marginBottom: 10,
+        textAlign: 'center',
+        letterSpacing: -0.3,
+    },
+    biometricSubtitle: {
+        fontSize: 15,
+        textAlign: 'center',
+        lineHeight: 22,
+        marginBottom: 28,
+    },
+    biometricEnableBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        width: '100%',
+        height: 52,
+        borderRadius: 14,
+        marginBottom: 12,
+    },
+    biometricEnableBtnText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    biometricDismissBtn: {
+        padding: 12,
+    },
+    biometricDismissText: {
+        fontSize: 15,
+        fontWeight: '500',
+    },
 });

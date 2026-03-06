@@ -273,3 +273,51 @@ export async function fetchRecentActivities(
 
     return { data: activities, error: null };
 }
+
+// ── Manager Dashboard Stats ──────────────────────────────────
+
+export interface ManagerDashboardStats {
+    activeCandidates: number;
+    agentsManaged: number;
+}
+
+/**
+ * Fetch extra stats for the manager dashboard (candidate count, agent count).
+ */
+export async function fetchManagerDashboardStats(
+    userId: string,
+    userRole: string,
+): Promise<{ data: ManagerDashboardStats; error: string | null }> {
+    // Count active candidates (not yet active_agent or licensed)
+    let candidateQuery = supabase
+        .from('candidates')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['applied', 'interview_scheduled', 'interviewed', 'approved', 'exam_prep']);
+
+    if (userRole === 'manager') {
+        candidateQuery = candidateQuery.eq('assigned_manager_id', userId);
+    }
+
+    const { count: candidateCount } = await candidateQuery;
+
+    // Count agents
+    let agentQuery = supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'agent')
+        .eq('is_active', true);
+
+    if (userRole === 'manager') {
+        agentQuery = agentQuery.eq('reports_to', userId);
+    }
+
+    const { count: agentCount } = await agentQuery;
+
+    return {
+        data: {
+            activeCandidates: candidateCount || 0,
+            agentsManaged: agentCount || 0,
+        },
+        error: null,
+    };
+}

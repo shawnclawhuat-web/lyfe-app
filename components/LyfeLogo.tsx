@@ -11,7 +11,7 @@ interface LyfeLogoProps {
 const SIZES: Record<string, TextStyle> = {
     sm: { fontSize: 20, lineHeight: 28 },
     md: { fontSize: 32, lineHeight: 40 },
-    lg: { fontSize: 48, lineHeight: 60 },
+    lg: { fontSize: 48, lineHeight: 72 },
 };
 
 /**

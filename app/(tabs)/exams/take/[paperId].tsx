@@ -2,6 +2,7 @@ import ConfirmDialog, { type ConfirmDialogButton } from '@/components/ConfirmDia
 import MathRenderer from '@/components/MathRenderer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { submitExamAttempt } from '@/lib/exams';
 import { supabase } from '@/lib/supabase';
 import type { ExamQuestion } from '@/types/exam';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,8 +20,8 @@ import {
     View,
     type AppStateStatus,
 } from 'react-native';
+import { isMockMode } from '@/lib/mockMode';
 
-const MOCK_OTP = process.env.EXPO_PUBLIC_MOCK_OTP === 'true';
 
 // Mock questions for development
 const MOCK_QUESTIONS: ExamQuestion[] = [
@@ -61,6 +62,7 @@ function formatTime(seconds: number): string {
 const STORAGE_KEY = 'lyfe_active_exam';
 
 export default function TakeExamScreen() {
+    const MOCK_OTP = isMockMode();
     const { paperId } = useLocalSearchParams<{ paperId: string }>();
     const { colors, isDark } = useTheme();
     const { user } = useAuth();
@@ -144,7 +146,7 @@ export default function TakeExamScreen() {
                         return;
                     }
                 }
-            } catch { }
+            } catch (e) { console.error('[ExamTake] Failed to restore saved state:', e); }
 
             // No saved state — start fresh
             startedAtRef.current = Date.now();
@@ -208,7 +210,7 @@ export default function TakeExamScreen() {
             totalQuestions: questions.length,
             timeLeft,
         };
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(() => { });
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch((e) => { console.error('[ExamTake] Failed to auto-save state:', e); });
     }, [answers, currentIndex, timeLeft]);
 
     const handleSelectAnswer = (questionId: string, answer: string) => {
@@ -253,7 +255,33 @@ export default function TakeExamScreen() {
         setIsSubmitting(true);
         if (timerRef.current) clearInterval(timerRef.current);
 
-        // Calculate score
+        if (!MOCK_OTP && user?.id) {
+            // Real mode: persist to Supabase
+            const { data: result, error } = await submitExamAttempt(
+                {
+                    userId: user.id,
+                    paperId: paperId || '',
+                    questions,
+                    answers,
+                    status,
+                    startedAt: startedAtRef.current,
+                },
+                PAPER_CODES[paperId || ''] || paperId || '',
+            );
+
+            if (error || !result) {
+                console.error('Failed to submit exam to Supabase:', error);
+                // Fall through to AsyncStorage fallback
+            } else {
+                // Also save to AsyncStorage for immediate results page use
+                await AsyncStorage.setItem(`exam_result_${result.id}`, JSON.stringify(result));
+                await AsyncStorage.removeItem(STORAGE_KEY);
+                router.replace(`/exams/results/${result.id}`);
+                return;
+            }
+        }
+
+        // Mock mode or Supabase fallback: save locally only
         let correct = 0;
         const answerDetails = questions.map((q) => {
             const selected = answers[q.id] || null;
@@ -265,7 +293,6 @@ export default function TakeExamScreen() {
         const percentage = Math.round((correct / questions.length) * 100);
         const passed = percentage >= 70;
 
-        // Store results locally for mock mode
         const resultId = `result_${Date.now()}`;
         const result = {
             id: resultId,

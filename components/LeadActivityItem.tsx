@@ -1,4 +1,5 @@
 import { useTheme } from '@/contexts/ThemeContext';
+import { timeAgo } from '@/lib/utils';
 import { ACTIVITY_ICONS, type LeadActivity } from '@/types/lead';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
@@ -7,24 +8,6 @@ import { StyleSheet, Text, View } from 'react-native';
 interface LeadActivityItemProps {
     activity: LeadActivity;
     isLast?: boolean;
-}
-
-function formatActivityTime(dateStr: string): string {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMin = Math.floor(diffMs / 60000);
-
-    if (diffMin < 1) return 'Just now';
-    if (diffMin < 60) return `${diffMin}m ago`;
-
-    const diffHr = Math.floor(diffMin / 60);
-    if (diffHr < 24) return `${diffHr}h ago`;
-
-    const diffDay = Math.floor(diffHr / 24);
-    if (diffDay < 7) return `${diffDay}d ago`;
-
-    return date.toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: '2-digit' });
 }
 
 function getActivityDescription(activity: LeadActivity): string {
@@ -75,7 +58,7 @@ export default function LeadActivityItem({ activity, isLast }: LeadActivityItemP
                     {getActivityDescription(activity)}
                 </Text>
                 <Text style={[styles.time, { color: colors.textTertiary }]}>
-                    {formatActivityTime(activity.created_at)}
+                    {timeAgo(activity.created_at)}
                 </Text>
             </View>
         </View>

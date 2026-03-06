@@ -1,5 +1,6 @@
 import MathRenderer from '@/components/MathRenderer';
 import { useTheme } from '@/contexts/ThemeContext';
+import { fetchExamResult } from '@/lib/exams';
 import type { ExamQuestion } from '@/types/exam';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,6 +15,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { isMockMode } from '@/lib/mockMode';
+
 
 interface ExamResult {
     id: string;
@@ -33,6 +36,7 @@ interface ExamResult {
 }
 
 export default function ExamResultsScreen() {
+    const MOCK_OTP = isMockMode();
     const { attemptId } = useLocalSearchParams<{ attemptId: string }>();
     const { colors } = useTheme();
     const router = useRouter();
@@ -44,9 +48,20 @@ export default function ExamResultsScreen() {
     useEffect(() => {
         const loadResult = async () => {
             try {
+                // Try AsyncStorage first (covers mock mode and immediate post-submit)
                 const stored = await AsyncStorage.getItem(`exam_result_${attemptId}`);
                 if (stored) {
                     setResult(JSON.parse(stored));
+                    setIsLoading(false);
+                    return;
+                }
+
+                // If not in AsyncStorage and not mock mode, try Supabase
+                if (!MOCK_OTP) {
+                    const { data, error } = await fetchExamResult(attemptId || '');
+                    if (data && !error) {
+                        setResult(data);
+                    }
                 }
             } catch { } finally {
                 setIsLoading(false);

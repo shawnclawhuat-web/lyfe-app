@@ -1,3 +1,4 @@
+import EmptyState from '@/components/EmptyState';
 import LeadActivityItem from '@/components/LeadActivityItem';
 import LoadingState from '@/components/LoadingState';
 import ScreenHeader from '@/components/ScreenHeader';
@@ -24,14 +25,13 @@ import {
     View
 } from 'react-native';
 
-const MOCK_OTP = process.env.EXPO_PUBLIC_MOCK_OTP === 'true';
-
-// Import mock data for dev mode
+import { isMockMode } from '@/lib/mockMode';
 import { MOCK_ACTIVITIES, MOCK_LEADS } from './index';
 
 const STATUS_ORDER: LeadStatus[] = ['new', 'contacted', 'qualified', 'proposed', 'won', 'lost'];
 
 export default function LeadDetailScreen() {
+    const MOCK_OTP = isMockMode();
     const { leadId } = useLocalSearchParams<{ leadId: string }>();
     const { colors } = useTheme();
     const { user } = useAuth();
@@ -157,35 +157,42 @@ export default function LeadDetailScreen() {
     const handleChangeStatus = async (newStatus: LeadStatus) => {
         if (newStatus === currentStatus) return;
 
+        const previousStatus = currentStatus;
+
         if (MOCK_OTP) {
-            // Mock mode: local-only
+            // Mock mode: optimistic update + append activity
             const newActivity: LeadActivity = {
                 id: `a_${Date.now()}`,
                 lead_id: lead.id,
                 user_id: 'me',
                 type: 'status_change',
                 description: null,
-                metadata: { from_status: currentStatus, to_status: newStatus },
+                metadata: { from_status: previousStatus, to_status: newStatus },
                 created_at: new Date().toISOString(),
             };
-            setActivities((prev) => [newActivity, ...prev]);
             setCurrentStatus(newStatus);
             setShowStatusPicker(false);
+            setActivities((prev) => [newActivity, ...prev]);
             return;
         }
 
         if (!user?.id) return;
+
+        // Optimistic update — close picker and show new status immediately
+        setCurrentStatus(newStatus);
+        setShowStatusPicker(false);
         setIsUpdatingStatus(true);
-        const { error } = await updateLeadStatus(lead.id, newStatus, currentStatus, user.id);
+
+        const { error } = await updateLeadStatus(lead.id, newStatus, previousStatus, user.id);
         setIsUpdatingStatus(false);
 
         if (!error) {
-            // Re-fetch activities to get the new status_change activity
+            // Re-fetch activities to get the persisted status_change entry
             const { data: updatedActivities } = await fetchLeadActivities(lead.id);
             if (updatedActivities) setActivities(updatedActivities);
-            setCurrentStatus(newStatus);
-            setShowStatusPicker(false);
         } else {
+            // Rollback on failure
+            setCurrentStatus(previousStatus);
             console.error('Failed to update status:', error);
         }
     };
@@ -220,7 +227,7 @@ export default function LeadDetailScreen() {
                             <View style={styles.leadInfo}>
                                 <Text style={[styles.leadName, { color: colors.textPrimary }]}>{lead.full_name}</Text>
                                 <View style={{ marginTop: 4 }}>
-                                    <StatusBadge status={currentStatus} size="medium" showIcon />
+                                    <StatusBadge status={currentStatus} size="medium" />
                                 </View>
                             </View>
                         </View>
@@ -383,9 +390,11 @@ export default function LeadDetailScreen() {
                                 />
                             ))}
                             {activities.length === 0 && (
-                                <Text style={[styles.noActivityText, { color: colors.textTertiary }]}>
-                                    No activity recorded yet
-                                </Text>
+                                <EmptyState
+                                    icon="time-outline"
+                                    title="No activity yet"
+                                    subtitle="Activity will appear here as you work this lead"
+                                />
                             )}
                         </View>
                     </View>
@@ -544,7 +553,6 @@ const styles = StyleSheet.create({
     },
     activityCount: { fontSize: 12 },
     timelineContent: { marginTop: 4 },
-    noActivityText: { fontSize: 14, textAlign: 'center', paddingVertical: 16 },
     notFound: {
         flex: 1,
         alignItems: 'center',

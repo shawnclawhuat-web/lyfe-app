@@ -1,18 +1,23 @@
+import Avatar from '@/components/Avatar';
 import LyfeLogo from '@/components/LyfeLogo';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useViewMode, type ViewMode } from '@/contexts/ViewModeContext';
+import { getBiometryType, type BiometryType } from '@/lib/biometrics';
+import { pickAndUploadAvatar, removeAvatar, takeAndUploadAvatar } from '@/lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Modal,
     Platform,
     SafeAreaView,
     ScrollView,
     StyleSheet,
+    Switch,
     Text,
     TouchableOpacity,
     View,
@@ -54,10 +59,28 @@ const SUPPORT_SETTINGS: SettingsRow[] = [
 
 export default function ProfileScreen() {
     const { colors, isDark, mode, setMode } = useTheme();
-    const { user, signOut } = useAuth();
+    const { user, signOut, biometricsEnabled, enableBiometrics, disableBiometrics, updateAvatarUrl } = useAuth();
     const { viewMode, canToggle, setViewMode } = useViewMode();
     const router = useRouter();
     const [showSignOutModal, setShowSignOutModal] = useState(false);
+    const [showAvatarSheet, setShowAvatarSheet] = useState(false);
+    const [avatarUploading, setAvatarUploading] = useState(false);
+    const [biometryType, setBiometryType] = useState<BiometryType>('none');
+
+    useEffect(() => {
+        getBiometryType().then(setBiometryType);
+    }, []);
+
+    const handleToggleBiometrics = async (value: boolean) => {
+        if (value) {
+            const success = await enableBiometrics();
+            if (!success && Platform.OS !== 'web') {
+                Alert.alert('Could not enable', 'Biometric authentication failed. Please try again.');
+            }
+        } else {
+            await disableBiometrics();
+        }
+    };
 
     const handleSignOut = () => {
         setShowSignOutModal(true);
@@ -78,10 +101,39 @@ export default function ProfileScreen() {
     };
 
     const handleSettingsPress = (key: string) => {
+        if (key === 'edit') {
+            setShowAvatarSheet(true);
+            return;
+        }
         if (Platform.OS === 'web') {
             window.alert(`${key.charAt(0).toUpperCase() + key.slice(1)} — Coming soon`);
         } else {
             Alert.alert('Coming Soon', `This feature is under development.`);
+        }
+    };
+
+    const handleAvatarAction = async (action: 'camera' | 'library' | 'remove') => {
+        setShowAvatarSheet(false);
+        if (!user?.id) return;
+
+        setAvatarUploading(true);
+        let result: { url?: string | null; error: string | null };
+
+        if (action === 'remove') {
+            result = await removeAvatar(user.id);
+            if (!result.error) updateAvatarUrl(null);
+        } else if (action === 'camera') {
+            result = await takeAndUploadAvatar(user.id);
+            if (!result.error && result.url) updateAvatarUrl(result.url);
+        } else {
+            result = await pickAndUploadAvatar(user.id);
+            if (!result.error && result.url) updateAvatarUrl(result.url);
+        }
+
+        setAvatarUploading(false);
+
+        if (result.error) {
+            Alert.alert('Upload Failed', result.error);
         }
     };
 
@@ -99,14 +151,31 @@ export default function ProfileScreen() {
                 {/* Hero User Card */}
                 <View style={[styles.card, styles.userCard, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
                     <View style={styles.userCardRow}>
-                        {/* Avatar */}
-                        <View style={[styles.avatarOuter, { borderColor: colors.accent + '30' }]}>
-                            <View style={[styles.avatarCircle, { backgroundColor: colors.accentLight }]}>
-                                <Text style={[styles.avatarText, { color: colors.accent }]}>
-                                    {user?.full_name?.charAt(0)?.toUpperCase() || '?'}
-                                </Text>
+                        {/* Avatar — tappable */}
+                        <TouchableOpacity
+                            onPress={() => setShowAvatarSheet(true)}
+                            activeOpacity={0.8}
+                            accessibilityRole="button"
+                            accessibilityLabel="Change profile photo"
+                            style={[styles.avatarOuter, { borderColor: colors.accent + '30' }]}
+                        >
+                            {avatarUploading ? (
+                                <View style={[styles.avatarCircle, { backgroundColor: colors.accentLight }]}>
+                                    <ActivityIndicator color={colors.accent} />
+                                </View>
+                            ) : (
+                                <Avatar
+                                    name={user?.full_name || '?'}
+                                    avatarUrl={user?.avatar_url}
+                                    size={66}
+                                    backgroundColor={colors.accentLight}
+                                    textColor={colors.accent}
+                                />
+                            )}
+                            <View style={[styles.avatarEditBadge, { backgroundColor: colors.accent }]}>
+                                <Ionicons name="camera" size={10} color="#FFFFFF" />
                             </View>
-                        </View>
+                        </TouchableOpacity>
 
                         {/* User Info */}
                         <View style={styles.userInfo}>
@@ -191,6 +260,37 @@ export default function ProfileScreen() {
                                 ? 'Manage your leads and clients'
                                 : 'Manage your team and candidates'}
                         </Text>
+                    </View>
+                )}
+
+                {/* Security — Face ID / Touch ID */}
+                {biometryType !== 'none' && (
+                    <View style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                        <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>SECURITY</Text>
+                        <View style={styles.settingsRow}>
+                            <View style={[styles.settingsIconCircle, { backgroundColor: colors.accentLight }]}>
+                                <Ionicons
+                                    name={biometryType === 'faceid' ? 'scan' : 'finger-print'}
+                                    size={18}
+                                    color={colors.accent}
+                                />
+                            </View>
+                            <View style={styles.settingsTextCol}>
+                                <Text style={[styles.settingsLabel, { color: colors.textPrimary }]}>
+                                    {biometryType === 'faceid' ? 'Face ID' : 'Touch ID'}
+                                </Text>
+                                <Text style={[styles.settingsSubtitle, { color: colors.textTertiary }]}>
+                                    Sign in without OTP
+                                </Text>
+                            </View>
+                            <Switch
+                                value={biometricsEnabled}
+                                onValueChange={handleToggleBiometrics}
+                                trackColor={{ false: colors.border, true: colors.accent }}
+                                thumbColor="#FFFFFF"
+                                accessibilityLabel={`${biometryType === 'faceid' ? 'Face ID' : 'Touch ID'} sign-in`}
+                            />
+                        </View>
                     </View>
                 )}
 
@@ -314,6 +414,61 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
             </ScrollView>
 
+            {/* Avatar Picker Sheet */}
+            <Modal
+                visible={showAvatarSheet}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowAvatarSheet(false)}
+                accessibilityViewIsModal
+            >
+                <TouchableOpacity
+                    style={styles.sheetOverlay}
+                    activeOpacity={1}
+                    onPress={() => setShowAvatarSheet(false)}
+                >
+                    <View style={[styles.sheet, { backgroundColor: colors.cardBackground }]}>
+                        <View style={[styles.sheetHandle, { backgroundColor: colors.divider }]} />
+                        <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>Profile Photo</Text>
+
+                        <TouchableOpacity
+                            style={styles.sheetRow}
+                            onPress={() => handleAvatarAction('camera')}
+                            activeOpacity={0.7}
+                        >
+                            <View style={[styles.sheetIconCircle, { backgroundColor: colors.accentLight }]}>
+                                <Ionicons name="camera-outline" size={20} color={colors.accent} />
+                            </View>
+                            <Text style={[styles.sheetRowText, { color: colors.textPrimary }]}>Take Photo</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.sheetRow}
+                            onPress={() => handleAvatarAction('library')}
+                            activeOpacity={0.7}
+                        >
+                            <View style={[styles.sheetIconCircle, { backgroundColor: colors.accentLight }]}>
+                                <Ionicons name="image-outline" size={20} color={colors.accent} />
+                            </View>
+                            <Text style={[styles.sheetRowText, { color: colors.textPrimary }]}>Choose from Library</Text>
+                        </TouchableOpacity>
+
+                        {user?.avatar_url && (
+                            <TouchableOpacity
+                                style={styles.sheetRow}
+                                onPress={() => handleAvatarAction('remove')}
+                                activeOpacity={0.7}
+                            >
+                                <View style={[styles.sheetIconCircle, { backgroundColor: colors.dangerLight }]}>
+                                    <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                                </View>
+                                <Text style={[styles.sheetRowText, { color: colors.danger }]}>Remove Photo</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+
             {/* Sign Out Confirmation Modal */}
             <Modal
                 visible={showSignOutModal}
@@ -388,6 +543,7 @@ const styles = StyleSheet.create({
         borderWidth: 2.5,
         alignItems: 'center',
         justifyContent: 'center',
+        position: 'relative',
     },
     avatarCircle: {
         width: 66,
@@ -396,9 +552,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    avatarText: {
-        fontSize: 28,
-        fontWeight: '800',
+    avatarEditBadge: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: '#FFFFFF',
     },
     userInfo: {
         flex: 1,
@@ -544,6 +708,53 @@ const styles = StyleSheet.create({
     signOutText: {
         fontSize: 15,
         fontWeight: '600',
+    },
+
+    // ── Avatar Sheet ──
+    sheetOverlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    sheet: {
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingHorizontal: 20,
+        paddingTop: 12,
+        paddingBottom: 40,
+        gap: 4,
+    },
+    sheetHandle: {
+        width: 36,
+        height: 4,
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginBottom: 16,
+        opacity: 0.5,
+    },
+    sheetTitle: {
+        fontSize: 17,
+        fontWeight: '700',
+        marginBottom: 12,
+        paddingHorizontal: 4,
+    },
+    sheetRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+        paddingVertical: 12,
+        paddingHorizontal: 4,
+    },
+    sheetIconCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    sheetRowText: {
+        fontSize: 16,
+        fontWeight: '500',
     },
 
     // ── Modal ──

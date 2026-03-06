@@ -31,7 +31,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       // Already authenticated → redirect to main app
       router.replace('/(tabs)/home');
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, segments, router]);
+
+  // Block all rendering until auth state is resolved.
+  // This prevents any protected screen from flashing before the redirect fires.
+  if (isLoading) return null;
 
   return <>{children}</>;
 }

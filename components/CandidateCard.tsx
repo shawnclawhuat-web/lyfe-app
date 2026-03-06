@@ -1,4 +1,5 @@
 import { useTheme } from '@/contexts/ThemeContext';
+import { timeAgo } from '@/lib/utils';
 import { CANDIDATE_STATUS_CONFIG, type RecruitmentCandidate } from '@/types/recruitment';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
@@ -13,7 +14,7 @@ export default function CandidateCard({ candidate, onPress }: CandidateCardProps
     const { colors } = useTheme();
     const statusConfig = CANDIDATE_STATUS_CONFIG[candidate.status];
 
-    const timeAgo = getTimeAgo(candidate.updated_at);
+    const timeAgoStr = timeAgo(candidate.updated_at);
     const interviewCount = candidate.interviews.length;
 
     return (
@@ -21,11 +22,13 @@ export default function CandidateCard({ candidate, onPress }: CandidateCardProps
             style={[styles.card, { backgroundColor: colors.cardBackground }]}
             onPress={onPress}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Candidate: ${candidate.name}, status: ${statusConfig.label}`}
         >
             <View style={styles.row}>
                 <View style={[styles.avatar, { backgroundColor: colors.accentLight }]}>
                     <Text style={[styles.avatarText, { color: colors.accent }]}>
-                        {candidate.name.charAt(0).toUpperCase()}
+                        {(candidate.name || '?').charAt(0).toUpperCase()}
                     </Text>
                 </View>
 
@@ -62,19 +65,12 @@ export default function CandidateCard({ candidate, onPress }: CandidateCardProps
                         </Text>
                     </View>
                 )}
-                <Text style={[styles.metaText, { color: colors.textTertiary }]}>{timeAgo}</Text>
+                <Text style={[styles.metaText, { color: colors.textTertiary }]}>{timeAgoStr}</Text>
             </View>
         </TouchableOpacity>
     );
 }
 
-function getTimeAgo(dateStr: string): string {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const days = Math.floor(diff / 86400000);
-    if (days === 0) return 'Today';
-    if (days === 1) return '1d ago';
-    return `${days}d ago`;
-}
 
 const styles = StyleSheet.create({
     card: {

@@ -18,12 +18,13 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { isMockMode } from '@/lib/mockMode';
 
-const MOCK_OTP = process.env.EXPO_PUBLIC_MOCK_OTP === 'true';
 const SOURCES: LeadSource[] = ['referral', 'walk_in', 'online', 'event', 'cold_call', 'other'];
 const PRODUCTS: ProductInterest[] = ['life', 'health', 'ilp', 'general'];
 
 export default function AddLeadScreen() {
+    const MOCK_OTP = isMockMode();
     const { colors } = useTheme();
     const { user } = useAuth();
     const router = useRouter();

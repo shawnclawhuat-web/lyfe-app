@@ -20,8 +20,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-
-const MOCK_OTP = process.env.EXPO_PUBLIC_MOCK_OTP === 'true';
+import { isMockMode } from '@/lib/mockMode';
 
 // ── Mock data (dev only) ───────────────────────────────────
 const now = Date.now();
@@ -100,6 +99,7 @@ const FILTER_TABS: { key: CandidateStatus | 'all'; label: string }[] = [
 ];
 
 export default function CandidatesScreen() {
+    const MOCK_OTP = isMockMode();
     const { colors } = useTheme();
     const { user } = useAuth();
     const { viewMode, canToggle } = useViewMode();
@@ -214,12 +214,12 @@ export default function CandidatesScreen() {
                         {/* Error Banner */}
                         {error && (
                             <TouchableOpacity
-                                style={[styles.errorBanner, { backgroundColor: '#FEE2E2' }]}
+                                style={[styles.errorBanner, { backgroundColor: colors.dangerLight }]}
                                 onPress={loadCandidates}
                             >
-                                <Ionicons name="alert-circle" size={16} color="#DC2626" />
-                                <Text style={styles.errorText}>{error}</Text>
-                                <Text style={styles.retryText}>Tap to retry</Text>
+                                <Ionicons name="alert-circle" size={16} color={colors.danger} />
+                                <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
+                                <Text style={[styles.retryText, { color: colors.danger }]}>Tap to retry</Text>
                             </TouchableOpacity>
                         )}
 
@@ -244,6 +244,9 @@ export default function CandidatesScreen() {
                                             },
                                         ]}
                                         onPress={() => setActiveFilter(item.key)}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={`Filter by ${item.label}`}
+                                        accessibilityState={{ selected: isActive }}
                                     >
                                         <Text
                                             style={[
@@ -320,8 +323,8 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         marginBottom: 12,
     },
-    errorText: { flex: 1, fontSize: 13, color: '#DC2626' },
-    retryText: { fontSize: 12, fontWeight: '600', color: '#DC2626' },
+    errorText: { flex: 1, fontSize: 13 },
+    retryText: { fontSize: 12, fontWeight: '600' },
     filterList: {
         flexGrow: 0,
         marginBottom: 8,

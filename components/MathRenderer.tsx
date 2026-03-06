@@ -80,7 +80,7 @@ export default function MathRenderer({ content, style, fontSize = 15 }: MathRend
             if (data.type === 'height' && data.value > 0) {
                 setWebViewHeight(data.value + 8);
             }
-        } catch { }
+        } catch (e) { console.error('[MathRenderer] Failed to parse WebView message:', e); }
     }, []);
 
     // If no LaTeX, render as plain text (much faster)
@@ -125,8 +125,6 @@ export default function MathRenderer({ content, style, fontSize = 15 }: MathRend
  * Web-only math renderer using KaTeX auto-render via script injection.
  */
 function WebMathRenderer({ content, isDark, fontSize }: { content: string; isDark: boolean; fontSize: number }) {
-    const textColor = isDark ? '#E6EDF3' : '#1F2328';
-
     // For web, we render in an iframe to isolate KaTeX styles
     const html = buildKatexHtml(content, isDark, fontSize);
     const [height, setHeight] = useState(40);
@@ -150,7 +148,7 @@ function WebMathRenderer({ content, isDark, fontSize }: { content: string; isDar
                         const h = doc.body.scrollHeight;
                         if (h > 0) setHeight(h + 8);
                     }
-                } catch { }
+                } catch (e) { console.error('[MathRenderer] Failed to read iframe height:', e); }
             }}
         />
     );

@@ -5,7 +5,6 @@ import { StyleSheet, Text, View } from 'react-native';
 interface StatusBadgeProps {
     status: LeadStatus;
     size?: 'small' | 'medium';
-    showIcon?: boolean;
 }
 
 export default function StatusBadge({ status, size = 'small' }: StatusBadgeProps) {
