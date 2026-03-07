@@ -8,8 +8,7 @@ import { useViewMode, type ViewMode } from '@/contexts/ViewModeContext';
 import { getBiometryType, type BiometryType } from '@/lib/biometrics';
 import { pickAndUploadAvatar, removeAvatar, takeAndUploadAvatar } from '@/lib/storage';
 import { Ionicons } from '@expo/vector-icons';
-import { MOCK_ASSIGNED_MANAGERS, type AssignedManager } from '@/lib/mockData';
-import { isMockMode } from '@/lib/mockMode';
+import type { AssignedManager } from '@/lib/mockData';
 import { supabase } from '@/lib/supabase';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -56,7 +55,6 @@ const SUPPORT_SETTINGS: SettingsRow[] = [
 ];
 
 export default function ProfileScreen() {
-    const MOCK_OTP = isMockMode();
     const { colors, isDark, mode, setMode } = useTheme();
     const { user, signOut, biometricsEnabled, enableBiometrics, disableBiometrics, updateAvatarUrl, updateProfile } = useAuth();
     const { viewMode, canToggle, setViewMode } = useViewMode();
@@ -80,7 +78,6 @@ export default function ProfileScreen() {
 
     const loadManagers = useCallback(async () => {
         if (user?.role !== 'pa') return;
-        if (MOCK_OTP) { setManagers(MOCK_ASSIGNED_MANAGERS); return; }
         if (!user?.id) return;
         const { data } = await supabase
             .from('pa_manager_assignments')

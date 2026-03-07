@@ -3,6 +3,7 @@
  */
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'proposed' | 'won' | 'lost';
+export const LEAD_STATUSES: LeadStatus[] = ['new', 'contacted', 'qualified', 'proposed', 'won', 'lost'];
 export type LeadSource = 'referral' | 'walk_in' | 'online' | 'event' | 'cold_call' | 'other';
 export type ProductInterest = 'life' | 'health' | 'ilp' | 'general';
 export type LeadActivityType = 'created' | 'note' | 'call' | 'whatsapp' | 'status_change' | 'reassignment' | 'email' | 'meeting' | 'follow_up';

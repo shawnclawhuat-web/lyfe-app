@@ -40,7 +40,7 @@ function getActivityDescription(activity: LeadActivity): string {
     }
 }
 
-export default function LeadActivityItem({ activity, isLast }: LeadActivityItemProps) {
+function LeadActivityItem({ activity, isLast }: LeadActivityItemProps) {
     const { colors } = useTheme();
     const iconConfig = ACTIVITY_ICONS[activity.type];
 
@@ -66,6 +66,8 @@ export default function LeadActivityItem({ activity, isLast }: LeadActivityItemP
         </View>
     );
 }
+
+export default React.memo(LeadActivityItem);
 
 const styles = StyleSheet.create({
     container: {

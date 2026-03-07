@@ -90,7 +90,7 @@ export async function submitExamAttempt(
         .insert(answerRows);
 
     if (answersError) {
-        console.error('Failed to insert exam answers:', answersError.message);
+        if (__DEV__) console.error('Failed to insert exam answers:', answersError.message);
         // Don't fail — the attempt was already saved
     }
 

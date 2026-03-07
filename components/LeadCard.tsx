@@ -13,7 +13,7 @@ interface LeadCardProps {
     agentName?: string;
 }
 
-export default function LeadCard({ lead, onPress, lastActivity, agentName }: LeadCardProps) {
+function LeadCard({ lead, onPress, lastActivity, agentName }: LeadCardProps) {
     const { colors } = useTheme();
 
     return (
@@ -76,6 +76,8 @@ export default function LeadCard({ lead, onPress, lastActivity, agentName }: Lea
         </TouchableOpacity>
     );
 }
+
+export default React.memo(LeadCard);
 
 const styles = StyleSheet.create({
     card: {

@@ -84,7 +84,7 @@ export default function LoginScreen() {
             await authenticateWithBiometrics();
             // On success AuthGate redirects automatically
         } catch (e) {
-            console.error('[FaceID] Auth error:', e);
+            if (__DEV__) console.error('[FaceID] Auth error:', e);
         } finally {
             setIsBiometricLoading(false);
         }

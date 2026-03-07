@@ -363,14 +363,14 @@ export async function syncAgentToMKTR(candidate: {
     lyfeUserId?: string;
 }): Promise<{ success: boolean; error?: string }> {
     if (!candidate.email) {
-        console.warn('⚠️ Cannot sync agent to MKTR: no email for candidate', candidate.name);
+        if (__DEV__) console.warn('Cannot sync agent to MKTR: no email for candidate', candidate.name);
         return { success: false, error: 'No email address' };
     }
 
     try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) {
-            console.warn('⚠️ Cannot sync agent to MKTR: no active session');
+            if (__DEV__) console.warn('Cannot sync agent to MKTR: no active session');
             return { success: false, error: 'No active session' };
         }
 
@@ -391,14 +391,14 @@ export async function syncAgentToMKTR(candidate: {
 
         const data = await response.json();
         if (!response.ok) {
-            console.error(`❌ MKTR sync failed (${response.status}):`, data);
+            if (__DEV__) console.error(`MKTR sync failed (${response.status}):`, data);
             return { success: false, error: data.error || 'Unknown error' };
         }
 
-        console.log('✅ Agent synced to MKTR:', data);
+        if (__DEV__) console.log('Agent synced to MKTR:', data);
         return { success: true };
     } catch (err: any) {
-        console.error('❌ MKTR sync error:', err.message);
+        if (__DEV__) console.error('MKTR sync error:', err.message);
         return { success: false, error: err.message };
     }
 }

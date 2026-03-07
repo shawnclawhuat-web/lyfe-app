@@ -15,7 +15,7 @@ import {
 import { fetchLeadStats, fetchManagerDashboardStats, fetchRecentActivities, type LeadPipelineStats, type ManagerDashboardStats } from '@/lib/leads';
 import { formatDateShort, formatTime } from '@/lib/dateTime';
 import { PA_MANAGER_COLORS } from '@/constants/ui';
-import { MOCK_ACTIVITIES, MOCK_AGENT_STATS, MOCK_LEAD_PIPELINE, MOCK_MANAGER_ACTIVITIES, MOCK_MANAGER_STATS, PA_MOCK_CANDIDATE_COUNT, PA_MOCK_EVENTS, PA_MOCK_INTERVIEW_COUNT } from '@/lib/mockData';
+import { MOCK_AGENT_STATS, MOCK_LEAD_PIPELINE, MOCK_MANAGER_ACTIVITIES, MOCK_MANAGER_STATS } from '@/lib/mockData';
 import { fetchUpcomingEvents } from '@/lib/events';
 import { EVENT_TYPE_COLORS, type AgencyEvent } from '@/types/event';
 import { supabase } from '@/lib/supabase';
@@ -33,8 +33,6 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { isMockMode } from '@/lib/mockMode';
-
 function getGreeting(): string {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -92,7 +90,6 @@ function formatActivities(activities: (LeadActivity & { lead_name?: string })[])
 
 
 export default function HomeScreen() {
-    const MOCK_OTP = isMockMode();
     const { colors } = useTheme();
     const { user, enableBiometrics } = useAuth();
     const { viewMode, canToggle } = useViewMode();
@@ -157,12 +154,6 @@ export default function HomeScreen() {
 
         // ── PA branch ──
         if (isPa) {
-            if (MOCK_OTP) {
-                setPaCandidateCount(PA_MOCK_CANDIDATE_COUNT);
-                setPaInterviewCount(PA_MOCK_INTERVIEW_COUNT);
-                setPaEvents(PA_MOCK_EVENTS);
-                return;
-            }
             const { data: assignments } = await supabase
                 .from('pa_manager_assignments')
                 .select('manager_id')
@@ -182,7 +173,6 @@ export default function HomeScreen() {
         }
 
         // ── Agent / Manager branch ──
-        if (MOCK_OTP) return;
         const promises: Promise<any>[] = [
             fetchLeadStats(user.id, isManagerView),
             fetchRecentActivities(user.id, isManagerView, 5),
@@ -211,11 +201,11 @@ export default function HomeScreen() {
     const pipeline = stats?.pipeline || MOCK_LEAD_PIPELINE;
 
     // Normalize recent activities for display
-    const displayActivities = (!MOCK_OTP && recentActivities.length > 0)
+    const displayActivities = recentActivities.length > 0
         ? formatActivities(recentActivities)
-        : (isManagerView ? MOCK_MANAGER_ACTIVITIES : MOCK_ACTIVITIES);
+        : (isManagerView ? MOCK_MANAGER_ACTIVITIES : []);
 
-    const totalPipeline = pipeline.reduce((n, s) => n + s.count, 0);
+    const totalPipeline = useMemo(() => pipeline.reduce((n, s) => n + s.count, 0), [pipeline]);
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>

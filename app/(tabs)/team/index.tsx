@@ -6,7 +6,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { fetchTeamMembers, type TeamMember } from '@/lib/team';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
     FlatList,
     RefreshControl,
@@ -18,15 +18,10 @@ import {
     View,
 } from 'react-native';
 import { AVATAR_COLORS, getAvatarColor } from '@/constants/ui';
-import { MOCK_AGENTS, MOCK_MANAGERS } from '@/lib/mockData';
-import { isMockMode } from '@/lib/mockMode';
-
-export { MOCK_AGENTS, MOCK_MANAGERS } from '@/lib/mockData';
 
 type FilterKey = 'all' | 'manager' | 'agent';
 
 export default function TeamScreen() {
-    const MOCK_OTP = isMockMode();
     const { colors } = useTheme();
     const { user } = useAuth();
     const router = useRouter();
@@ -34,20 +29,12 @@ export default function TeamScreen() {
     const [filter, setFilter] = useState<FilterKey>('all');
     const [search, setSearch] = useState('');
     const [members, setMembers] = useState<TeamMember[]>([]);
-    const [isLoading, setIsLoading] = useState(!MOCK_OTP);
+    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const isDirector = user?.role === 'director' || user?.role === 'admin';
 
     const loadMembers = useCallback(async () => {
-        if (MOCK_OTP) {
-            const mockData = isDirector
-                ? [...MOCK_MANAGERS, ...MOCK_AGENTS]
-                : [...MOCK_AGENTS];
-            setMembers(mockData);
-            return;
-        }
-
         if (!user?.id) return;
         setError(null);
         const { data, error: fetchError } = await fetchTeamMembers(user.id, user.role || 'agent');
@@ -65,7 +52,7 @@ export default function TeamScreen() {
         }, [loadMembers])
     );
 
-    const filteredMembers = members.filter((m) => {
+    const filteredMembers = useMemo(() => members.filter((m) => {
         if (filter !== 'all' && m.role !== filter) return false;
         if (search.trim()) {
             const q = search.toLowerCase();
@@ -76,18 +63,19 @@ export default function TeamScreen() {
             ) return false;
         }
         return true;
-    });
+    }), [members, filter, search]);
 
-    const counts = {
-        all: members.length,
-        manager: members.filter((m) => m.role === 'manager').length,
-        agent: members.filter((m) => m.role === 'agent').length,
-        active: members.filter((m) => m.isActive).length,
-    };
-
-    const totalLeads = members.reduce((sum, m) => sum + m.leadsCount, 0);
-    const totalWon = members.reduce((sum, m) => sum + m.wonCount, 0);
-    const avgConversion = totalLeads > 0 ? Math.round(totalWon / totalLeads * 100) : 0;
+    const { counts, totalLeads, totalWon, avgConversion } = useMemo(() => {
+        const c = {
+            all: members.length,
+            manager: members.filter((m) => m.role === 'manager').length,
+            agent: members.filter((m) => m.role === 'agent').length,
+            active: members.filter((m) => m.isActive).length,
+        };
+        const tl = members.reduce((sum, m) => sum + m.leadsCount, 0);
+        const tw = members.reduce((sum, m) => sum + m.wonCount, 0);
+        return { counts: c, totalLeads: tl, totalWon: tw, avgConversion: tl > 0 ? Math.round(tw / tl * 100) : 0 };
+    }, [members]);
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);

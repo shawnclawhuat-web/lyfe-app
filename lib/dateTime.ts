@@ -45,6 +45,18 @@ export function formatCreatedAt(iso: string): string {
     return new Date(iso).toLocaleDateString('en-SG', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+/** Format ISO timestamp as "8 Mar 2026, 09:00 AM" (date + time) */
+export function formatDateTime(iso: string): string {
+    return new Date(iso).toLocaleDateString('en-SG', {
+        day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+}
+
+/** Format ISO date/timestamp as "Mar 2026" (month + year only) */
+export function formatMonthYear(iso: string): string {
+    return new Date(iso).toLocaleDateString('en-SG', { month: 'short', year: 'numeric' });
+}
+
 /** Today as YYYY-MM-DD using locale-safe method */
 export function todayLocalStr(): string {
     return new Date().toLocaleDateString('en-CA');

@@ -1,3 +1,4 @@
+import ErrorBanner from '@/components/ErrorBanner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { createCandidate, uploadCandidateDocument, type CreateCandidateInput } from '@/lib/recruitment';
@@ -21,10 +22,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { isMockMode } from '@/lib/mockMode';
-
 export default function AddCandidateScreen() {
-    const MOCK_OTP = isMockMode();
     const { colors } = useTheme();
     const { user } = useAuth();
     const router = useRouter();
@@ -50,14 +48,6 @@ export default function AddCandidateScreen() {
     const handleSubmit = async () => {
         if (!validate()) return;
         setSaveError(null);
-
-        if (MOCK_OTP) {
-            // Mock mode: just show success
-            const token = `inv_${Math.random().toString(36).substring(2, 12)}`;
-            setInviteLink(`https://lyfe.app/invite/${token}`);
-            setShowSuccess(true);
-            return;
-        }
 
         if (!user?.id) {
             setSaveError('Not authenticated');
@@ -111,10 +101,7 @@ export default function AddCandidateScreen() {
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     {/* Save Error */}
                     {saveError && (
-                        <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2' }]}>
-                            <Ionicons name="alert-circle" size={16} color="#DC2626" />
-                            <Text style={styles.errorBannerText}>{saveError}</Text>
-                        </View>
+                        <ErrorBanner message={saveError} style={styles.errorBannerSpacing} />
                     )}
 
                     {/* Form Card */}
@@ -286,16 +273,9 @@ const styles = StyleSheet.create({
     closeBtn: { padding: 8 },
     navTitle: { fontSize: 17, fontWeight: '600' },
     scrollContent: { paddingBottom: 20 },
-    errorBanner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        padding: 12,
-        borderRadius: 10,
+    errorBannerSpacing: {
         marginHorizontal: 16,
-        marginBottom: 12,
     },
-    errorBannerText: { flex: 1, fontSize: 13, color: '#DC2626' },
 
     // Form Card — iOS grouped style
     formCard: {

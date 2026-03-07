@@ -11,7 +11,7 @@ interface ExamCardProps {
     disabled?: boolean;
 }
 
-export default function ExamCard({ paper, stats, onPress, disabled }: ExamCardProps) {
+function ExamCard({ paper, stats, onPress, disabled }: ExamCardProps) {
     const { colors } = useTheme();
 
     const hasAttempts = stats && stats.attemptCount > 0;
@@ -94,6 +94,8 @@ export default function ExamCard({ paper, stats, onPress, disabled }: ExamCardPr
         </TouchableOpacity>
     );
 }
+
+export default React.memo(ExamCard);
 
 const styles = StyleSheet.create({
     card: {

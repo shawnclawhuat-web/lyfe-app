@@ -17,18 +17,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { isMockMode } from '@/lib/mockMode';
-
-// Mock data for development
-const MOCK_PAPERS: ExamPaper[] = [
-    { id: 'm5', code: 'M5', title: 'Rules & Regulations of Life Insurance Business', description: 'Fundamentals of life insurance regulations in Singapore, covering MAS guidelines, policy types, and compliance requirements.', duration_minutes: 60, pass_percentage: 70, question_count: 5, is_active: true, is_mandatory: true, display_order: 1 },
-    { id: 'm9', code: 'M9', title: 'Life Insurance & Investment-Linked Policies', description: 'Advanced knowledge on ILPs, fund structures, risk assessment, and suitability analysis.', duration_minutes: 60, pass_percentage: 70, question_count: 3, is_active: true, is_mandatory: true, display_order: 2 },
-    { id: 'm9a', code: 'M9A', title: 'Life Insurance & Investment-Linked Policies (Supplementary)', description: 'Supplementary module covering additional ILP regulations, unit pricing, and switching rules.', duration_minutes: 45, pass_percentage: 70, question_count: 0, is_active: true, is_mandatory: true, display_order: 3 },
-    { id: 'hi', code: 'HI', title: 'Health Insurance', description: 'Health insurance fundamentals including MediShield Life, Integrated Shield Plans, riders, and claims processes.', duration_minutes: 45, pass_percentage: 70, question_count: 3, is_active: true, is_mandatory: true, display_order: 4 },
-];
-
 export default function ExamsListScreen() {
-    const MOCK_OTP = isMockMode();
     const { colors } = useTheme();
     const { user } = useAuth();
     const router = useRouter();
@@ -43,14 +32,6 @@ export default function ExamsListScreen() {
         try {
             setError(null);
 
-            if (MOCK_OTP) {
-                // Use mock data in development
-                setPapers(MOCK_PAPERS);
-                setStats({});
-                return;
-            }
-
-            // Fetch papers
             const { data: papersData, error: papersError } = await supabase
                 .from('exam_papers')
                 .select('*')

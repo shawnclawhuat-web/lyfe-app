@@ -1,14 +1,12 @@
 import Avatar from '@/components/Avatar';
 import ScreenHeader from '@/components/ScreenHeader';
 import WheelPicker, { WHEEL_ITEM_H } from '@/components/WheelPicker';
-import { ATTENDEE_ROLES, AVATAR_COLORS, getAvatarColor, formatPickerTime, hhmm24ToPickerState, PICKER_AMPM, PICKER_HOURS, PICKER_MINUTES, pickerToHHMM24, TIME_PICKER_VISIBLE } from '@/constants/ui';
+import { ATTENDEE_ROLES, AVATAR_COLORS, ERROR_BG, ERROR_TEXT, getAvatarColor, formatPickerTime, hhmm24ToPickerState, PICKER_AMPM, PICKER_HOURS, PICKER_MINUTES, pickerToHHMM24, TIME_PICKER_VISIBLE } from '@/constants/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { dateDiffDays, dateRange, formatDateLabel, isValidDate, todayStr } from '@/lib/dateTime';
 import { createEvent, createRoadshowBulk, fetchAllUsers, fetchEventById, fetchRoadshowConfig, saveRoadshowConfig, updateEvent, type RoadshowConfigInput, type SimpleUser } from '@/lib/events';
-import { MOCK_USERS } from '@/lib/mockData';
 import { supabase } from '@/lib/supabase';
-import { isMockMode } from '@/lib/mockMode';
 import type { AttendeeRole, CreateEventInput, EventType, ExternalAttendee } from '@/types/event';
 import { EVENT_TYPE_COLORS, EVENT_TYPE_LABELS } from '@/types/event';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,7 +42,6 @@ export default function CreateEventScreen() {
     const { colors } = useTheme();
     const { user } = useAuth();
     const router = useRouter();
-    const MOCK_OTP = isMockMode();
     const { eventId } = useLocalSearchParams<{ eventId?: string }>();
     const isEditing = !!eventId;
 
@@ -93,11 +90,6 @@ export default function CreateEventScreen() {
     const loadUsers = useCallback(async () => {
         setLoadingUsers(true);
         setUsersError(null);
-        if (MOCK_OTP) {
-            setAllUsers(MOCK_USERS);
-            setLoadingUsers(false);
-            return;
-        }
         const { data, error } = await fetchAllUsers();
         if (error) setUsersError('Failed to load users. Tap to retry.');
         setAllUsers(data);
@@ -112,29 +104,6 @@ export default function CreateEventScreen() {
     // Pre-populate form when editing
     useEffect(() => {
         if (!isEditing || !eventId) return;
-
-        if (MOCK_OTP) {
-            // Use a representative mock event so the edit flow is testable
-            setTitle('Agency Kickoff 2026');
-            setEventType('agency_event');
-            setEventDate(new Date().toISOString().split('T')[0]);
-            const sp = hhmm24ToPickerState('09:00');
-            setStartHour(sp.hour); setStartMinIdx(sp.minIdx); setStartAmPm(sp.ampm);
-            const ep = hhmm24ToPickerState('12:00');
-            setEndHour(ep.hour); setEndMinIdx(ep.minIdx); setEndAmPm(ep.ampm);
-            setHasEndTime(true);
-            setLocation('Marina Bay Sands Convention Centre');
-            setDescription('Annual agency kickoff event for all staff.');
-            setSelectedAttendees([
-                { user_id: 'u1', full_name: 'Alice Tan', role: 'agent', attendee_role: 'attendee' },
-                { user_id: 'u2', full_name: 'David Lim', role: 'manager', attendee_role: 'duty_manager' },
-            ]);
-            setExternalAttendees([
-                { _key: 'ext_0', name: 'John Smith (Client)', attendee_role: 'attendee' },
-            ]);
-            setLoadingEvent(false);
-            return;
-        }
 
         fetchEventById(eventId).then(async ({ data }) => {
             if (data) {
@@ -224,14 +193,6 @@ export default function CreateEventScreen() {
         const endTime = hasEndTime ? pickerToHHMM24(endHour, endMinIdx, endAmPm) : null;
 
         setSubmitting(true);
-
-        if (MOCK_OTP) {
-            setSubmitting(false);
-            Alert.alert('Success', isEditing ? 'Event updated (mock mode)' : 'Event created (mock mode)', [
-                { text: 'OK', onPress: () => router.back() },
-            ]);
-            return;
-        }
 
         // ── Roadshow bulk create ───────────────────────────────
         if (eventType === 'roadshow' && !isEditing) {
@@ -596,8 +557,8 @@ export default function CreateEventScreen() {
                     )}
 
                     {errors._submit ? (
-                        <View style={[styles.submitError, { backgroundColor: '#FEE2E2' }]}>
-                            <Text style={{ color: '#DC2626', fontSize: 13 }}>{errors._submit}</Text>
+                        <View style={[styles.submitError, { backgroundColor: ERROR_BG }]}>
+                            <Text style={{ color: ERROR_TEXT, fontSize: 13 }}>{errors._submit}</Text>
                         </View>
                     ) : null}
 

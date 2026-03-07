@@ -21,10 +21,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { isMockMode } from '@/lib/mockMode';
-
 export default function CandidateDetailScreen() {
-    const MOCK_OTP = isMockMode();
     const { colors } = useTheme();
     const { user } = useAuth();
     const router = useRouter();
@@ -48,13 +45,6 @@ export default function CandidateDetailScreen() {
     }, [showNoteModal]);
 
     const loadCandidate = useCallback(async () => {
-        if (MOCK_OTP) {
-            const { MOCK_CANDIDATES } = require('../../candidates/index');
-            const found = MOCK_CANDIDATES.find((c: RecruitmentCandidate) => c.id === candidateId);
-            setCandidate(found || null);
-            setIsLoading(false);
-            return;
-        }
         if (!candidateId) return;
         const { data } = await fetchCandidate(candidateId);
         setCandidate(data);
@@ -88,37 +78,35 @@ export default function CandidateDetailScreen() {
         const prevStatus = candidate.status;
         setCandidate(prev => prev ? { ...prev, status: newStatus } : null);
 
-        if (!MOCK_OTP) {
-            const { error } = await updateCandidateStatus(candidate.id, newStatus);
-            if (error) {
-                setCandidate(prev => prev ? { ...prev, status: prevStatus } : null);
-                Alert.alert('Error', error);
-                return;
-            }
-            const newConfig = CANDIDATE_STATUS_CONFIG[newStatus];
-            if (newStatus === 'active_agent') {
-                syncAgentToMKTR({
-                    email: candidate.email,
-                    name: candidate.name,
-                    phone: candidate.phone,
-                }).then((result: { success: boolean; error?: string }) => {
-                    if (result.success) {
-                        Alert.alert('Agent Activated', `${candidate.name} is now active and synced to MKTR for lead assignment.`);
-                    } else {
-                        Alert.alert('Status Updated', `Changed to ${newConfig.label}\n\nMKTR sync failed: ${result.error}. The agent may need to be manually added to MKTR.`);
-                    }
-                });
-            } else {
-                Alert.alert('Status Updated', `Changed to ${newConfig.label}`);
-            }
-            loadCandidate();
+        const { error } = await updateCandidateStatus(candidate.id, newStatus);
+        if (error) {
+            setCandidate(prev => prev ? { ...prev, status: prevStatus } : null);
+            Alert.alert('Error', error);
+            return;
         }
+        const newConfig = CANDIDATE_STATUS_CONFIG[newStatus];
+        if (newStatus === 'active_agent') {
+            syncAgentToMKTR({
+                email: candidate.email,
+                name: candidate.name,
+                phone: candidate.phone,
+            }).then((result: { success: boolean; error?: string }) => {
+                if (result.success) {
+                    Alert.alert('Agent Activated', `${candidate.name} is now active and synced to MKTR for lead assignment.`);
+                } else {
+                    Alert.alert('Status Updated', `Changed to ${newConfig.label}\n\nMKTR sync failed: ${result.error}. The agent may need to be manually added to MKTR.`);
+                }
+            });
+        } else {
+            Alert.alert('Status Updated', `Changed to ${newConfig.label}`);
+        }
+        loadCandidate();
     };
 
     const handleSaveNote = async () => {
         if (!noteText.trim()) return;
         setIsSavingNote(true);
-        if (!MOCK_OTP && user?.id && candidate.id) {
+        if (user?.id && candidate.id) {
             await addCandidateActivity(candidate.id, user.id, 'note', null, noteText.trim());
         }
         setIsSavingNote(false);

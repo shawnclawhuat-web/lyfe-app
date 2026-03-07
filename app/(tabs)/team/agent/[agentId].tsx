@@ -3,8 +3,7 @@ import LoadingState from '@/components/LoadingState';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useTheme } from '@/contexts/ThemeContext';
 import { fetchTeamMember, type TeamMember } from '@/lib/team';
-import type { Lead, LeadStatus } from '@/types/lead';
-import { STATUS_CONFIG } from '@/types/lead';
+import { LEAD_STATUSES, STATUS_CONFIG, type Lead, type LeadStatus } from '@/types/lead';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -17,17 +16,10 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { isMockMode } from '@/lib/mockMode';
-
-const AVATAR_COLORS = ['#6366F1', '#0D9488', '#E11D48', '#F59E0B', '#8B5CF6', '#06B6D4'];
-const PIPELINE_STATUSES: LeadStatus[] = ['new', 'contacted', 'qualified', 'proposed', 'won', 'lost'];
-
-function formatDate(dateStr: string) {
-    return new Date(dateStr).toLocaleDateString('en-SG', { month: 'short', year: 'numeric' });
-}
+import { getAvatarColor } from '@/constants/ui';
+import { formatMonthYear } from '@/lib/dateTime';
 
 export default function AgentDetailScreen() {
-    const MOCK_OTP = isMockMode();
     const { colors } = useTheme();
     const router = useRouter();
     const { agentId } = useLocalSearchParams<{ agentId: string }>();
@@ -37,23 +29,6 @@ export default function AgentDetailScreen() {
     const [isLoading, setIsLoading] = useState(true);
 
     const loadAgent = useCallback(async () => {
-        if (MOCK_OTP) {
-            // Import mock data from team index
-            const { MOCK_AGENTS, MOCK_MANAGERS } = require('../index');
-            const allMock = [...MOCK_MANAGERS, ...MOCK_AGENTS];
-            const found = allMock.find((m: TeamMember) => m.id === agentId);
-            setAgent(found || null);
-            // Mock leads — import from leads screen
-            try {
-                const { MOCK_LEADS } = require('../../leads/index');
-                setAgentLeads(MOCK_LEADS || []);
-            } catch {
-                setAgentLeads([]);
-            }
-            setIsLoading(false);
-            return;
-        }
-
         if (!agentId) return;
         const { member, leads, error } = await fetchTeamMember(agentId);
         if (!error && member) {
@@ -69,7 +44,7 @@ export default function AgentDetailScreen() {
 
     const pipelineCounts = useMemo(() => {
         const counts: Record<string, number> = {};
-        PIPELINE_STATUSES.forEach((s) => { counts[s] = 0; });
+        LEAD_STATUSES.forEach((s) => { counts[s] = 0; });
         agentLeads.forEach((l) => { counts[l.status] = (counts[l.status] || 0) + 1; });
         return counts;
     }, [agentLeads]);
@@ -97,7 +72,7 @@ export default function AgentDetailScreen() {
         );
     }
 
-    const avatarColor = AVATAR_COLORS[agent.name.charCodeAt(0) % AVATAR_COLORS.length];
+    const avatarColor = getAvatarColor(agent.name);
     const initials = agent.name.split(' ').map((n) => n[0]).join('');
     const isManager = agent.role === 'manager';
     const lostCount = pipelineCounts['lost'] || 0;
@@ -153,7 +128,7 @@ export default function AgentDetailScreen() {
                                 </View>
                             </View>
                             <Text style={[styles.joinDate, { color: colors.textTertiary }]}>
-                                Member since {formatDate(agent.joinedDate)}
+                                Member since {formatMonthYear(agent.joinedDate)}
                             </Text>
                         </View>
                     </View>
@@ -213,7 +188,7 @@ export default function AgentDetailScreen() {
                     {/* Stacked Bar */}
                     {totalPipelineLeads > 0 && (
                         <View style={styles.pipelineBar}>
-                            {PIPELINE_STATUSES.map((status) => {
+                            {LEAD_STATUSES.map((status) => {
                                 const count = pipelineCounts[status] || 0;
                                 if (count === 0) return null;
                                 const config = STATUS_CONFIG[status];
@@ -235,7 +210,7 @@ export default function AgentDetailScreen() {
 
                     {/* Legend */}
                     <View style={styles.pipelineLegend}>
-                        {PIPELINE_STATUSES.map((status) => {
+                        {LEAD_STATUSES.map((status) => {
                             const count = pipelineCounts[status] || 0;
                             const config = STATUS_CONFIG[status];
                             return (

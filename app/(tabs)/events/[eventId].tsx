@@ -10,9 +10,7 @@ import {
     managerCheckIn, type PledgeInput,
 } from '@/lib/events';
 import { formatActivityTime, formatCheckinTime, formatCreatedAt, formatDateLong, formatTime, todayLocalStr } from '@/lib/dateTime';
-import { activityLabel, activityTypeColor, ATTENDEE_ROLE_COLORS, ATTENDEE_ROLE_LABELS, ATTENDEE_ROLE_ORDER, AVATAR_COLORS, getAvatarColor, PICKER_HOURS, PICKER_MINUTES, PICKER_AMPM, ROADSHOW_PINK } from '@/constants/ui';
-import { MOCK_EVENTS, MOCK_RS_ACTIVITIES, MOCK_RS_ATTENDANCE, MOCK_RS_CONFIG, MOCK_RS_PAST_ACTIVITIES, MOCK_RS_PAST_ATTENDANCE } from '@/lib/mockData';
-import { isMockMode } from '@/lib/mockMode';
+import { activityLabel, activityTypeColor, ATTENDEE_ROLE_COLORS, ATTENDEE_ROLE_LABELS, ATTENDEE_ROLE_ORDER, AVATAR_COLORS, ERROR_BG, ERROR_TEXT, getAvatarColor, PICKER_HOURS, PICKER_MINUTES, PICKER_AMPM, ROADSHOW_PINK } from '@/constants/ui';
 import { supabase } from '@/lib/supabase';
 import type { AgencyEvent, AttendeeRole, EventAttendee, RoadshowActivity, RoadshowAttendance, RoadshowConfig } from '@/types/event';
 import { useViewMode } from '@/contexts/ViewModeContext';
@@ -79,7 +77,6 @@ export default function EventDetailScreen() {
     const { user } = useAuth();
     const { viewMode } = useViewMode();
     const router = useRouter();
-    const MOCK_OTP = isMockMode();
     const { eventId } = useLocalSearchParams<{ eventId: string }>();
     const insets = useSafeAreaInsets();
 
@@ -150,7 +147,6 @@ export default function EventDetailScreen() {
         if (event?.event_date !== today) return;
         if (!myAttendance) return;
         if (!event?.end_time) return;
-        if (MOCK_OTP) return;
         if (autoDepFired.current) return;
 
         const hasDeparted = activities.some(a => a.user_id === user?.id && a.type === 'departure');
@@ -177,30 +173,6 @@ export default function EventDetailScreen() {
 
     const loadEvent = useCallback(async (isRefresh = false) => {
         if (isRefresh) setRefreshing(true);
-
-        if (MOCK_OTP) {
-            const found = MOCK_EVENTS.find(e => e.id === eventId) ?? MOCK_EVENTS[0];
-            setEvent(found);
-            if (found.event_type === 'roadshow') {
-                setRoadshowConfig({ ...MOCK_RS_CONFIG, event_id: found.id });
-                if (found.id === 'e4past') {
-                    setAttendance(MOCK_RS_PAST_ATTENDANCE);
-                    setActivities(MOCK_RS_PAST_ACTIVITIES);
-                    setMyAttendance(null);
-                } else if (found.id === 'e4live') {
-                    setAttendance(MOCK_RS_ATTENDANCE);
-                    setActivities(MOCK_RS_ACTIVITIES);
-                    setMyAttendance(MOCK_RS_ATTENDANCE.find(a => a.user_id === 'mock-user-id') ?? null);
-                } else {
-                    setAttendance([]);
-                    setActivities([]);
-                    setMyAttendance(null);
-                }
-            }
-            setIsLoading(false);
-            setRefreshing(false);
-            return;
-        }
 
         if (!eventId) return;
         const { data } = await fetchEventById(eventId);
@@ -229,7 +201,7 @@ export default function EventDetailScreen() {
 
     // Realtime subscription for live roadshow
     useEffect(() => {
-        if (!event || event.event_type !== 'roadshow' || event.event_date !== todayStr || MOCK_OTP) return;
+        if (!event || event.event_type !== 'roadshow' || event.event_date !== todayStr) return;
 
         const channel = supabase
             .channel(`roadshow-${eventId}`)
@@ -309,20 +281,18 @@ export default function EventDetailScreen() {
         setCheckinError(null);
 
         // Check for existing attendance (manager may have checked in already)
-        if (!MOCK_OTP) {
-            const { data: existing } = await supabase
-                .from('roadshow_attendance')
-                .select('id')
-                .eq('event_id', eventId)
-                .eq('user_id', user!.id)
-                .single();
-            if (existing) {
-                setCheckingIn(false);
-                setShowPledgeSheet(false);
-                Alert.alert('Already Checked In', 'You were already checked in by your manager.');
-                loadEvent(true);
-                return;
-            }
+        const { data: existing } = await supabase
+            .from('roadshow_attendance')
+            .select('id')
+            .eq('event_id', eventId)
+            .eq('user_id', user!.id)
+            .single();
+        if (existing) {
+            setCheckingIn(false);
+            setShowPledgeSheet(false);
+            Alert.alert('Already Checked In', 'You were already checked in by your manager.');
+            loadEvent(true);
+            return;
         }
 
         const pledges: PledgeInput = {
@@ -331,26 +301,6 @@ export default function EventDetailScreen() {
             closed: pledgeClosed,
             afyc: Number(pledgeAfyc) || 0,
         };
-
-        if (MOCK_OTP) {
-            const mockAtt: RoadshowAttendance = {
-                id: 'att_new', event_id: eventId!, user_id: 'mock-user-id', full_name: user?.full_name ?? 'Me',
-                checked_in_at: new Date().toISOString(), late_reason: lateReason || null, checked_in_by: null,
-                is_late: isCurrentlyLate, minutes_late: minutesCurrentlyLate,
-                pledged_sitdowns: pledges.sitdowns, pledged_pitches: pledges.pitches,
-                pledged_closed: pledges.closed, pledged_afyc: pledges.afyc,
-            };
-            setMyAttendance(mockAtt);
-            setAttendance(prev => [...prev.filter(a => a.user_id !== 'mock-user-id'), mockAtt]);
-            setActivities(prev => [{
-                id: `act_ci_${Date.now()}`, event_id: eventId!, user_id: 'mock-user-id',
-                full_name: user?.full_name ?? 'Me', type: 'check_in', afyc_amount: null,
-                logged_at: new Date().toISOString(),
-            }, ...prev]);
-            setShowPledgeSheet(false);
-            setCheckingIn(false);
-            return;
-        }
 
         const { error } = await logRoadshowAttendanceWithPledge(eventId!, user!.id, lateReason || null, pledges);
         if (error) {
@@ -433,12 +383,10 @@ export default function EventDetailScreen() {
         };
         setActivities(prev => [optimistic, ...prev]);
 
-        if (!MOCK_OTP) {
-            const { error } = await logRoadshowActivity(eventId!, user!.id, type, afycAmount, loggedAt);
-            if (error) {
-                setActivities(prev => prev.filter(a => a.id !== tempId));
-                Alert.alert('Failed', 'Could not log activity. Please try again.');
-            }
+        const { error } = await logRoadshowActivity(eventId!, user!.id, type, afycAmount, loggedAt);
+        if (error) {
+            setActivities(prev => prev.filter(a => a.id !== tempId));
+            Alert.alert('Failed', 'Could not log activity. Please try again.');
         }
 
         setTimeout(() => setLogDebounce(prev => ({ ...prev, [type]: false })), 400);
@@ -470,12 +418,10 @@ export default function EventDetailScreen() {
         setAfycInput('');
         triggerConfetti();
 
-        if (!MOCK_OTP) {
-            const { error } = await logRoadshowActivity(eventId!, user!.id, 'case_closed', amount, loggedAt);
-            if (error) {
-                setActivities(prev => prev.filter(a => a.id !== tempId));
-                Alert.alert('Failed', 'Could not log case closed.');
-            }
+        const { error: ccError } = await logRoadshowActivity(eventId!, user!.id, 'case_closed', amount, loggedAt);
+        if (ccError) {
+            setActivities(prev => prev.filter(a => a.id !== tempId));
+            Alert.alert('Failed', 'Could not log case closed.');
         }
         setLoggingActivity(false);
     };
@@ -524,38 +470,21 @@ export default function EventDetailScreen() {
                             closed: overridePledgeClosed,
                             afyc: Number(overridePledgeAfyc) || 0,
                         };
-                        if (!MOCK_OTP) {
-                            const { error } = await managerCheckIn(
-                                eventId!, overrideTarget.user_id, checkedInAt.toISOString(),
-                                overrideLateReason || null, pledges, user!.id,
-                            );
-                            if (error) {
-                                const msg = error.includes('unique') ? `${overrideTarget.full_name} just checked in themselves.` : error;
-                                setOverrideError(msg);
-                                setOverrideSubmitting(false);
-                                return;
-                            }
-                            // Log check_in activity for the agent (fire-and-forget)
-                            logRoadshowActivity(eventId!, overrideTarget.user_id, 'check_in').catch(() => { });
-                        } else {
-                            const mockAtt: RoadshowAttendance = {
-                                id: `att_ovr_${Date.now()}`, event_id: eventId!, user_id: overrideTarget.user_id,
-                                full_name: overrideTarget.full_name ?? '', checked_in_at: checkedInAt.toISOString(),
-                                late_reason: overrideLateReason || null, checked_in_by: user!.id,
-                                is_late: false, minutes_late: 0,
-                                pledged_sitdowns: pledges.sitdowns, pledged_pitches: pledges.pitches,
-                                pledged_closed: pledges.closed, pledged_afyc: pledges.afyc,
-                            };
-                            setAttendance(prev => [...prev, mockAtt]);
-                            setActivities(prev => [{
-                                id: `act_ci_ovr_${Date.now()}`, event_id: eventId!,
-                                user_id: overrideTarget.user_id, full_name: overrideTarget.full_name ?? '',
-                                type: 'check_in', afyc_amount: null, logged_at: checkedInAt.toISOString(),
-                            }, ...prev]);
+                        const { error } = await managerCheckIn(
+                            eventId!, overrideTarget.user_id, checkedInAt.toISOString(),
+                            overrideLateReason || null, pledges, user!.id,
+                        );
+                        if (error) {
+                            const msg = error.includes('unique') ? `${overrideTarget.full_name} just checked in themselves.` : error;
+                            setOverrideError(msg);
+                            setOverrideSubmitting(false);
+                            return;
                         }
+                        // Log check_in activity for the agent (fire-and-forget)
+                        logRoadshowActivity(eventId!, overrideTarget.user_id, 'check_in').catch(() => { });
                         setOverrideTarget(null);
                         setOverrideSubmitting(false);
-                        if (!MOCK_OTP) loadEvent(true);
+                        loadEvent(true);
                     },
                 },
             ],
@@ -583,10 +512,8 @@ export default function EventDetailScreen() {
                         afyc_amount: null, logged_at: new Date().toISOString(),
                     };
                     setActivities(prev => [optimistic, ...prev]);
-                    if (!MOCK_OTP) {
-                        const { error } = await logRoadshowActivity(eventId!, user!.id, 'departure');
-                        if (error) setActivities(prev => prev.filter(a => a.id !== tempId));
-                    }
+                    const { error: depError } = await logRoadshowActivity(eventId!, user!.id, 'departure');
+                    if (depError) setActivities(prev => prev.filter(a => a.id !== tempId));
                 },
             },
         ]);
@@ -600,10 +527,8 @@ export default function EventDetailScreen() {
             afyc_amount: null, logged_at: new Date().toISOString(),
         };
         setActivities(prev => [optimistic, ...prev]);
-        if (!MOCK_OTP) {
-            const { error } = await logRoadshowActivity(eventId!, user!.id, 'check_in');
-            if (error) setActivities(prev => prev.filter(a => a.id !== tempId));
-        }
+        const { error: retError } = await logRoadshowActivity(eventId!, user!.id, 'check_in');
+        if (retError) setActivities(prev => prev.filter(a => a.id !== tempId));
     };
 
     // ── Render guards ─────────────────────────────────────────
@@ -637,7 +562,7 @@ export default function EventDetailScreen() {
             { text: 'Cancel', style: 'cancel' },
             {
                 text: 'Delete', style: 'destructive', onPress: async () => {
-                    const { error } = MOCK_OTP ? { error: null } : await deleteEvent(event.id);
+                    const { error } = await deleteEvent(event.id);
                     if (error) Alert.alert('Error', error);
                     else router.back();
                 },
@@ -784,8 +709,8 @@ export default function EventDetailScreen() {
                 </TouchableOpacity>
 
                 {checkinError && (
-                    <View style={[rsStyles.errorBanner, { backgroundColor: '#FEE2E2' }]}>
-                        <Text style={{ color: '#DC2626', fontSize: 13 }}>{checkinError}</Text>
+                    <View style={[rsStyles.errorBanner, { backgroundColor: ERROR_BG }]}>
+                        <Text style={{ color: ERROR_TEXT, fontSize: 13 }}>{checkinError}</Text>
                     </View>
                 )}
             </View>
@@ -1432,8 +1357,8 @@ export default function EventDetailScreen() {
                                 />
                             </View>
                             {checkinError && (
-                                <View style={[rsStyles.errorBanner, { backgroundColor: '#FEE2E2' }]}>
-                                    <Text style={{ color: '#DC2626', fontSize: 13 }}>{checkinError}</Text>
+                                <View style={[rsStyles.errorBanner, { backgroundColor: ERROR_BG }]}>
+                                    <Text style={{ color: ERROR_TEXT, fontSize: 13 }}>{checkinError}</Text>
                                 </View>
                             )}
                             <TouchableOpacity
@@ -1611,8 +1536,8 @@ export default function EventDetailScreen() {
                                 />
                             </View>
                             {overrideError && (
-                                <View style={[rsStyles.errorBanner, { backgroundColor: '#FEE2E2' }]}>
-                                    <Text style={{ color: '#DC2626', fontSize: 13 }}>{overrideError}</Text>
+                                <View style={[rsStyles.errorBanner, { backgroundColor: ERROR_BG }]}>
+                                    <Text style={{ color: ERROR_TEXT, fontSize: 13 }}>{overrideError}</Text>
                                 </View>
                             )}
                             <TouchableOpacity

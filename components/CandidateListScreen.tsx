@@ -1,15 +1,14 @@
+import CandidateCard from '@/components/CandidateCard';
 import EmptyState from '@/components/EmptyState';
-import LeadCard from '@/components/LeadCard';
 import LoadingState from '@/components/LoadingState';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useViewMode } from '@/contexts/ViewModeContext';
-import { fetchLeads } from '@/lib/leads';
-import type { Lead, LeadStatus } from '@/types/lead';
+import { fetchCandidates } from '@/lib/recruitment';
+import { CANDIDATE_STATUSES, CANDIDATE_STATUS_CONFIG, type CandidateStatus, type RecruitmentCandidate } from '@/types/recruitment';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
     FlatList,
     RefreshControl,
@@ -20,77 +19,84 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-const FILTER_TABS: { key: LeadStatus | 'all'; label: string }[] = [
+
+export interface CandidateListScreenProps {
+    /** Builds the path for the candidate detail screen given a candidate id. */
+    candidateRoute: (id: string) => string;
+    /** Path to navigate to when the "add candidate" button is pressed. */
+    addRoute: string;
+    /** When true, fetches candidates in manager-view scope. Defaults to false. */
+    isManagerView?: boolean;
+}
+
+const FILTER_TABS: { key: CandidateStatus | 'all'; label: string }[] = [
     { key: 'all', label: 'All' },
-    { key: 'new', label: 'New' },
-    { key: 'contacted', label: 'Contacted' },
-    { key: 'qualified', label: 'Qualified' },
-    { key: 'proposed', label: 'Proposed' },
-    { key: 'won', label: 'Won' },
-    { key: 'lost', label: 'Lost' },
+    ...CANDIDATE_STATUSES.map((status) => ({
+        key: status,
+        label: CANDIDATE_STATUS_CONFIG[status].label,
+    })),
 ];
 
-export default function LeadsListScreen() {
+export default function CandidateListScreen({
+    candidateRoute,
+    addRoute,
+    isManagerView = false,
+}: CandidateListScreenProps) {
     const { colors } = useTheme();
     const { user } = useAuth();
-    const { viewMode, canToggle } = useViewMode();
     const router = useRouter();
-    const isManagerView = canToggle && viewMode === 'manager';
 
     const [search, setSearch] = useState('');
-    const [activeFilter, setActiveFilter] = useState<LeadStatus | 'all'>('all');
+    const [activeFilter, setActiveFilter] = useState<CandidateStatus | 'all'>('all');
     const [refreshing, setRefreshing] = useState(false);
-    const [leads, setLeads] = useState<Lead[]>([]);
+    const [candidates, setCandidates] = useState<RecruitmentCandidate[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch leads from Supabase
-    const loadLeads = useCallback(async () => {
+    const loadCandidates = useCallback(async () => {
         if (!user?.id) return;
         setError(null);
-        const { data, error: fetchError } = await fetchLeads(user.id, isManagerView);
+        const { data, error: fetchError } = await fetchCandidates(user.id, isManagerView);
         if (fetchError) {
             setError(fetchError);
         } else {
-            setLeads(data);
+            setCandidates(data);
         }
         setIsLoading(false);
     }, [user?.id, isManagerView]);
 
-    // Re-fetch on focus (e.g., after adding a lead)
     useFocusEffect(
         useCallback(() => {
-            loadLeads();
-        }, [loadLeads])
+            loadCandidates();
+        }, [loadCandidates])
     );
 
-    const filteredLeads = useMemo(() => leads.filter((lead) => {
-        if (search.trim()) {
-            const q = search.toLowerCase();
-            const matchesName = lead.full_name.toLowerCase().includes(q);
-            const matchesPhone = lead.phone?.includes(q);
-            if (!matchesName && !matchesPhone) return false;
-        }
-        if (activeFilter !== 'all' && lead.status !== activeFilter) return false;
-        return true;
-    }).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()), [leads, search, activeFilter]);
+    const filteredCandidates = candidates
+        .filter((candidate) => {
+            if (search.trim()) {
+                const q = search.toLowerCase();
+                const matchesName = candidate.name.toLowerCase().includes(q);
+                const matchesPhone = candidate.phone?.includes(q);
+                if (!matchesName && !matchesPhone) return false;
+            }
+            if (activeFilter !== 'all' && candidate.status !== activeFilter) return false;
+            return true;
+        })
+        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
-    const counts = useMemo(() => {
-        const c: Record<string, number> = { all: leads.length };
-        leads.forEach((l) => { c[l.status] = (c[l.status] || 0) + 1; });
-        return c;
-    }, [leads]);
+    const counts: Record<string, number> = { all: candidates.length };
+    candidates.forEach((c) => { counts[c.status] = (counts[c.status] || 0) + 1; });
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
-        await loadLeads();
+        await loadCandidates();
         setRefreshing(false);
-    }, [loadLeads]);
+    }, [loadCandidates]);
 
     if (isLoading) {
         return (
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-                <ScreenHeader title="Leads" />
+                <ScreenHeader title="Candidates" />
                 <LoadingState />
             </SafeAreaView>
         );
@@ -98,33 +104,26 @@ export default function LeadsListScreen() {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-            {/* Header */}
             <ScreenHeader
-                title="Leads"
-                rightAction={!isManagerView ? (
+                title="Candidates"
+                rightAction={
                     <TouchableOpacity
                         style={[styles.addButton, { backgroundColor: colors.accent }]}
-                        onPress={() => router.push('/leads/add')}
-                        accessibilityLabel="Add new lead"
+                        onPress={() => router.push(addRoute as any)}
+                        accessibilityLabel="Add new candidate"
                     >
-                        <Ionicons name="add" size={20} color="#FFFFFF" />
-                        <Text style={styles.addButtonText}>Add</Text>
+                        <Ionicons name="person-add" size={20} color="#FFFFFF" />
                     </TouchableOpacity>
-                ) : undefined}
+                }
             />
 
-            {/* Lead List */}
             <FlatList
-                data={filteredLeads}
+                data={filteredCandidates}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={onRefresh}
-                        tintColor={colors.accent}
-                    />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
                 }
                 ListHeaderComponent={
                     <View style={styles.headerContainer}>
@@ -133,7 +132,7 @@ export default function LeadsListScreen() {
                             <Ionicons name="search" size={18} color={colors.textTertiary} />
                             <TextInput
                                 style={[styles.searchInput, { color: colors.textPrimary }]}
-                                placeholder="Search by name or phone..."
+                                placeholder="Search candidates..."
                                 placeholderTextColor={colors.textTertiary}
                                 value={search}
                                 onChangeText={setSearch}
@@ -143,7 +142,6 @@ export default function LeadsListScreen() {
                                 <TouchableOpacity
                                     onPress={() => setSearch('')}
                                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                    accessibilityLabel="Clear search"
                                 >
                                     <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
                                 </TouchableOpacity>
@@ -154,7 +152,7 @@ export default function LeadsListScreen() {
                         {error && (
                             <TouchableOpacity
                                 style={[styles.errorBanner, { backgroundColor: colors.dangerLight }]}
-                                onPress={loadLeads}
+                                onPress={loadCandidates}
                             >
                                 <Ionicons name="alert-circle" size={16} color={colors.danger} />
                                 <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
@@ -211,15 +209,15 @@ export default function LeadsListScreen() {
                 }
                 ListEmptyComponent={
                     <EmptyState
-                        icon="search-outline"
-                        title="No leads found"
-                        subtitle={search.trim() ? `No results for "${search}"` : 'No leads match this filter'}
+                        icon="people-outline"
+                        title="No candidates found"
+                        subtitle={search.trim() ? `No results for "${search}"` : 'No candidates match this filter'}
                     />
                 }
                 renderItem={({ item }) => (
-                    <LeadCard
-                        lead={item}
-                        onPress={() => router.push(`/leads/${item.id}`)}
+                    <CandidateCard
+                        candidate={item}
+                        onPress={() => router.push(candidateRoute(item.id) as any)}
                     />
                 )}
             />
@@ -230,14 +228,12 @@ export default function LeadsListScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     addButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: 14,
-        paddingVertical: 9,
+        width: 40,
+        height: 40,
         borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    addButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
     headerContainer: {
         paddingBottom: 4,
     },
@@ -268,12 +264,10 @@ const styles = StyleSheet.create({
     retryText: { fontSize: 12, fontWeight: '600' },
     filterList: {
         flexGrow: 0,
-        marginHorizontal: -16,
         marginBottom: 8,
     },
     filterRow: {
         gap: 8,
-        paddingHorizontal: 16,
         paddingBottom: 8,
     },
     filterChip: {
@@ -288,7 +282,8 @@ const styles = StyleSheet.create({
     filterChipText: { fontSize: 13, fontWeight: '600' },
     filterChipCount: { fontSize: 12, fontWeight: '500' },
     listContent: {
-        padding: 16,
+        paddingHorizontal: 16,
+        paddingBottom: 40,
         paddingTop: 16,
     },
 });

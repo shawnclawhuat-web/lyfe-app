@@ -7,7 +7,7 @@ interface StatusBadgeProps {
     size?: 'small' | 'medium';
 }
 
-export default function StatusBadge({ status, size = 'small' }: StatusBadgeProps) {
+function StatusBadge({ status, size = 'small' }: StatusBadgeProps) {
     const config = STATUS_CONFIG[status];
     const isSmall = size === 'small';
 
@@ -36,6 +36,8 @@ export default function StatusBadge({ status, size = 'small' }: StatusBadgeProps
         </View>
     );
 }
+
+export default React.memo(StatusBadge);
 
 const styles = StyleSheet.create({
     badge: {

@@ -30,7 +30,7 @@ interface ConfirmDialogProps {
  * (window.confirm auto-cancels in some browser environments).
  * This component renders a proper React Native Modal instead.
  */
-export default function ConfirmDialog({
+function ConfirmDialog({
     visible,
     title,
     message,
@@ -103,6 +103,8 @@ export default function ConfirmDialog({
         </Modal>
     );
 }
+
+export default React.memo(ConfirmDialog);
 
 const styles = StyleSheet.create({
     overlay: {

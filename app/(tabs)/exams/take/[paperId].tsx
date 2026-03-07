@@ -20,36 +20,6 @@ import {
     View,
     type AppStateStatus,
 } from 'react-native';
-import { isMockMode } from '@/lib/mockMode';
-
-
-// Mock questions for development
-const MOCK_QUESTIONS: ExamQuestion[] = [
-    { id: 'q1', paper_id: 'm5', question_number: 1, question_text: 'Under the Insurance Act, what is the minimum paid-up capital requirement for a life insurer in Singapore?', has_latex: false, options: { A: '$5 million', B: '$10 million', C: '$25 million', D: '$50 million' }, correct_answer: 'B', explanation: 'The Insurance Act requires a minimum paid-up capital of $10 million for life insurers operating in Singapore.', explanation_has_latex: false },
-    { id: 'q2', paper_id: 'm5', question_number: 2, question_text: 'A policyholder takes out a whole life policy with a sum assured of $S200{,}000$. If the annual premium is $S4{,}800$ and the policy has been in force for 5 years, what is the total premium paid?', has_latex: true, options: { A: '$S20{,}000$', B: '$S24{,}000$', C: '$S28{,}000$', D: '$S30{,}000$' }, correct_answer: 'B', explanation: 'Total premium = Annual premium × Number of years = $S4{,}800 \\times 5 = S24{,}000$.', explanation_has_latex: true },
-    { id: 'q3', paper_id: 'm5', question_number: 3, question_text: 'Which of the following is NOT a type of life insurance policy?', has_latex: false, options: { A: 'Term Life Insurance', B: 'Whole Life Insurance', C: 'Universal Life Insurance', D: 'Property Life Insurance' }, correct_answer: 'D', explanation: 'Property Life Insurance does not exist. The three main types are Term, Whole Life, and Universal Life Insurance.', explanation_has_latex: false },
-    { id: 'q4', paper_id: 'm5', question_number: 4, question_text: 'If a policyholder has a coverage ratio calculated as $\\frac{\\text{Sum Assured}}{\\text{Annual Income}}$, and earns $S80{,}000$ per year with a sum assured of $S640{,}000$, what is the coverage ratio?', has_latex: true, options: { A: '6 times', B: '8 times', C: '10 times', D: '12 times' }, correct_answer: 'B', explanation: 'Coverage ratio = $\\frac{S640{,}000}{S80{,}000} = 8$ times annual income.', explanation_has_latex: true },
-    { id: 'q5', paper_id: 'm5', question_number: 5, question_text: 'What is the free-look period for a new life insurance policy in Singapore?', has_latex: false, options: { A: '7 days', B: '14 days', C: '21 days', D: '30 days' }, correct_answer: 'B', explanation: 'The free-look period in Singapore is 14 days from the date the policyholder receives the policy document.', explanation_has_latex: false },
-];
-
-const MOCK_QUESTIONS_M9: ExamQuestion[] = [
-    { id: 'q6', paper_id: 'm9', question_number: 1, question_text: 'What is the Net Asset Value (NAV) per unit if a fund has total assets of $S10{,}000{,}000$, total liabilities of $S500{,}000$, and $1{,}900{,}000$ units outstanding?', has_latex: true, options: { A: '$S5.00$', B: '$S5.26$', C: '$S4.50$', D: '$S5.50$' }, correct_answer: 'A', explanation: 'NAV per unit = $\\frac{S10{,}000{,}000 - S500{,}000}{1{,}900{,}000} = S5.00$.', explanation_has_latex: true },
-    { id: 'q7', paper_id: 'm9', question_number: 2, question_text: 'Which of the following best describes an Investment-Linked Policy (ILP)?', has_latex: false, options: { A: 'A policy that guarantees a fixed return', B: 'A policy that combines insurance protection with investment in sub-funds', C: 'A policy that only provides death coverage', D: 'A fixed deposit with insurance benefits' }, correct_answer: 'B', explanation: 'An ILP combines insurance protection with investment components, where the policy value depends on the performance of the chosen sub-funds.', explanation_has_latex: false },
-    { id: 'q8', paper_id: 'm9', question_number: 3, question_text: 'If the bid-offer spread is $5\\%$ and the offer price of a fund unit is $S2.00$, what is the bid price?', has_latex: true, options: { A: '$S1.80$', B: '$S1.90$', C: '$S1.95$', D: '$S2.10$' }, correct_answer: 'B', explanation: 'Bid price = Offer price × $(1 - \\text{spread})$ = $S2.00 \\times (1 - 0.05) = S1.90$.', explanation_has_latex: true },
-];
-
-const MOCK_QUESTIONS_HI: ExamQuestion[] = [
-    { id: 'q9', paper_id: 'hi', question_number: 1, question_text: 'What is the maximum claim limit for MediShield Life per policy year?', has_latex: false, options: { A: '$S100,000', B: '$S150,000', C: '$S200,000', D: 'No maximum limit' }, correct_answer: 'A', explanation: 'MediShield Life has a maximum claim limit of $S100,000 per policy year.', explanation_has_latex: false },
-    { id: 'q10', paper_id: 'hi', question_number: 2, question_text: 'Which of the following is covered under an Integrated Shield Plan (IP) but NOT under basic MediShield Life?', has_latex: false, options: { A: 'Class B2/C ward hospitalisation', B: 'Private hospital ward charges', C: 'Day surgery at public hospitals', D: 'Basic outpatient treatment' }, correct_answer: 'B', explanation: 'Integrated Shield Plans extend coverage beyond MediShield Life to include private hospital wards.', explanation_has_latex: false },
-    { id: 'q11', paper_id: 'hi', question_number: 3, question_text: 'A patient incurs hospital bills of $S25{,}000$. The deductible is $S3{,}500$ and co-insurance is $10\\%$. What is the patient\'s out-of-pocket amount?', has_latex: true, options: { A: '$S3{,}500$', B: '$S5{,}650$', C: '$S5{,}150$', D: '$S6{,}000$' }, correct_answer: 'B', explanation: 'Out-of-pocket = $S3{,}500 + 0.10 \\times (S25{,}000 - S3{,}500) = S3{,}500 + S2{,}150 = S5{,}650$.', explanation_has_latex: true },
-];
-
-const ALL_MOCK_QUESTIONS: Record<string, ExamQuestion[]> = {
-    m5: MOCK_QUESTIONS,
-    m9: MOCK_QUESTIONS_M9,
-    hi: MOCK_QUESTIONS_HI,
-};
-
 const PAPER_DURATIONS: Record<string, number> = { m5: 60, m9: 60, m9a: 45, hi: 45 };
 const PAPER_CODES: Record<string, string> = { m5: 'M5', m9: 'M9', m9a: 'M9A', hi: 'HI' };
 
@@ -62,7 +32,6 @@ function formatTime(seconds: number): string {
 const STORAGE_KEY = 'lyfe_active_exam';
 
 export default function TakeExamScreen() {
-    const MOCK_OTP = isMockMode();
     const { paperId } = useLocalSearchParams<{ paperId: string }>();
     const { colors, isDark } = useTheme();
     const { user } = useAuth();
@@ -99,30 +68,25 @@ export default function TakeExamScreen() {
             let questionsData: ExamQuestion[] = [];
             let duration = 60;
 
-            if (MOCK_OTP) {
-                questionsData = ALL_MOCK_QUESTIONS[paperId || ''] || [];
-                duration = PAPER_DURATIONS[paperId || ''] || 60;
-            } else {
-                const { data, error } = await supabase
-                    .from('exam_questions')
-                    .select('*')
-                    .eq('paper_id', paperId)
-                    .order('question_number');
+            const { data, error } = await supabase
+                .from('exam_questions')
+                .select('*')
+                .eq('paper_id', paperId)
+                .order('question_number');
 
-                if (error) {
-                    router.back();
-                    return;
-                }
-                questionsData = data as ExamQuestion[];
-
-                const { data: paper } = await supabase
-                    .from('exam_papers')
-                    .select('duration_minutes')
-                    .eq('id', paperId)
-                    .single();
-
-                duration = paper?.duration_minutes || 60;
+            if (error) {
+                router.back();
+                return;
             }
+            questionsData = data as ExamQuestion[];
+
+            const { data: paper } = await supabase
+                .from('exam_papers')
+                .select('duration_minutes')
+                .eq('id', paperId)
+                .single();
+
+            duration = paper?.duration_minutes || 60;
 
             setQuestions(questionsData);
 
@@ -146,7 +110,7 @@ export default function TakeExamScreen() {
                         return;
                     }
                 }
-            } catch (e) { console.error('[ExamTake] Failed to restore saved state:', e); }
+            } catch (e) { if (__DEV__) console.error('[ExamTake] Failed to restore saved state:', e); }
 
             // No saved state — start fresh
             startedAtRef.current = Date.now();
@@ -210,7 +174,7 @@ export default function TakeExamScreen() {
             totalQuestions: questions.length,
             timeLeft,
         };
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch((e) => { console.error('[ExamTake] Failed to auto-save state:', e); });
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch((e) => { if (__DEV__) console.error('[ExamTake] Failed to auto-save state:', e); });
     }, [answers, currentIndex, timeLeft]);
 
     const handleSelectAnswer = (questionId: string, answer: string) => {
@@ -255,8 +219,7 @@ export default function TakeExamScreen() {
         setIsSubmitting(true);
         if (timerRef.current) clearInterval(timerRef.current);
 
-        if (!MOCK_OTP && user?.id) {
-            // Real mode: persist to Supabase
+        if (user?.id) {
             const { data: result, error } = await submitExamAttempt(
                 {
                     userId: user.id,
@@ -270,7 +233,7 @@ export default function TakeExamScreen() {
             );
 
             if (error || !result) {
-                console.error('Failed to submit exam to Supabase:', error);
+                if (__DEV__) console.error('Failed to submit exam to Supabase:', error);
                 // Fall through to AsyncStorage fallback
             } else {
                 // Also save to AsyncStorage for immediate results page use
@@ -281,7 +244,7 @@ export default function TakeExamScreen() {
             }
         }
 
-        // Mock mode or Supabase fallback: save locally only
+        // Supabase fallback: save locally only
         let correct = 0;
         const answerDetails = questions.map((q) => {
             const selected = answers[q.id] || null;

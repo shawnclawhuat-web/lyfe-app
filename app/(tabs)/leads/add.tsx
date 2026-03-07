@@ -1,3 +1,4 @@
+import ErrorBanner from '@/components/ErrorBanner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { createLead, type CreateLeadInput } from '@/lib/leads';
@@ -18,13 +19,10 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { isMockMode } from '@/lib/mockMode';
-
 const SOURCES: LeadSource[] = ['referral', 'walk_in', 'online', 'event', 'cold_call', 'other'];
 const PRODUCTS: ProductInterest[] = ['life', 'health', 'ilp', 'general'];
 
 export default function AddLeadScreen() {
-    const MOCK_OTP = isMockMode();
     const { colors } = useTheme();
     const { user } = useAuth();
     const router = useRouter();
@@ -55,12 +53,6 @@ export default function AddLeadScreen() {
     const handleSave = async () => {
         if (!validate()) return;
         setSaveError(null);
-
-        if (MOCK_OTP) {
-            // Mock mode: just show success
-            setShowSuccessModal(true);
-            return;
-        }
 
         if (!user?.id) {
             setSaveError('Not authenticated');
@@ -121,12 +113,7 @@ export default function AddLeadScreen() {
             >
                 <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                     {/* Save Error */}
-                    {saveError && (
-                        <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2' }]}>
-                            <Ionicons name="alert-circle" size={16} color="#DC2626" />
-                            <Text style={styles.errorBannerText}>{saveError}</Text>
-                        </View>
-                    )}
+                    {saveError && <ErrorBanner message={saveError} />}
 
                     {/* Contact Info */}
                     <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
@@ -341,15 +328,6 @@ const styles = StyleSheet.create({
     saveBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
     scrollView: { flex: 1 },
     scrollContent: { padding: 16, paddingBottom: 40 },
-    errorBanner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        padding: 12,
-        borderRadius: 10,
-        marginBottom: 12,
-    },
-    errorBannerText: { flex: 1, fontSize: 13, color: '#DC2626' },
     card: {
         borderRadius: 14,
         borderWidth: 0.5,

@@ -33,21 +33,12 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { isMockMode } from '@/lib/mockMode';
+import { ERROR_BG, ERROR_TEXT, INTERVIEW_STATUS_COLORS } from '@/constants/ui';
+import { formatCreatedAt, formatDateTime } from '@/lib/dateTime';
 import { WebView } from 'react-native-webview';
 
 
 // ── Helpers ──
-
-function formatDate(iso: string): string {
-    const d = new Date(iso);
-    return d.toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function formatDateTime(iso: string): string {
-    const d = new Date(iso);
-    return d.toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
 
 function getTimeAgo(dateStr: string): string {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -102,10 +93,7 @@ function InterviewCard({ interview, colors, onEdit, onDelete }: {
     interview: Interview; colors: any; onEdit: () => void; onDelete: () => void;
 }) {
     const isUpcoming = new Date(interview.datetime) > new Date();
-    const statusColor = interview.status === 'completed' ? '#34C759'
-        : interview.status === 'cancelled' ? '#FF3B30'
-        : interview.status === 'rescheduled' ? '#AF52DE'
-        : '#FF9500';
+    const statusColor = INTERVIEW_STATUS_COLORS[interview.status] ?? INTERVIEW_STATUS_COLORS.scheduled;
 
     return (
         <View style={[interviewStyles.card, { backgroundColor: colors.surfacePrimary || colors.background, borderColor: colors.border }]}>
@@ -246,7 +234,6 @@ function WheelPicker({
 // ── Main Screen ──
 
 export default function CandidateDetailScreen() {
-    const MOCK_OTP = isMockMode();
     const { candidateId } = useLocalSearchParams<{ candidateId: string }>();
     const { colors } = useTheme();
     const { user } = useAuth();
@@ -297,14 +284,6 @@ export default function CandidateDetailScreen() {
     const [scheduleError, setScheduleError] = useState<string | null>(null);
 
     const loadCandidate = useCallback(async () => {
-        if (MOCK_OTP) {
-            const { MOCK_CANDIDATES } = require('./index');
-            const found = MOCK_CANDIDATES.find((c: RecruitmentCandidate) => c.id === candidateId);
-            setCandidate(found || null);
-            setIsLoading(false);
-            return;
-        }
-
         if (!candidateId) return;
         setError(null);
         const [{ data, error: fetchError }, { data: docs }] = await Promise.all([
@@ -378,9 +357,7 @@ export default function CandidateDetailScreen() {
 
     const handleDeleteDocument = async (doc: CandidateDocument) => {
         setDocuments(prev => prev.filter(d => d.id !== doc.id));
-        if (!MOCK_OTP) {
-            deleteCandidateDocument(doc.id);
-        }
+        deleteCandidateDocument(doc.id);
     };
 
     const handleSelectLabel = async (label: string) => {
@@ -399,25 +376,6 @@ export default function CandidateDetailScreen() {
 
         const asset = result.assets[0];
         setAddDocStep('uploading');
-
-        if (MOCK_OTP) {
-            setTimeout(() => {
-                const mockDoc: CandidateDocument = {
-                    id: `doc_${Date.now()}`,
-                    candidate_id: candidate.id,
-                    label,
-                    file_url: 'https://example.com/mock.pdf',
-                    file_name: asset.name,
-                    created_at: new Date().toISOString(),
-                };
-                setDocuments(prev => [mockDoc, ...prev]);
-                setShowAddDoc(false);
-                setAddDocLabel('');
-                setAddDocCustomLabel('');
-                setAddDocStep('label');
-            }, 800);
-            return;
-        }
 
         const { data: newDoc, error } = await uploadCandidateDocument(candidate.id, label, asset.uri, asset.name);
         setAddDocStep('label');
@@ -464,7 +422,7 @@ export default function CandidateDetailScreen() {
             actor_name: user?.full_name || undefined,
         };
         setCallLog(prev => [activity, ...prev]);
-        if (!MOCK_OTP && user?.id) {
+        if (user?.id) {
             addCandidateActivity(candidate.id, user.id, pendingType, selectedOutcome, note);
         }
         handleDismissSheet();
@@ -495,7 +453,7 @@ export default function CandidateDetailScreen() {
             actor_name: user?.full_name || undefined,
         };
         setCallLog(prev => [activity, ...prev]);
-        if (!MOCK_OTP && user?.id) {
+        if (user?.id) {
             addCandidateActivity(candidate.id, user.id, 'note', null, text);
         }
         setNoteSheetText('');
@@ -565,7 +523,7 @@ export default function CandidateDetailScreen() {
                             ...prev,
                             interviews: prev.interviews.filter(iv => iv.id !== interview.id),
                         } : prev);
-                        if (!MOCK_OTP) deleteInterview(interview.id);
+                        deleteInterview(interview.id);
                     },
                 },
             ],
@@ -604,38 +562,6 @@ export default function CandidateDetailScreen() {
         const loc = scheduleType === 'in_person' ? scheduleLocation.trim() || null : null;
         const link = scheduleType === 'zoom' ? scheduleLink.trim() || null : null;
         const notes = scheduleNotes.trim() || null;
-
-        if (MOCK_OTP) {
-            if (editingInterview) {
-                setCandidate(prev => prev ? {
-                    ...prev,
-                    interviews: prev.interviews.map(iv => iv.id === editingInterview.id
-                        ? { ...iv, type: scheduleType, datetime: isoDatetime, location: loc, zoom_link: link, notes, status: scheduleStatus }
-                        : iv),
-                } : prev);
-                closeScheduleSheet();
-                Alert.alert('Saved', 'Interview updated.');
-            } else {
-                const mockInterview: Interview = {
-                    id: `iv_${Date.now()}`,
-                    candidate_id: candidate.id,
-                    manager_id: candidate.assigned_manager_id,
-                    scheduled_by_id: user?.id || 'me',
-                    round_number: candidate.interviews.length + 1,
-                    type: scheduleType,
-                    datetime: isoDatetime,
-                    location: loc,
-                    zoom_link: link,
-                    google_calendar_event_id: null,
-                    status: 'scheduled',
-                    notes,
-                    created_at: new Date().toISOString(),
-                };
-                setCandidate(prev => prev ? { ...prev, interviews: [mockInterview, ...prev.interviews] } : prev);
-                closeScheduleSheet();
-            }
-            return;
-        }
 
         if (!user?.id) { setScheduleError('Not authenticated'); return; }
         setIsScheduling(true);
@@ -730,7 +656,7 @@ export default function CandidateDetailScreen() {
                         <View style={styles.contactRow}>
                             <Ionicons name="calendar-outline" size={16} color={colors.textTertiary} />
                             <Text style={[styles.contactText, { color: colors.textSecondary }]}>
-                                Applied {formatDate(candidate.created_at)} · Updated {getTimeAgo(candidate.updated_at)}
+                                Applied {formatCreatedAt(candidate.created_at)} · Updated {getTimeAgo(candidate.updated_at)}
                             </Text>
                         </View>
                     </View>
@@ -1083,8 +1009,8 @@ export default function CandidateDetailScreen() {
                             <ScrollView style={{ width: '100%' }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
                                 {scheduleError && (
-                                    <View style={[schedStyles.errorRow, { backgroundColor: '#FEE2E2' }]}>
-                                        <Ionicons name="alert-circle" size={14} color="#DC2626" />
+                                    <View style={[schedStyles.errorRow, { backgroundColor: ERROR_BG }]}>
+                                        <Ionicons name="alert-circle" size={14} color={ERROR_TEXT} />
                                         <Text style={schedStyles.errorText}>{scheduleError}</Text>
                                     </View>
                                 )}
@@ -1247,8 +1173,8 @@ export default function CandidateDetailScreen() {
                             </Text>
 
                             {addDocError && (
-                                <View style={[schedStyles.errorRow, { backgroundColor: '#FEE2E2' }]}>
-                                    <Ionicons name="alert-circle" size={14} color="#DC2626" />
+                                <View style={[schedStyles.errorRow, { backgroundColor: ERROR_BG }]}>
+                                    <Ionicons name="alert-circle" size={14} color={ERROR_TEXT} />
                                     <Text style={schedStyles.errorText}>{addDocError}</Text>
                                 </View>
                             )}
@@ -1470,7 +1396,7 @@ const resumeStyles = StyleSheet.create({
         borderRadius: 8,
         marginBottom: 10,
     },
-    errorText: { flex: 1, fontSize: 12, color: '#DC2626' },
+    errorText: { flex: 1, fontSize: 12, color: ERROR_TEXT },
     fileRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -1910,5 +1836,5 @@ const schedStyles = StyleSheet.create({
         borderRadius: 10,
         marginBottom: 12,
     },
-    errorText: { fontSize: 13, color: '#DC2626', flex: 1 },
+    errorText: { fontSize: 13, color: ERROR_TEXT, flex: 1 },
 });

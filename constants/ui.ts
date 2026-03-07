@@ -4,7 +4,7 @@
 import type { AttendeeRole } from '@/types/event';
 
 // ── Avatar colour palettes ─────────────────────────────────────
-export const AVATAR_COLORS = ['#6366F1', '#0D9488', '#E11D48', '#F59E0B', '#8B5CF6'];
+export const AVATAR_COLORS = ['#6366F1', '#0D9488', '#E11D48', '#F59E0B', '#8B5CF6', '#06B6D4'];
 export const PA_MANAGER_COLORS = ['#6366F1', '#0D9488', '#E11D48', '#F59E0B', '#8B5CF6'];
 
 /** Deterministic avatar colour from a name string */
@@ -71,6 +71,18 @@ export function pickerToHHMM24(hour: number, minIdx: number, ampm: number): stri
     if (ampm === 0 && h === 12) h = 0;
     return `${String(h).padStart(2, '0')}:${PICKER_MINUTES[minIdx]}`;
 }
+
+// ── Error banner colours ──────────────────────────────────────
+export const ERROR_BG = '#FEE2E2';
+export const ERROR_TEXT = '#DC2626';
+
+// ── Interview status colours ─────────────────────────────────
+export const INTERVIEW_STATUS_COLORS: Record<string, string> = {
+    completed: '#34C759',
+    cancelled: '#FF3B30',
+    rescheduled: '#AF52DE',
+    scheduled: '#FF9500',
+};
 
 // ── Roadshow constants ──────────────────────────────────────────
 export const ROADSHOW_PINK = '#EC4899';

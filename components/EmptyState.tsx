@@ -11,7 +11,7 @@ interface EmptyStateProps {
     onAction?: () => void;
 }
 
-export default function EmptyState({ icon = 'file-tray-outline', title, subtitle, actionLabel, onAction }: EmptyStateProps) {
+function EmptyState({ icon = 'file-tray-outline', title, subtitle, actionLabel, onAction }: EmptyStateProps) {
     const { colors } = useTheme();
 
     return (
@@ -35,6 +35,8 @@ export default function EmptyState({ icon = 'file-tray-outline', title, subtitle
         </View>
     );
 }
+
+export default React.memo(EmptyState);
 
 const styles = StyleSheet.create({
     container: {

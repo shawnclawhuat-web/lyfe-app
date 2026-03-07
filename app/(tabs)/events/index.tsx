@@ -4,8 +4,6 @@ import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { fetchAllEvents, fetchEvents } from '@/lib/events';
-import { isMockMode } from '@/lib/mockMode';
-import { MOCK_EVENTS } from '@/lib/mockData';
 import { formatTime, toDateStr } from '@/lib/dateTime';
 import { AVATAR_COLORS } from '@/constants/ui';
 import type { AgencyEvent } from '@/types/event';
@@ -543,21 +541,16 @@ export default function EventsScreen() {
     const { colors } = useTheme();
     const { user } = useAuth();
     const router = useRouter();
-    const MOCK_OTP = isMockMode();
 
     const todayStr = toDateStr(new Date());
     const [selectedDate, setSelectedDate] = useState(todayStr);
     const [allEvents, setAllEvents] = useState<AgencyEvent[]>([]);
     const [refreshing, setRefreshing] = useState(false);
-    const [isLoading, setIsLoading] = useState(!MOCK_OTP);
+    const [isLoading, setIsLoading] = useState(true);
 
     const isPA = user?.role === 'pa' || user?.role === 'admin';
 
     const loadEvents = useCallback(async () => {
-        if (MOCK_OTP) {
-            setAllEvents(MOCK_EVENTS);
-            return;
-        }
         if (!user?.id) return;
 
         const { data, error } = isPA

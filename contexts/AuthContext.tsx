@@ -71,14 +71,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .single();
 
             if (insertError) {
-                console.error('Error creating user profile:', insertError.message);
+                if (__DEV__) console.error('Error creating user profile:', insertError.message);
                 return null;
             }
             return newUser as User;
         }
 
         if (error) {
-            console.error('Error fetching user profile:', error.message);
+            if (__DEV__) console.error('Error fetching user profile:', error.message);
             return null;
         }
         return null;
@@ -141,7 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     });
                 }
             } catch (e) {
-                console.error('[AuthContext] initAuth failed:', e);
+                if (__DEV__) console.error('[AuthContext] initAuth failed:', e);
                 setState({
                     session: null,
                     user: null,
@@ -234,7 +234,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             return { success: true };
         } catch (e) {
-            console.error('[AuthContext] authenticateWithBiometrics error:', e);
+            if (__DEV__) console.error('[AuthContext] authenticateWithBiometrics error:', e);
             return { success: false };
         }
     }, [fetchUserProfile, updateLastLogin]);

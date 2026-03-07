@@ -8,7 +8,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useViewMode } from '@/contexts/ViewModeContext';
 import { addLeadActivity, addLeadNote, fetchLead, fetchLeadActivities, fetchTeamAgents, reassignLead, updateLeadStatus } from '@/lib/leads';
 import type { Lead } from '@/types/lead';
-import { PRODUCT_LABELS, SOURCE_LABELS, STATUS_CONFIG, type LeadActivity, type LeadStatus } from '@/types/lead';
+import { LEAD_STATUSES, PRODUCT_LABELS, SOURCE_LABELS, STATUS_CONFIG, type LeadActivity, type LeadStatus } from '@/types/lead';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -27,26 +27,8 @@ import {
     View
 } from 'react-native';
 
-import { isMockMode } from '@/lib/mockMode';
-import { MOCK_ACTIVITIES, MOCK_LEADS } from './index';
-
-const MOCK_AGENTS: { id: string; full_name: string }[] = [
-    { id: 'agent-alice', full_name: 'Alice Tan' },
-    { id: 'agent-bob', full_name: 'Bob Lee' },
-    { id: 'agent-charlie', full_name: 'Charlie Lim' },
-];
-
-const MOCK_AGENT_NAME: Record<string, string> = {
-    'me': 'You',
-    'agent-alice': 'Alice Tan',
-    'agent-bob': 'Bob Lee',
-    'agent-charlie': 'Charlie Lim',
-};
-
-const STATUS_ORDER: LeadStatus[] = ['new', 'contacted', 'qualified', 'proposed', 'won', 'lost'];
 
 export default function LeadDetailScreen() {
-    const MOCK_OTP = isMockMode();
     const { leadId } = useLocalSearchParams<{ leadId: string }>();
     const { colors } = useTheme();
     const { user } = useAuth();
@@ -88,23 +70,6 @@ export default function LeadDetailScreen() {
     const loadData = useCallback(async () => {
         if (!leadId) return;
 
-        if (MOCK_OTP) {
-            // Mock mode
-            const mockLead = MOCK_LEADS.find((l) => l.id === leadId) || null;
-            setLead(mockLead);
-            setCurrentStatus(mockLead?.status || 'new');
-            const mockActs = (MOCK_ACTIVITIES[leadId] || [])
-                .map((a) => ({
-                    ...a,
-                    actor_name: a.user_id === 'me' ? (user?.full_name || 'You') : (MOCK_AGENT_NAME[a.user_id] || a.user_id),
-                }))
-                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-            setActivities(mockActs);
-            setIsLoading(false);
-            return;
-        }
-
-        // Real mode
         const [leadResult, activitiesResult] = await Promise.all([
             fetchLead(leadId),
             fetchLeadActivities(leadId),
@@ -159,7 +124,7 @@ export default function LeadDetailScreen() {
             actor_name: user?.full_name || undefined,
         };
         setActivities((prev) => [optimistic, ...prev]);
-        if (!MOCK_OTP && user?.id) {
+        if (user?.id) {
             addLeadActivity(lead.id, user.id, type, description, metadata);
         }
     };
@@ -199,9 +164,7 @@ export default function LeadDetailScreen() {
     };
 
     const handleOpenReassign = async () => {
-        if (MOCK_OTP) {
-            setReassignAgents(MOCK_AGENTS.filter((a) => a.id !== lead.assigned_to));
-        } else if (user?.id) {
+        if (user?.id) {
             const { data } = await fetchTeamAgents(user.id);
             setReassignAgents(data.filter((a) => a.id !== lead.assigned_to));
         }
@@ -211,7 +174,7 @@ export default function LeadDetailScreen() {
     const handleReassign = async (toAgent: { id: string; full_name: string }) => {
         if (!lead) return;
         const fromId = lead.assigned_to;
-        const fromName = MOCK_OTP ? (MOCK_AGENT_NAME[fromId] || fromId) : fromId;
+        const fromName = fromId;
 
         const newActivity: LeadActivity = {
             id: `a_${Date.now()}`,
@@ -226,11 +189,6 @@ export default function LeadDetailScreen() {
 
         setShowReassignModal(false);
 
-        if (MOCK_OTP) {
-            setActivities((prev) => [newActivity, ...prev]);
-            return;
-        }
-
         if (!user?.id) return;
         setIsReassigning(true);
         const { error } = await reassignLead(lead.id, toAgent.id, fromId, fromName, toAgent.full_name, user.id);
@@ -238,30 +196,12 @@ export default function LeadDetailScreen() {
         if (!error) {
             setActivities((prev) => [newActivity, ...prev]);
         } else {
-            console.error('Failed to reassign:', error);
+            if (__DEV__) console.error('Failed to reassign:', error);
         }
     };
 
     const handleAddNote = async () => {
         if (!noteText.trim()) return;
-
-        if (MOCK_OTP) {
-            // Mock mode: local-only
-            const newActivity: LeadActivity = {
-                id: `a_${Date.now()}`,
-                lead_id: lead.id,
-                user_id: 'me',
-                type: 'note',
-                description: noteText.trim(),
-                metadata: {},
-                created_at: new Date().toISOString(),
-                actor_name: user?.full_name || undefined,
-            };
-            setActivities((prev) => [newActivity, ...prev]);
-            setNoteText('');
-            setShowNoteInput(false);
-            return;
-        }
 
         if (!user?.id) return;
         setIsSavingNote(true);
@@ -273,7 +213,7 @@ export default function LeadDetailScreen() {
             setNoteText('');
             setShowNoteInput(false);
         } else if (error) {
-            console.error('Failed to add note:', error);
+            if (__DEV__) console.error('Failed to add note:', error);
         }
     };
 
@@ -281,24 +221,6 @@ export default function LeadDetailScreen() {
         if (newStatus === currentStatus) return;
 
         const previousStatus = currentStatus;
-
-        if (MOCK_OTP) {
-            // Mock mode: optimistic update + append activity
-            const newActivity: LeadActivity = {
-                id: `a_${Date.now()}`,
-                lead_id: lead.id,
-                user_id: 'me',
-                type: 'status_change',
-                description: null,
-                metadata: { from_status: previousStatus, to_status: newStatus },
-                created_at: new Date().toISOString(),
-                actor_name: user?.full_name || undefined,
-            };
-            setCurrentStatus(newStatus);
-            setShowStatusPicker(false);
-            setActivities((prev) => [newActivity, ...prev]);
-            return;
-        }
 
         if (!user?.id) return;
 
@@ -317,7 +239,7 @@ export default function LeadDetailScreen() {
         } else {
             // Rollback on failure
             setCurrentStatus(previousStatus);
-            console.error('Failed to update status:', error);
+            if (__DEV__) console.error('Failed to update status:', error);
         }
     };
 
@@ -439,7 +361,7 @@ export default function LeadDetailScreen() {
                         <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
                             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Change Status</Text>
                             <View style={styles.statusGrid}>
-                                {STATUS_ORDER.map((s) => {
+                                {LEAD_STATUSES.map((s) => {
                                     const cfg = STATUS_CONFIG[s];
                                     const isActive = s === currentStatus;
                                     return (

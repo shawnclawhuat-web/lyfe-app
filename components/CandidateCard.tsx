@@ -10,7 +10,7 @@ interface CandidateCardProps {
     onPress: () => void;
 }
 
-export default function CandidateCard({ candidate, onPress }: CandidateCardProps) {
+function CandidateCard({ candidate, onPress }: CandidateCardProps) {
     const { colors } = useTheme();
     const statusConfig = CANDIDATE_STATUS_CONFIG[candidate.status];
 
@@ -71,6 +71,8 @@ export default function CandidateCard({ candidate, onPress }: CandidateCardProps
     );
 }
 
+
+export default React.memo(CandidateCard);
 
 const styles = StyleSheet.create({
     card: {

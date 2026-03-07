@@ -15,9 +15,6 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { isMockMode } from '@/lib/mockMode';
-
-
 interface ExamResult {
     id: string;
     score: number;
@@ -36,7 +33,6 @@ interface ExamResult {
 }
 
 export default function ExamResultsScreen() {
-    const MOCK_OTP = isMockMode();
     const { attemptId } = useLocalSearchParams<{ attemptId: string }>();
     const { colors } = useTheme();
     const router = useRouter();
@@ -56,12 +52,10 @@ export default function ExamResultsScreen() {
                     return;
                 }
 
-                // If not in AsyncStorage and not mock mode, try Supabase
-                if (!MOCK_OTP) {
-                    const { data, error } = await fetchExamResult(attemptId || '');
-                    if (data && !error) {
-                        setResult(data);
-                    }
+                // If not in AsyncStorage, try Supabase
+                const { data, error } = await fetchExamResult(attemptId || '');
+                if (data && !error) {
+                    setResult(data);
                 }
             } catch { } finally {
                 setIsLoading(false);
