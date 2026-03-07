@@ -52,7 +52,7 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
     other: 'Other',
 };
 
-export type RoadshowActivityType = 'sitdown' | 'pitch' | 'case_closed';
+export type RoadshowActivityType = 'sitdown' | 'pitch' | 'case_closed' | 'check_in' | 'departure';
 
 export interface RoadshowConfig {
     id: string;

@@ -357,6 +357,7 @@ export async function logRoadshowActivity(
     userId: string,
     type: RoadshowActivityType,
     afycAmount?: number,
+    loggedAt?: string,
 ): Promise<{ data: RoadshowActivity | null; error: string | null }> {
     const { data, error } = await supabase
         .from('roadshow_activities')
@@ -365,6 +366,7 @@ export async function logRoadshowActivity(
             user_id: userId,
             type,
             afyc_amount: afycAmount ?? null,
+            ...(loggedAt ? { logged_at: loggedAt } : {}),
         })
         .select()
         .single();

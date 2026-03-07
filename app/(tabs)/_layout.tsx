@@ -76,7 +76,7 @@ export default function TabLayout() {
         name="home"
         options={{
           title: TAB_LABELS.home,
-          href: visibleTabs.includes('home') ? '/home' : null,
+          href: visibleTabs.includes('home') ? undefined : null,
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons
               name={focused ? TAB_ICONS_FOCUSED.home : TAB_ICONS.home}
@@ -90,7 +90,7 @@ export default function TabLayout() {
         name="leads"
         options={{
           title: TAB_LABELS.leads,
-          href: visibleTabs.includes('leads') ? '/leads' : null,
+          href: visibleTabs.includes('leads') ? undefined : null,
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons
               name={focused ? TAB_ICONS_FOCUSED.leads : TAB_ICONS.leads}
@@ -104,7 +104,7 @@ export default function TabLayout() {
         name="exams"
         options={{
           title: TAB_LABELS.exams,
-          href: visibleTabs.includes('exams') ? '/exams' : null,
+          href: visibleTabs.includes('exams') ? undefined : null,
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons
               name={focused ? TAB_ICONS_FOCUSED.exams : TAB_ICONS.exams}
@@ -118,7 +118,7 @@ export default function TabLayout() {
         name="candidates"
         options={{
           title: TAB_LABELS.candidates,
-          href: visibleTabs.includes('candidates') ? '/candidates' : null,
+          href: visibleTabs.includes('candidates') ? undefined : null,
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons
               name={focused ? TAB_ICONS_FOCUSED.candidates : TAB_ICONS.candidates}
@@ -132,7 +132,7 @@ export default function TabLayout() {
         name="team"
         options={{
           title: TAB_LABELS.team,
-          href: visibleTabs.includes('team') ? '/team' : null,
+          href: visibleTabs.includes('team') ? undefined : null,
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons
               name={focused ? TAB_ICONS_FOCUSED.team : TAB_ICONS.team}
@@ -146,7 +146,7 @@ export default function TabLayout() {
         name="events"
         options={{
           title: TAB_LABELS.events,
-          href: visibleTabs.includes('events') ? '/events' : null,
+          href: visibleTabs.includes('events') ? undefined : null,
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons
               name={focused ? TAB_ICONS_FOCUSED.events : TAB_ICONS.events}
@@ -160,7 +160,7 @@ export default function TabLayout() {
         name="pa"
         options={{
           title: TAB_LABELS.pa,
-          href: visibleTabs.includes('pa') ? '/pa' : null,
+          href: visibleTabs.includes('pa') ? undefined : null,
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons
               name={focused ? TAB_ICONS_FOCUSED.pa : TAB_ICONS.pa}
@@ -174,7 +174,7 @@ export default function TabLayout() {
         name="admin"
         options={{
           title: TAB_LABELS.admin,
-          href: visibleTabs.includes('admin') ? '/admin' : null,
+          href: visibleTabs.includes('admin') ? undefined : null,
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons
               name={focused ? TAB_ICONS_FOCUSED.admin : TAB_ICONS.admin}
@@ -188,7 +188,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: TAB_LABELS.profile,
-          href: visibleTabs.includes('profile') ? '/profile' : null,
+          href: visibleTabs.includes('profile') ? undefined : null,
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons
               name={focused ? TAB_ICONS_FOCUSED.profile : TAB_ICONS.profile}

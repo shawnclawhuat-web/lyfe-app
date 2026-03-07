@@ -1,5 +1,7 @@
 import Avatar from '@/components/Avatar';
+import Confetti, { CONFETTI_DURATION } from '@/components/Confetti';
 import ScreenHeader from '@/components/ScreenHeader';
+import WheelPicker from '@/components/WheelPicker';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import {
@@ -32,6 +34,11 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// ── Time picker constants ──────────────────────────────────────
+const LOG_HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1));
+const LOG_MINUTES = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+const LOG_AMPM = ['AM', 'PM'];
 
 // ── Mock data ─────────────────────────────────────────────────
 const today = new Date();
@@ -74,6 +81,8 @@ const MOCK_RS_ACTIVITIES: RoadshowActivity[] = [
     { id: 'act5', event_id: 'e4live', user_id: 'u2', full_name: 'James Tan', type: 'pitch', afyc_amount: null, logged_at: `${fd(0)}T01:10:00.000Z` },
     { id: 'act6', event_id: 'e4live', user_id: 'u2', full_name: 'James Tan', type: 'sitdown', afyc_amount: null, logged_at: `${fd(0)}T00:32:00.000Z` },
     { id: 'act7', event_id: 'e4live', user_id: 'mock-user-id', full_name: 'Sarah Lee', type: 'sitdown', afyc_amount: null, logged_at: `${fd(0)}T00:20:00.000Z` },
+    { id: 'act8', event_id: 'e4live', user_id: 'u2', full_name: 'James Tan', type: 'check_in', afyc_amount: null, logged_at: `${fd(0)}T10:23:00.000Z` },
+    { id: 'act9', event_id: 'e4live', user_id: 'mock-user-id', full_name: 'Sarah Lee', type: 'check_in', afyc_amount: null, logged_at: `${fd(0)}T10:02:00.000Z` },
 ];
 
 const MOCK_RS_PAST_ATTENDANCE: RoadshowAttendance[] = [
@@ -84,14 +93,20 @@ const MOCK_RS_PAST_ATTENDANCE: RoadshowAttendance[] = [
 
 const MOCK_RS_PAST_ACTIVITIES: RoadshowActivity[] = [
     { id: 'pa1', event_id: 'e4past', user_id: 'u2', full_name: 'James Tan', type: 'case_closed', afyc_amount: 3200, logged_at: `${fd(-7)}T03:03:00.000Z` },
-    { id: 'pa2', event_id: 'e4past', user_id: 'u1', full_name: 'Sarah Lee', type: 'pitch', afyc_amount: null, logged_at: `${fd(-7)}T02:45:00.000Z` },
-    { id: 'pa3', event_id: 'e4past', user_id: 'u3', full_name: 'Mei Ling', type: 'sitdown', afyc_amount: null, logged_at: `${fd(-7)}T02:30:00.000Z` },
-    { id: 'pa4', event_id: 'e4past', user_id: 'u1', full_name: 'Sarah Lee', type: 'sitdown', afyc_amount: null, logged_at: `${fd(-7)}T01:45:00.000Z` },
-    { id: 'pa5', event_id: 'e4past', user_id: 'u2', full_name: 'James Tan', type: 'pitch', afyc_amount: null, logged_at: `${fd(-7)}T01:30:00.000Z` },
-    { id: 'pa6', event_id: 'e4past', user_id: 'u3', full_name: 'Mei Ling', type: 'pitch', afyc_amount: null, logged_at: `${fd(-7)}T01:00:00.000Z` },
-    { id: 'pa7', event_id: 'e4past', user_id: 'u2', full_name: 'James Tan', type: 'sitdown', afyc_amount: null, logged_at: `${fd(-7)}T00:32:00.000Z` },
-    { id: 'pa8', event_id: 'e4past', user_id: 'u2', full_name: 'James Tan', type: 'sitdown', afyc_amount: null, logged_at: `${fd(-7)}T00:15:00.000Z` },
-    { id: 'pa9', event_id: 'e4past', user_id: 'u1', full_name: 'Sarah Lee', type: 'sitdown', afyc_amount: null, logged_at: `${fd(-7)}T00:05:00.000Z` },
+    { id: 'pa2', event_id: 'e4past', user_id: 'u1', full_name: 'Sarah Lee', type: 'departure', afyc_amount: null, logged_at: `${fd(-7)}T19:00:00.000Z` },
+    { id: 'pa3', event_id: 'e4past', user_id: 'u2', full_name: 'James Tan', type: 'departure', afyc_amount: null, logged_at: `${fd(-7)}T19:00:00.000Z` },
+    { id: 'pa4', event_id: 'e4past', user_id: 'u3', full_name: 'Mei Ling', type: 'departure', afyc_amount: null, logged_at: `${fd(-7)}T19:00:00.000Z` },
+    { id: 'pa5', event_id: 'e4past', user_id: 'u1', full_name: 'Sarah Lee', type: 'pitch', afyc_amount: null, logged_at: `${fd(-7)}T02:45:00.000Z` },
+    { id: 'pa6', event_id: 'e4past', user_id: 'u3', full_name: 'Mei Ling', type: 'sitdown', afyc_amount: null, logged_at: `${fd(-7)}T02:30:00.000Z` },
+    { id: 'pa7', event_id: 'e4past', user_id: 'u1', full_name: 'Sarah Lee', type: 'sitdown', afyc_amount: null, logged_at: `${fd(-7)}T01:45:00.000Z` },
+    { id: 'pa8', event_id: 'e4past', user_id: 'u2', full_name: 'James Tan', type: 'pitch', afyc_amount: null, logged_at: `${fd(-7)}T01:30:00.000Z` },
+    { id: 'pa9', event_id: 'e4past', user_id: 'u3', full_name: 'Mei Ling', type: 'pitch', afyc_amount: null, logged_at: `${fd(-7)}T01:00:00.000Z` },
+    { id: 'pa10', event_id: 'e4past', user_id: 'u2', full_name: 'James Tan', type: 'sitdown', afyc_amount: null, logged_at: `${fd(-7)}T00:32:00.000Z` },
+    { id: 'pa11', event_id: 'e4past', user_id: 'u2', full_name: 'James Tan', type: 'sitdown', afyc_amount: null, logged_at: `${fd(-7)}T00:15:00.000Z` },
+    { id: 'pa12', event_id: 'e4past', user_id: 'u1', full_name: 'Sarah Lee', type: 'sitdown', afyc_amount: null, logged_at: `${fd(-7)}T00:05:00.000Z` },
+    { id: 'pa13', event_id: 'e4past', user_id: 'u1', full_name: 'Sarah Lee', type: 'check_in', afyc_amount: null, logged_at: `${fd(-7)}T09:55:00.000Z` },
+    { id: 'pa14', event_id: 'e4past', user_id: 'u2', full_name: 'James Tan', type: 'check_in', afyc_amount: null, logged_at: `${fd(-7)}T10:23:00.000Z` },
+    { id: 'pa15', event_id: 'e4past', user_id: 'u3', full_name: 'Mei Ling', type: 'check_in', afyc_amount: null, logged_at: `${fd(-7)}T09:55:00.000Z` },
 ];
 
 // ── Constants ─────────────────────────────────────────────────
@@ -132,7 +147,17 @@ function formatCreatedAt(iso: string) {
 function activityLabel(type: string) {
     if (type === 'sitdown') return 'Sitdown';
     if (type === 'pitch') return 'Pitch';
-    return 'Case Closed';
+    if (type === 'case_closed') return 'Case Closed';
+    if (type === 'check_in') return 'Checked in';
+    if (type === 'departure') return 'Left booth';
+    return type;
+}
+
+function activityTypeColor(type: string, fallback: string) {
+    if (type === 'case_closed') return '#F59E0B';
+    if (type === 'check_in') return '#0D9488';
+    if (type === 'departure') return '#8E8E93';
+    return fallback;
 }
 
 // ── Progress Ring ─────────────────────────────────────────────
@@ -204,9 +229,17 @@ export default function EventDetailScreen() {
 
     // Activity log
     const [logDebounce, setLogDebounce] = useState<Record<string, boolean>>({});
+    const [confirmActivity, setConfirmActivity] = useState<'sitdown' | 'pitch' | null>(null);
+    const [confettiVisible, setConfettiVisible] = useState(false);
+    const [confettiKey, setConfettiKey] = useState(0);
+    const confettiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [showAfycSheet, setShowAfycSheet] = useState(false);
     const [afycInput, setAfycInput] = useState('');
     const [loggingActivity, setLoggingActivity] = useState(false);
+    // Log time picker state
+    const [logHour, setLogHour] = useState(0);       // index into LOG_HOURS (0=1, 11=12)
+    const [logMinuteIdx, setLogMinuteIdx] = useState(0); // index into LOG_MINUTES
+    const [logAmPm, setLogAmPm] = useState(0);        // 0=AM, 1=PM
 
     // Manager override
     const [overrideTarget, setOverrideTarget] = useState<EventAttendee | null>(null);
@@ -230,6 +263,37 @@ export default function EventDetailScreen() {
         pulse.start();
         return () => pulse.stop();
     }, [liveAnim]);
+
+    // Auto-log departure 1 hour after event ends if agent hasn't left yet
+    const autoDepFired = useRef(false);
+    useEffect(() => {
+        const today = new Date().toLocaleDateString('en-CA');
+        if (event?.event_type !== 'roadshow') return;
+        if (event?.event_date !== today) return;
+        if (!myAttendance) return;
+        if (!event?.end_time) return;
+        if (MOCK_OTP) return;
+        if (autoDepFired.current) return;
+
+        const hasDeparted = activities.some(a => a.user_id === user?.id && a.type === 'departure');
+        if (hasDeparted) { autoDepFired.current = true; return; }
+
+        const [h, m] = event.end_time.split(':').map(Number);
+        const autoLeave = new Date();
+        autoLeave.setHours(h, m + 60, 0, 0);
+        const ms = autoLeave.getTime() - Date.now();
+
+        const doAutoDepart = () => {
+            autoDepFired.current = true;
+            logRoadshowActivity(eventId!, user!.id, 'departure').then(({ data }) => {
+                if (data) setActivities(prev => [{ ...data, full_name: user?.full_name ?? 'Me' }, ...prev]);
+            });
+        };
+
+        if (ms <= 0) { doAutoDepart(); return; }
+        const timer = setTimeout(doAutoDepart, ms);
+        return () => clearTimeout(timer);
+    }, [event?.event_date, event?.end_time, event?.event_type, myAttendance?.id]);
 
     const todayStr = todayLocalStr();
 
@@ -400,6 +464,11 @@ export default function EventDetailScreen() {
             };
             setMyAttendance(mockAtt);
             setAttendance(prev => [...prev.filter(a => a.user_id !== 'mock-user-id'), mockAtt]);
+            setActivities(prev => [{
+                id: `act_ci_${Date.now()}`, event_id: eventId!, user_id: 'mock-user-id',
+                full_name: user?.full_name ?? 'Me', type: 'check_in', afyc_amount: null,
+                logged_at: new Date().toISOString(),
+            }, ...prev]);
             setShowPledgeSheet(false);
             setCheckingIn(false);
             return;
@@ -411,6 +480,9 @@ export default function EventDetailScreen() {
             setCheckingIn(false);
             return;
         }
+
+        // Log check_in activity (fire-and-forget)
+        logRoadshowActivity(eventId!, user!.id, 'check_in').catch(() => { });
 
         // Fire-and-forget push notification
         const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
@@ -429,21 +501,56 @@ export default function EventDetailScreen() {
         loadEvent(true);
     };
 
+    // ── Log time helpers ──────────────────────────────────────
+    const initLogTime = () => {
+        const now = new Date();
+        let h = now.getHours();
+        const mins = now.getMinutes();
+        const roundedMin = Math.round(mins / 5) * 5;
+        const ampm = h >= 12 ? 1 : 0;
+        if (h > 12) h -= 12;
+        if (h === 0) h = 12;
+        const minIdx = Math.min(Math.floor(roundedMin / 5), LOG_MINUTES.length - 1);
+        setLogHour(h - 1); // LOG_HOURS[0] = '1', so index = h - 1
+        setLogMinuteIdx(minIdx);
+        setLogAmPm(ampm);
+    };
+
+    const logTimeToISO = (): string => {
+        let h = logHour + 1; // 1-12
+        if (logAmPm === 1 && h !== 12) h += 12;
+        if (logAmPm === 0 && h === 12) h = 0;
+        const mins = Number(LOG_MINUTES[logMinuteIdx]);
+        const d = new Date();
+        d.setHours(h, mins, 0, 0);
+        return d.toISOString();
+    };
+
     // ── Activity logging ──────────────────────────────────────
     const handleLogActivity = async (type: 'sitdown' | 'pitch', afycAmount?: number) => {
         if (logDebounce[type]) return;
         setLogDebounce(prev => ({ ...prev, [type]: true }));
 
+        // Check if this tap will exactly hit the pledged target → celebrate
+        const currentCount = type === 'sitdown' ? myCounts.sitdowns : myCounts.pitches;
+        const pledgedTarget = type === 'sitdown'
+            ? (myAttendance?.pledged_sitdowns ?? 0)
+            : (myAttendance?.pledged_pitches ?? 0);
+        if (pledgedTarget > 0 && currentCount + 1 === pledgedTarget) {
+            triggerConfetti();
+        }
+
         // Optimistic update
         const tempId = `opt_${Date.now()}`;
+        const loggedAt = logTimeToISO();
         const optimistic: RoadshowActivity = {
             id: tempId, event_id: eventId!, user_id: user!.id, full_name: user?.full_name ?? 'Me',
-            type, afyc_amount: afycAmount ?? null, logged_at: new Date().toISOString(),
+            type, afyc_amount: afycAmount ?? null, logged_at: loggedAt,
         };
         setActivities(prev => [optimistic, ...prev]);
 
         if (!MOCK_OTP) {
-            const { error } = await logRoadshowActivity(eventId!, user!.id, type, afycAmount);
+            const { error } = await logRoadshowActivity(eventId!, user!.id, type, afycAmount, loggedAt);
             if (error) {
                 setActivities(prev => prev.filter(a => a.id !== tempId));
                 Alert.alert('Failed', 'Could not log activity. Please try again.');
@@ -469,16 +576,18 @@ export default function EventDetailScreen() {
         }
 
         const tempId = `opt_cc_${Date.now()}`;
+        const loggedAt = logTimeToISO();
         const optimistic: RoadshowActivity = {
             id: tempId, event_id: eventId!, user_id: user!.id, full_name: user?.full_name ?? 'Me',
-            type: 'case_closed', afyc_amount: amount, logged_at: new Date().toISOString(),
+            type: 'case_closed', afyc_amount: amount, logged_at: loggedAt,
         };
         setActivities(prev => [optimistic, ...prev]);
         setShowAfycSheet(false);
         setAfycInput('');
+        triggerConfetti();
 
         if (!MOCK_OTP) {
-            const { error } = await logRoadshowActivity(eventId!, user!.id, 'case_closed', amount);
+            const { error } = await logRoadshowActivity(eventId!, user!.id, 'case_closed', amount, loggedAt);
             if (error) {
                 setActivities(prev => prev.filter(a => a.id !== tempId));
                 Alert.alert('Failed', 'Could not log case closed.');
@@ -542,6 +651,8 @@ export default function EventDetailScreen() {
                                 setOverrideSubmitting(false);
                                 return;
                             }
+                            // Log check_in activity for the agent (fire-and-forget)
+                            logRoadshowActivity(eventId!, overrideTarget.user_id, 'check_in').catch(() => { });
                         } else {
                             const mockAtt: RoadshowAttendance = {
                                 id: `att_ovr_${Date.now()}`, event_id: eventId!, user_id: overrideTarget.user_id,
@@ -552,6 +663,11 @@ export default function EventDetailScreen() {
                                 pledged_closed: pledges.closed, pledged_afyc: pledges.afyc,
                             };
                             setAttendance(prev => [...prev, mockAtt]);
+                            setActivities(prev => [{
+                                id: `act_ci_ovr_${Date.now()}`, event_id: eventId!,
+                                user_id: overrideTarget.user_id, full_name: overrideTarget.full_name ?? '',
+                                type: 'check_in', afyc_amount: null, logged_at: checkedInAt.toISOString(),
+                            }, ...prev]);
                         }
                         setOverrideTarget(null);
                         setOverrideSubmitting(false);
@@ -560,6 +676,50 @@ export default function EventDetailScreen() {
                 },
             ],
         );
+    };
+
+    // ── Confetti ──────────────────────────────────────────────
+    const triggerConfetti = () => {
+        if (confettiTimer.current) clearTimeout(confettiTimer.current);
+        setConfettiKey(k => k + 1);
+        setConfettiVisible(true);
+        confettiTimer.current = setTimeout(() => setConfettiVisible(false), CONFETTI_DURATION + 400);
+    };
+
+    // ── Departure ─────────────────────────────────────────────
+    const handleLogDeparture = () => {
+        Alert.alert('Leave Roadshow?', 'This will log your departure from the booth.', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Leave', style: 'destructive', onPress: async () => {
+                    const tempId = `opt_dep_${Date.now()}`;
+                    const optimistic: RoadshowActivity = {
+                        id: tempId, event_id: eventId!, user_id: user!.id,
+                        full_name: user?.full_name ?? 'Me', type: 'departure',
+                        afyc_amount: null, logged_at: new Date().toISOString(),
+                    };
+                    setActivities(prev => [optimistic, ...prev]);
+                    if (!MOCK_OTP) {
+                        const { error } = await logRoadshowActivity(eventId!, user!.id, 'departure');
+                        if (error) setActivities(prev => prev.filter(a => a.id !== tempId));
+                    }
+                },
+            },
+        ]);
+    };
+
+    const handleReturnToBooth = async () => {
+        const tempId = `opt_ret_${Date.now()}`;
+        const optimistic: RoadshowActivity = {
+            id: tempId, event_id: eventId!, user_id: user!.id,
+            full_name: user?.full_name ?? 'Me', type: 'check_in',
+            afyc_amount: null, logged_at: new Date().toISOString(),
+        };
+        setActivities(prev => [optimistic, ...prev]);
+        if (!MOCK_OTP) {
+            const { error } = await logRoadshowActivity(eventId!, user!.id, 'check_in');
+            if (error) setActivities(prev => prev.filter(a => a.id !== tempId));
+        }
     };
 
     // ── Render guards ─────────────────────────────────────────
@@ -751,12 +911,14 @@ export default function EventDetailScreen() {
     // ---- T1 live: progress ----
     const renderT1Progress = () => (
         <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
-            <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Your Progress</Text>
-            {myAttendance && (
-                <Text style={[rsStyles.checkinLabel, { color: colors.textTertiary }]}>
-                    In since {formatCheckinTime(myAttendance.checked_in_at)}
-                </Text>
-            )}
+            <View style={rsStyles.progressHeaderRow}>
+                <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Your Progress</Text>
+                {myAttendance && (
+                    <Text style={[rsStyles.checkinLabel, { color: colors.textTertiary }]}>
+                        In since {formatCheckinTime(myAttendance.checked_in_at)}
+                    </Text>
+                )}
+            </View>
             <View style={rsStyles.ringsRow}>
                 <ProgressRing
                     actual={myCounts.sitdowns}
@@ -853,15 +1015,14 @@ export default function EventDetailScreen() {
                 )}
                 {feed.map(act => (
                     <View key={act.id} style={rsStyles.feedRow}>
-                        <Text style={[rsStyles.feedTime, { color: colors.textTertiary }]}>{formatActivityTime(act.logged_at)}</Text>
+                        <Text style={[rsStyles.feedTime, { color: colors.textTertiary }]}>{formatCheckinTime(act.logged_at)}</Text>
                         <Avatar name={act.full_name ?? '?'} avatarUrl={null} size={24} backgroundColor={avatarColor(act.full_name ?? '?') + '18'} textColor={avatarColor(act.full_name ?? '?')} />
                         <Text style={[rsStyles.feedName, { color: colors.textPrimary }]} numberOfLines={1}>{act.full_name}</Text>
-                        <Text style={[rsStyles.feedType, { color: act.type === 'case_closed' ? '#F59E0B' : colors.textSecondary }]}>
-                            {activityLabel(act.type)}
+                        <Text style={[rsStyles.feedType, { color: activityTypeColor(act.type, colors.textSecondary) }]}>
+                            {act.type === 'case_closed' && act.afyc_amount != null && act.afyc_amount > 0
+                                ? `Closed $${act.afyc_amount.toLocaleString()} AFYC`
+                                : activityLabel(act.type)}
                         </Text>
-                        {act.afyc_amount != null && act.afyc_amount > 0 && (
-                            <Text style={[rsStyles.feedAfyc, { color: '#F59E0B' }]}>${act.afyc_amount.toLocaleString()}</Text>
-                        )}
                     </View>
                 ))}
                 {activities.length > 20 && (
@@ -975,54 +1136,91 @@ export default function EventDetailScreen() {
     };
 
     // ---- T1 live: log activity card ----
-    const renderLogActivity = () => (
-        <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
-            <View style={rsStyles.logHeaderRow}>
-                <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Log Activity</Text>
-                <Text style={[rsStyles.logHint, { color: colors.textTertiary }]}>Tap to record</Text>
-            </View>
-            <View style={rsStyles.stickyRow}>
-                <TouchableOpacity
-                    style={[rsStyles.logBtnLg, { backgroundColor: '#6366F118', borderColor: '#6366F1' }]}
-                    onPress={() => handleLogActivity('sitdown')}
-                    disabled={!!logDebounce['sitdown']}
-                    activeOpacity={0.7}
-                    accessibilityLabel={`Log Sitdown, current count ${myCounts.sitdowns}`}
-                >
-                    <Ionicons name="people-outline" size={26} color="#6366F1" />
-                    <Text style={[rsStyles.logBtnLgLabel, { color: '#6366F1' }]}>Sitdown</Text>
-                    <View style={[rsStyles.logBtnBadge, { backgroundColor: '#6366F1' }]}>
-                        <Text style={rsStyles.logBtnBadgeText}>{myCounts.sitdowns}</Text>
-                    </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[rsStyles.logBtnLg, { backgroundColor: '#0D948818', borderColor: '#0D9488' }]}
-                    onPress={() => handleLogActivity('pitch')}
-                    disabled={!!logDebounce['pitch']}
-                    activeOpacity={0.7}
-                    accessibilityLabel={`Log Pitch, current count ${myCounts.pitches}`}
-                >
-                    <Ionicons name="megaphone-outline" size={26} color="#0D9488" />
-                    <Text style={[rsStyles.logBtnLgLabel, { color: '#0D9488' }]}>Pitch</Text>
-                    <View style={[rsStyles.logBtnBadge, { backgroundColor: '#0D9488' }]}>
-                        <Text style={rsStyles.logBtnBadgeText}>{myCounts.pitches}</Text>
-                    </View>
-                </TouchableOpacity>
-            </View>
-            <TouchableOpacity
-                style={[rsStyles.caseClosedBtn, { backgroundColor: '#F59E0B' }]}
-                onPress={() => { setAfycInput(''); setShowAfycSheet(true); }}
-                activeOpacity={0.75}
-                accessibilityLabel={`Log Case Closed, current count ${myCounts.closed}`}
-            >
-                <Ionicons name="checkmark-circle-outline" size={22} color="#FFFFFF" />
-                <Text style={rsStyles.caseClosedText}>Case Closed</Text>
-                <View style={[rsStyles.logBtnBadge, { backgroundColor: 'rgba(0,0,0,0.2)' }]}>
-                    <Text style={rsStyles.logBtnBadgeText}>{myCounts.closed}</Text>
+    const renderLogActivity = () => {
+        // Departed = latest check_in/departure event is a departure
+        const lastCheckinOrDep = activities
+            .filter(a => a.user_id === user?.id && (a.type === 'check_in' || a.type === 'departure'))
+            .sort((a, b) => new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime())[0];
+        const hasDeparted = lastCheckinOrDep?.type === 'departure';
+
+        return (
+            <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+                <View style={rsStyles.logHeaderRow}>
+                    <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Log Activity</Text>
+                    <Text style={[rsStyles.logHint, { color: colors.textTertiary }]}>Tap to record</Text>
                 </View>
-            </TouchableOpacity>
-        </View>
-    );
+                <View style={[rsStyles.stickyRow, hasDeparted && { opacity: 0.35 }]}>
+                    <TouchableOpacity
+                        style={[rsStyles.logBtnLg, { backgroundColor: '#6366F118', borderColor: '#6366F1' }]}
+                        onPress={() => { initLogTime(); setConfirmActivity('sitdown'); }}
+                        disabled={!!logDebounce['sitdown'] || hasDeparted}
+                        activeOpacity={0.7}
+                        accessibilityLabel={`Log Sitdown, current count ${myCounts.sitdowns}`}
+                    >
+                        <Ionicons name="people-outline" size={26} color="#6366F1" />
+                        <Text style={[rsStyles.logBtnLgLabel, { color: '#6366F1' }]}>Sitdown</Text>
+                        <View style={[rsStyles.logBtnBadge, { backgroundColor: '#6366F1' }]}>
+                            <Text style={rsStyles.logBtnBadgeText}>{myCounts.sitdowns}</Text>
+                        </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[rsStyles.logBtnLg, { backgroundColor: '#0D948818', borderColor: '#0D9488' }]}
+                        onPress={() => { initLogTime(); setConfirmActivity('pitch'); }}
+                        disabled={!!logDebounce['pitch'] || hasDeparted}
+                        activeOpacity={0.7}
+                        accessibilityLabel={`Log Pitch, current count ${myCounts.pitches}`}
+                    >
+                        <Ionicons name="megaphone-outline" size={26} color="#0D9488" />
+                        <Text style={[rsStyles.logBtnLgLabel, { color: '#0D9488' }]}>Pitch</Text>
+                        <View style={[rsStyles.logBtnBadge, { backgroundColor: '#0D9488' }]}>
+                            <Text style={rsStyles.logBtnBadgeText}>{myCounts.pitches}</Text>
+                        </View>
+                    </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                    style={[rsStyles.caseClosedBtn, { backgroundColor: '#F59E0B', opacity: hasDeparted ? 0.35 : 1 }]}
+                    onPress={() => { setAfycInput(''); initLogTime(); setShowAfycSheet(true); }}
+                    disabled={hasDeparted}
+                    activeOpacity={0.75}
+                    accessibilityLabel={`Log Case Closed, current count ${myCounts.closed}`}
+                >
+                    <Ionicons name="checkmark-circle-outline" size={22} color="#FFFFFF" />
+                    <Text style={rsStyles.caseClosedText}>Case Closed</Text>
+                    <View style={[rsStyles.logBtnBadge, { backgroundColor: 'rgba(0,0,0,0.2)' }]}>
+                        <Text style={rsStyles.logBtnBadgeText}>{myCounts.closed}</Text>
+                    </View>
+                </TouchableOpacity>
+                {!hasDeparted && (
+                    <TouchableOpacity
+                        style={[rsStyles.leaveBtn, { borderColor: colors.border }]}
+                        onPress={handleLogDeparture}
+                        activeOpacity={0.7}
+                        accessibilityLabel="Leave Roadshow"
+                    >
+                        <Ionicons name="log-out-outline" size={16} color={colors.textTertiary} />
+                        <Text style={[rsStyles.leaveBtnText, { color: colors.textTertiary }]}>Leave Roadshow</Text>
+                    </TouchableOpacity>
+                )}
+                {hasDeparted && (
+                    <View style={{ gap: 8 }}>
+                        <View style={rsStyles.departedBadge}>
+                            <Ionicons name="walk-outline" size={14} color={colors.textTertiary} />
+                            <Text style={[rsStyles.leaveBtnText, { color: colors.textTertiary }]}>You left the booth</Text>
+                        </View>
+                        <TouchableOpacity
+                            style={[rsStyles.returnBtn, { backgroundColor: colors.accent + '15', borderColor: colors.accent }]}
+                            onPress={handleReturnToBooth}
+                            activeOpacity={0.7}
+                            accessibilityLabel="Return to booth"
+                        >
+                            <Ionicons name="enter-outline" size={16} color={colors.accent} />
+                            <Text style={[rsStyles.returnBtnText, { color: colors.accent }]}>Return to Booth</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+            </View>
+        );
+    };
 
     // ---- T2/T3 live: booth totals ----
     const renderBoothTotals = () => (
@@ -1292,7 +1490,6 @@ export default function EventDetailScreen() {
                 </View>
             </ScrollView>
 
-
             {/* ── Pledge Sheet ── */}
             <Modal visible={showPledgeSheet} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowPledgeSheet(false)}>
                 <SafeAreaView style={[styles.sheetContainer, { backgroundColor: colors.background }]}>
@@ -1353,6 +1550,52 @@ export default function EventDetailScreen() {
                 </SafeAreaView>
             </Modal>
 
+            {/* ── Activity Confirm Sheet ── */}
+            <Modal visible={confirmActivity !== null} transparent animationType="fade" onRequestClose={() => setConfirmActivity(null)}>
+                {(() => {
+                    const cfg = confirmActivity === 'sitdown'
+                        ? { label: 'Sitdown', icon: 'people-outline' as const, color: '#6366F1', count: myCounts.sitdowns }
+                        : { label: 'Pitch', icon: 'megaphone-outline' as const, color: '#0D9488', count: myCounts.pitches };
+                    return (
+                        <View style={rsStyles.confirmOverlay}>
+                            {/* Backdrop tap to dismiss */}
+                            <TouchableOpacity
+                                style={StyleSheet.absoluteFillObject}
+                                activeOpacity={1}
+                                onPress={() => setConfirmActivity(null)}
+                            />
+                            {/* Sheet — plain View so ScrollView inside WheelPicker can scroll */}
+                            <View style={[rsStyles.confirmSheet, { backgroundColor: colors.cardBackground, paddingBottom: insets.bottom + 24 }]}>
+                                <View style={[rsStyles.confirmHandle, { backgroundColor: colors.border }]} />
+                                <View style={[rsStyles.confirmIconBg, { backgroundColor: cfg.color + '18' }]}>
+                                    <Ionicons name={cfg.icon} size={34} color={cfg.color} />
+                                </View>
+                                <Text style={[rsStyles.confirmTitle, { color: colors.textPrimary }]}>Log {cfg.label}?</Text>
+                                <Text style={[rsStyles.confirmSubtitle, { color: colors.textTertiary }]}>
+                                    {cfg.count === 0 ? 'First one today' : `${cfg.count} logged so far today`}
+                                </Text>
+                                <Text style={[rsStyles.confirmTimeLabel, { color: colors.textTertiary }]}>Time</Text>
+                                <View style={rsStyles.wheelRow}>
+                                    <WheelPicker items={LOG_HOURS} selectedIndex={logHour} onChange={setLogHour} colors={colors} width={52} />
+                                    <WheelPicker items={LOG_MINUTES} selectedIndex={logMinuteIdx} onChange={setLogMinuteIdx} colors={colors} width={52} />
+                                    <WheelPicker items={LOG_AMPM} selectedIndex={logAmPm} onChange={setLogAmPm} colors={colors} width={60} />
+                                </View>
+                                <TouchableOpacity
+                                    style={[rsStyles.confirmBtn, { backgroundColor: cfg.color }]}
+                                    activeOpacity={0.8}
+                                    onPress={() => { handleLogActivity(confirmActivity!); setConfirmActivity(null); }}
+                                >
+                                    <Text style={rsStyles.confirmBtnText}>Log {cfg.label}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={rsStyles.confirmCancel} onPress={() => setConfirmActivity(null)}>
+                                    <Text style={[rsStyles.confirmCancelText, { color: colors.textSecondary }]}>Cancel</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    );
+                })()}
+            </Modal>
+
             {/* ── AFYC Input Sheet ── */}
             <Modal visible={showAfycSheet} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAfycSheet(false)}>
                 <SafeAreaView style={[styles.sheetContainer, { backgroundColor: colors.background }]}>
@@ -1374,8 +1617,14 @@ export default function EventDetailScreen() {
                                 keyboardType="number-pad"
                                 autoFocus
                             />
+                            <Text style={[rsStyles.pledgeLabel, { color: colors.textSecondary, marginTop: 20, marginBottom: 4 }]}>Time</Text>
+                            <View style={[rsStyles.wheelRow, { marginBottom: 8 }]}>
+                                <WheelPicker items={LOG_HOURS} selectedIndex={logHour} onChange={setLogHour} colors={colors} width={52} />
+                                <WheelPicker items={LOG_MINUTES} selectedIndex={logMinuteIdx} onChange={setLogMinuteIdx} colors={colors} width={52} />
+                                <WheelPicker items={LOG_AMPM} selectedIndex={logAmPm} onChange={setLogAmPm} colors={colors} width={60} />
+                            </View>
                             <TouchableOpacity
-                                style={[rsStyles.checkinBtn, { backgroundColor: '#F59E0B', marginTop: 20, opacity: loggingActivity ? 0.6 : 1 }]}
+                                style={[rsStyles.checkinBtn, { backgroundColor: '#F59E0B', marginTop: 12, opacity: loggingActivity ? 0.6 : 1 }]}
                                 onPress={handleLogCaseClosed}
                                 disabled={loggingActivity}
                             >
@@ -1479,6 +1728,8 @@ export default function EventDetailScreen() {
                     </KeyboardAvoidingView>
                 </SafeAreaView>
             </Modal>
+
+            <Confetti visible={confettiVisible} confettiKey={confettiKey} />
         </SafeAreaView>
     );
 }
@@ -1552,6 +1803,7 @@ const rsStyles = StyleSheet.create({
     ringLabel: { fontSize: 11, color: '#8E8E93', fontWeight: '600' },
     ringTarget: { fontSize: 11, color: '#8E8E93' },
 
+    progressHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     checkinLabel: { fontSize: 13 },
 
     afycSection: { gap: 6 },
@@ -1572,13 +1824,28 @@ const rsStyles = StyleSheet.create({
     lbAfyc: { width: 52, textAlign: 'right', fontSize: 13, fontWeight: '600' },
 
     feedRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    feedTime: { fontSize: 12, width: 40 },
+    feedTime: { fontSize: 12, width: 62 },
     feedName: { flex: 1, fontSize: 13 },
     feedType: { fontSize: 13, fontWeight: '600' },
-    feedAfyc: { fontSize: 13, fontWeight: '600' },
 
-    stickyFooter: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16, paddingTop: 12, gap: 8, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 8 },
     stickyRow: { flexDirection: 'row', gap: 10 },
+    confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end', position: 'relative' },
+    confirmSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 24, paddingTop: 12, alignItems: 'center', gap: 10 },
+    confirmHandle: { width: 36, height: 4, borderRadius: 2, marginBottom: 4 },
+    confirmIconBg: { width: 76, height: 76, borderRadius: 38, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+    confirmTitle: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
+    confirmSubtitle: { fontSize: 14 },
+    confirmBtn: { width: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 14, paddingVertical: 16, minHeight: 52, marginTop: 6 },
+    confirmBtnText: { color: '#FFFFFF', fontSize: 17, fontWeight: '700' },
+    confirmCancel: { paddingVertical: 12, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+    confirmCancelText: { fontSize: 16 },
+    confirmTimeLabel: { fontSize: 13, fontWeight: '500', marginTop: 4, marginBottom: -4 },
+    wheelRow: { flexDirection: 'row', gap: 0, alignItems: 'center', justifyContent: 'center' },
+    leaveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingVertical: 10, minHeight: 40 },
+    leaveBtnText: { fontSize: 13, fontWeight: '500' },
+    departedBadge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 4 },
+    returnBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1.5, borderRadius: 10, paddingVertical: 11, minHeight: 44 },
+    returnBtnText: { fontSize: 14, fontWeight: '600' },
     logBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, paddingVertical: 13, borderWidth: 1.5, minHeight: 48 },
     logBtnText: { fontSize: 14, fontWeight: '700' },
     logBtnLg: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 14, paddingVertical: 18, borderWidth: 1.5, minHeight: 90, position: 'relative' },

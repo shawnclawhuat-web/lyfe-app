@@ -1,5 +1,6 @@
 import Avatar from '@/components/Avatar';
 import ScreenHeader from '@/components/ScreenHeader';
+import WheelPicker, { WHEEL_ITEM_H } from '@/components/WheelPicker';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { createEvent, createRoadshowBulk, fetchAllUsers, fetchEventById, fetchRoadshowConfig, saveRoadshowConfig, updateEvent, type RoadshowConfigInput, type SimpleUser } from '@/lib/events';
@@ -67,10 +68,6 @@ function isValidDate(s: string): boolean {
     return /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s).getTime());
 }
 
-/** Validates HH:MM (24h) */
-function isValidTime(s: string): boolean {
-    return /^([01]?\d|2[0-3]):[0-5]\d$/.test(s);
-}
 
 /** Returns number of calendar days between two YYYY-MM-DD strings */
 function dateDiffDays(start: string, end: string): number {
@@ -96,6 +93,34 @@ function formatDateLabel(s: string): string {
     return new Date(s + 'T00:00:00').toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
+// ── Time picker constants ──────────────────────────────────────
+const PICKER_HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1));
+const PICKER_MINUTES = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+const PICKER_AMPM = ['AM', 'PM'];
+const TIME_PICKER_VISIBLE = 3; // visible rows in form pickers (compact)
+
+function formatPickerTime(hour: number, minIdx: number, ampm: number): string {
+    return `${hour + 1}:${PICKER_MINUTES[minIdx]} ${PICKER_AMPM[ampm]}`;
+}
+
+function hhmm24ToPickerState(hhmm: string): { hour: number; minIdx: number; ampm: number } {
+    const parts = hhmm.split(':');
+    let h = parseInt(parts[0] ?? '9', 10);
+    const rawMin = parseInt(parts[1] ?? '0', 10);
+    const ampm = h >= 12 ? 1 : 0;
+    if (h > 12) h -= 12;
+    if (h === 0) h = 12;
+    const minIdx = Math.max(0, Math.min(PICKER_MINUTES.length - 1, Math.round(rawMin / 5)));
+    return { hour: h - 1, minIdx, ampm };
+}
+
+function pickerToHHMM24(hour: number, minIdx: number, ampm: number): string {
+    let h = hour + 1; // 1–12
+    if (ampm === 1 && h !== 12) h += 12;
+    if (ampm === 0 && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${PICKER_MINUTES[minIdx]}`;
+}
+
 export default function CreateEventScreen() {
     const { colors } = useTheme();
     const { user } = useAuth();
@@ -107,8 +132,16 @@ export default function CreateEventScreen() {
     const [title, setTitle] = useState('');
     const [eventType, setEventType] = useState<EventType>('team_meeting');
     const [eventDate, setEventDate] = useState(todayStr());
-    const [startTime, setStartTime] = useState('09:00');
-    const [endTime, setEndTime] = useState('');
+    // Start time picker (default 9:00 AM)
+    const [startHour, setStartHour] = useState(8);      // index 8 → '9'
+    const [startMinIdx, setStartMinIdx] = useState(0);
+    const [startAmPm, setStartAmPm] = useState(0);      // 0 = AM
+    // End time picker (default 5:00 PM, optional)
+    const [hasEndTime, setHasEndTime] = useState(false);
+    const [endHour, setEndHour] = useState(4);           // index 4 → '5'
+    const [endMinIdx, setEndMinIdx] = useState(0);
+    const [endAmPm, setEndAmPm] = useState(1);           // 1 = PM
+    const [showTimePicker, setShowTimePicker] = useState<'start' | 'end' | null>(null);
     const [location, setLocation] = useState('');
     const [description, setDescription] = useState('');
     const [selectedAttendees, setSelectedAttendees] = useState<SelectedAttendee[]>([]);
@@ -166,8 +199,11 @@ export default function CreateEventScreen() {
             setTitle('Agency Kickoff 2026');
             setEventType('agency_event');
             setEventDate(new Date().toISOString().split('T')[0]);
-            setStartTime('09:00');
-            setEndTime('12:00');
+            const sp = hhmm24ToPickerState('09:00');
+            setStartHour(sp.hour); setStartMinIdx(sp.minIdx); setStartAmPm(sp.ampm);
+            const ep = hhmm24ToPickerState('12:00');
+            setEndHour(ep.hour); setEndMinIdx(ep.minIdx); setEndAmPm(ep.ampm);
+            setHasEndTime(true);
             setLocation('Marina Bay Sands Convention Centre');
             setDescription('Annual agency kickoff event for all staff.');
             setSelectedAttendees([
@@ -186,8 +222,13 @@ export default function CreateEventScreen() {
                 setTitle(data.title);
                 setEventType(data.event_type);
                 setEventDate(data.event_date);
-                setStartTime(toHHMM(data.start_time));
-                setEndTime(toHHMM(data.end_time));
+                const sp = hhmm24ToPickerState(toHHMM(data.start_time) || '09:00');
+                setStartHour(sp.hour); setStartMinIdx(sp.minIdx); setStartAmPm(sp.ampm);
+                if (data.end_time) {
+                    const ep = hhmm24ToPickerState(toHHMM(data.end_time));
+                    setEndHour(ep.hour); setEndMinIdx(ep.minIdx); setEndAmPm(ep.ampm);
+                    setHasEndTime(true);
+                }
                 setLocation(data.location || '');
                 setDescription(data.description || '');
                 setSelectedAttendees(data.attendees.map(a => ({
@@ -253,14 +294,15 @@ export default function CreateEventScreen() {
         } else {
             if (!isValidDate(eventDate)) e.eventDate = 'Enter a valid date (YYYY-MM-DD)';
         }
-        if (!isValidTime(startTime)) e.startTime = 'Enter a valid time (HH:MM)';
-        if (endTime && !isValidTime(endTime)) e.endTime = 'Enter a valid time (HH:MM)';
         setErrors(e);
         return Object.keys(e).length === 0;
     };
 
     const handleSubmit = async () => {
         if (!validate()) return;
+
+        const startTime = pickerToHHMM24(startHour, startMinIdx, startAmPm);
+        const endTime = hasEndTime ? pickerToHHMM24(endHour, endMinIdx, endAmPm) : null;
 
         setSubmitting(true);
 
@@ -302,7 +344,7 @@ export default function CreateEventScreen() {
                 title: title.trim(),
                 event_date: d,
                 start_time: startTime,
-                end_time: endTime || '',
+                end_time: endTime ?? '',
                 location: location.trim(),
             }));
 
@@ -330,7 +372,7 @@ export default function CreateEventScreen() {
             event_type: eventType,
             event_date: eventDate,
             start_time: startTime,
-            end_time: endTime || null,
+            end_time: endTime,
             location: location.trim() || null,
             attendees: selectedAttendees.map(a => ({
                 user_id: a.user_id,
@@ -640,33 +682,44 @@ export default function CreateEventScreen() {
                         </View>
                     ) : null}
 
-                    {/* Times */}
-                    <View style={styles.timeRow}>
-                        <View style={[styles.field, { flex: 1 }]}>
-                            <Text style={labelStyle}>Start Time * (HH:MM)</Text>
-                            <TextInput
-                                style={[inputStyle, errors.startTime && { borderColor: colors.danger }]}
-                                placeholder="09:00"
-                                placeholderTextColor={colors.textTertiary}
-                                value={startTime}
-                                onChangeText={v => { setStartTime(v); setErrors(e => ({ ...e, startTime: '' })); }}
-                                keyboardType="numbers-and-punctuation"
-                                maxLength={5}
-                            />
-                            {errors.startTime ? <Text style={[styles.errorText, { color: colors.danger }]}>{errors.startTime}</Text> : null}
-                        </View>
-                        <View style={[styles.field, { flex: 1 }]}>
-                            <Text style={labelStyle}>End Time (HH:MM)</Text>
-                            <TextInput
-                                style={[inputStyle, errors.endTime && { borderColor: colors.danger }]}
-                                placeholder="17:00"
-                                placeholderTextColor={colors.textTertiary}
-                                value={endTime}
-                                onChangeText={v => { setEndTime(v); setErrors(e => ({ ...e, endTime: '' })); }}
-                                keyboardType="numbers-and-punctuation"
-                                maxLength={5}
-                            />
-                            {errors.endTime ? <Text style={[styles.errorText, { color: colors.danger }]}>{errors.endTime}</Text> : null}
+                    {/* Time row — tapping either cell opens the picker modal */}
+                    <View style={styles.field}>
+                        <Text style={labelStyle}>Time *</Text>
+                        <View style={[styles.timeRowCard, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+                            {/* Start time cell */}
+                            <TouchableOpacity
+                                style={styles.timeCell}
+                                onPress={() => setShowTimePicker('start')}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={[styles.timeCellLabel, { color: colors.textTertiary }]}>Start</Text>
+                                <Text style={[styles.timeCellValue, { color: colors.textPrimary }]}>
+                                    {formatPickerTime(startHour, startMinIdx, startAmPm)}
+                                </Text>
+                            </TouchableOpacity>
+
+                            <View style={[styles.timeCellDivider, { backgroundColor: colors.border }]} />
+
+                            {/* End time cell */}
+                            <TouchableOpacity
+                                style={styles.timeCell}
+                                onPress={() => { if (!hasEndTime) setHasEndTime(true); setShowTimePicker('end'); }}
+                                activeOpacity={0.7}
+                            >
+                                {hasEndTime ? (
+                                    <>
+                                        <Text style={[styles.timeCellLabel, { color: colors.textTertiary }]}>End</Text>
+                                        <Text style={[styles.timeCellValue, { color: colors.textPrimary }]}>
+                                            {formatPickerTime(endHour, endMinIdx, endAmPm)}
+                                        </Text>
+                                    </>
+                                ) : (
+                                    <View style={styles.timeCellAdd}>
+                                        <Ionicons name="add" size={16} color={colors.accent} />
+                                        <Text style={[styles.timeCellAddText, { color: colors.accent }]}>End time</Text>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
                         </View>
                     </View>
 
@@ -826,6 +879,62 @@ export default function CreateEventScreen() {
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            {/* Time Picker Modal */}
+            <Modal
+                visible={showTimePicker !== null}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowTimePicker(null)}
+            >
+                <View style={styles.timeModalOverlay}>
+                    <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setShowTimePicker(null)} />
+                    <View style={[styles.timeModalSheet, { backgroundColor: colors.cardBackground }]}>
+                        <View style={[styles.timeModalHandle, { backgroundColor: colors.border }]} />
+                        <View style={styles.timeModalHeader}>
+                            <Text style={[styles.timeModalTitle, { color: colors.textPrimary }]}>
+                                {showTimePicker === 'start' ? 'Start Time' : 'End Time'}
+                            </Text>
+                            <View style={styles.timeModalActions}>
+                                {showTimePicker === 'end' && hasEndTime && (
+                                    <TouchableOpacity
+                                        onPress={() => { setHasEndTime(false); setShowTimePicker(null); }}
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    >
+                                        <Text style={{ fontSize: 15, color: colors.danger }}>Remove</Text>
+                                    </TouchableOpacity>
+                                )}
+                                <TouchableOpacity onPress={() => setShowTimePicker(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                    <Text style={{ fontSize: 15, fontWeight: '600', color: colors.accent }}>Done</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                        {/* Picker */}
+                        <View style={[styles.timePickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, marginHorizontal: 16, marginBottom: 16 }]}>
+                            <View pointerEvents="none" style={[styles.timePickerBand, { borderColor: colors.border }]} />
+                            <View style={styles.timePickerWheels}>
+                                {showTimePicker === 'start' ? (
+                                    <>
+                                        <WheelPicker items={PICKER_HOURS} selectedIndex={startHour} onChange={setStartHour} colors={colors} width={60} showIndicator={false} visibleItems={TIME_PICKER_VISIBLE} />
+                                        <View style={styles.timePickerColon}><Text style={[styles.timeColonText, { color: colors.textPrimary }]}>:</Text></View>
+                                        <WheelPicker items={PICKER_MINUTES} selectedIndex={startMinIdx} onChange={setStartMinIdx} colors={colors} width={60} showIndicator={false} visibleItems={TIME_PICKER_VISIBLE} />
+                                        <View style={{ flex: 1 }} />
+                                        <WheelPicker items={PICKER_AMPM} selectedIndex={startAmPm} onChange={setStartAmPm} colors={colors} width={70} showIndicator={false} visibleItems={TIME_PICKER_VISIBLE} />
+                                    </>
+                                ) : (
+                                    <>
+                                        <WheelPicker items={PICKER_HOURS} selectedIndex={endHour} onChange={setEndHour} colors={colors} width={60} showIndicator={false} visibleItems={TIME_PICKER_VISIBLE} />
+                                        <View style={styles.timePickerColon}><Text style={[styles.timeColonText, { color: colors.textPrimary }]}>:</Text></View>
+                                        <WheelPicker items={PICKER_MINUTES} selectedIndex={endMinIdx} onChange={setEndMinIdx} colors={colors} width={60} showIndicator={false} visibleItems={TIME_PICKER_VISIBLE} />
+                                        <View style={{ flex: 1 }} />
+                                        <WheelPicker items={PICKER_AMPM} selectedIndex={endAmPm} onChange={setEndAmPm} colors={colors} width={70} showIndicator={false} visibleItems={TIME_PICKER_VISIBLE} />
+                                    </>
+                                )}
+                            </View>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
             {/* Attendee Picker Modal */}
             <Modal
@@ -1017,6 +1126,37 @@ const styles = StyleSheet.create({
     errorText: { fontSize: 12, marginTop: 4 },
 
     timeRow: { flexDirection: 'row', gap: 12 },
+
+    // Compact time row card
+    timeRowCard: { flexDirection: 'row', borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
+    timeCell: { flex: 1, paddingHorizontal: 14, paddingVertical: 12, justifyContent: 'center', minHeight: 60 },
+    timeCellLabel: { fontSize: 11, fontWeight: '500', marginBottom: 3, textTransform: 'uppercase', letterSpacing: 0.4 },
+    timeCellValue: { fontSize: 17, fontWeight: '500' },
+    timeCellDivider: { width: StyleSheet.hairlineWidth },
+    timeCellAdd: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    timeCellAddText: { fontSize: 15, fontWeight: '500' },
+
+    // Time picker modal
+    timeModalOverlay: { flex: 1, justifyContent: 'flex-end' },
+    timeModalSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 12, paddingBottom: 32 },
+    timeModalHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
+    timeModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 16 },
+    timeModalTitle: { fontSize: 17, fontWeight: '600' },
+    timeModalActions: { flexDirection: 'row', alignItems: 'center', gap: 20 },
+
+    // Shared picker internals
+    timePickerContainer: { borderWidth: 1, borderRadius: 12, overflow: 'hidden', position: 'relative' },
+    timePickerBand: {
+        position: 'absolute',
+        top: WHEEL_ITEM_H,
+        left: 0, right: 0,
+        height: WHEEL_ITEM_H,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    timePickerWheels: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 },
+    timePickerColon: { height: WHEEL_ITEM_H * TIME_PICKER_VISIBLE, justifyContent: 'center', paddingHorizontal: 2 },
+    timeColonText: { fontSize: 20, fontWeight: '700' },
 
     typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     typeChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1.5 },
