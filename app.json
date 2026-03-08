@@ -52,7 +52,13 @@
             "expo-local-authentication",
             "expo-image-picker",
             "expo-video",
-            "@sentry/react-native"
+            [
+                "@sentry/react-native",
+                {
+                    "organization": "mktr-pte-ltd",
+                    "project": "4511009413922896"
+                }
+            ]
         ],
         "experiments": {
             "typedRoutes": true
