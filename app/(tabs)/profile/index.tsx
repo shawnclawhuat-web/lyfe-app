@@ -10,7 +10,7 @@ import { pickAndUploadAvatar, removeAvatar, takeAndUploadAvatar } from '@/lib/st
 import { Ionicons } from '@expo/vector-icons';
 import type { AssignedManager } from '@/lib/mockData';
 import { useTypedRouter } from '@/hooks/useTypedRouter';
-import { supabase } from '@/lib/supabase';
+import { fetchPAManagers } from '@/lib/recruitment';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -80,11 +80,8 @@ export default function ProfileScreen() {
     const loadManagers = useCallback(async () => {
         if (user?.role !== 'pa') return;
         if (!user?.id) return;
-        const { data } = await supabase
-            .from('pa_manager_assignments')
-            .select('manager:users!pa_manager_assignments_manager_id_fkey(id, full_name, role)')
-            .eq('pa_id', user.id);
-        if (data) setManagers((data as any[]).map(r => r.manager).filter(Boolean));
+        const managers = await fetchPAManagers(user.id);
+        setManagers(managers);
     }, [user?.id, user?.role]);
 
     useFocusEffect(useCallback(() => { loadManagers(); }, [loadManagers]));
