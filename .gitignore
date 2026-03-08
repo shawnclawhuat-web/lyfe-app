@@ -42,3 +42,4 @@ admin/.env.local
 # generated native folders
 /ios
 /android
+.mcp.json

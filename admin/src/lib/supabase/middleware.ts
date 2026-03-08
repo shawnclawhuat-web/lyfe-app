@@ -1,7 +1,15 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+// Public routes that don't require authentication
+const PUBLIC_PATHS = ['/support', '/privacy'];
+
 export async function updateSession(request: NextRequest) {
+  // Skip auth for public pages
+  if (PUBLIC_PATHS.includes(request.nextUrl.pathname)) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(

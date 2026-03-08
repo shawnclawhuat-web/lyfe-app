@@ -13,7 +13,7 @@
       "backgroundColor": "#FFFFFF"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.shawnlee.lyfe",
       "developmentTeam": "Y953XF3N6C",
       "infoPlist": {
