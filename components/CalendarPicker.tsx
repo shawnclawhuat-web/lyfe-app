@@ -1,75 +1,83 @@
-import { toDateStr } from '@/lib/dateTime';
+import { formatDateLabel, toDateStr } from '@/lib/dateTime';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Animated, Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const SCREEN_W = Dimensions.get('window').width;
-const DAY_SIZE = Math.floor((SCREEN_W - 64) / 7); // 7 columns with padding
+const DAY_SIZE = Math.floor((SCREEN_W - 64) / 7);
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-interface CalendarPickerProps {
+interface SinglePickerProps {
+    mode?: 'single';
     visible: boolean;
-    selectedDate: string; // YYYY-MM-DD
+    selectedDate: string;
     onSelect: (date: string) => void;
     onClose: () => void;
     colors: any;
-    /** Optional: highlight a range end date (for roadshow date range) */
-    rangeEnd?: string;
-    /** Optional: title override */
     title?: string;
 }
 
-/** Build a 6-row Mon-first calendar grid */
-function buildGrid(year: number, month: number): (Date | null)[][] {
+interface RangePickerProps {
+    mode: 'range';
+    visible: boolean;
+    startDate: string;
+    endDate: string;
+    onConfirm: (start: string, end: string) => void;
+    onClose: () => void;
+    colors: any;
+    title?: string;
+}
+
+type CalendarPickerProps = SinglePickerProps | RangePickerProps;
+
+function buildGrid(year: number, month: number): Date[][] {
     const first = new Date(year, month, 1);
     const last = new Date(year, month + 1, 0);
-    const startDow = (first.getDay() + 6) % 7; // Mon=0
+    const startDow = (first.getDay() + 6) % 7;
 
-    // Fill previous month days
-    const cells: (Date | null)[] = [];
-    for (let i = startDow - 1; i >= 0; i--) {
-        const d = new Date(year, month, -i);
-        cells.push(d);
-    }
-    // Current month
-    for (let d = 1; d <= last.getDate(); d++) {
-        cells.push(new Date(year, month, d));
-    }
-    // Fill remaining cells with next month
+    const cells: Date[] = [];
+    for (let i = startDow - 1; i >= 0; i--) cells.push(new Date(year, month, -i));
+    for (let d = 1; d <= last.getDate(); d++) cells.push(new Date(year, month, d));
     while (cells.length < 42) {
         const nextDay = cells.length - startDow - last.getDate() + 1;
         cells.push(new Date(year, month + 1, nextDay));
     }
 
-    const weeks: (Date | null)[][] = [];
+    const weeks: Date[][] = [];
     for (let i = 0; i < 42; i += 7) weeks.push(cells.slice(i, i + 7));
     return weeks;
 }
 
-export default function CalendarPicker({
-    visible,
-    selectedDate,
-    onSelect,
-    onClose,
-    colors,
-    rangeEnd,
-    title = 'Select Date',
-}: CalendarPickerProps) {
+export default function CalendarPicker(props: CalendarPickerProps) {
+    const { visible, onClose, colors, title } = props;
+    const isRange = props.mode === 'range';
+
     const slideAnim = useRef(new Animated.Value(0)).current;
     const [isRendered, setIsRendered] = useState(false);
 
-    // Parse initial month from selected date
-    const initDate = new Date(selectedDate + 'T00:00:00');
-    const [displayMonth, setDisplayMonth] = useState({
-        year: initDate.getFullYear(),
-        month: initDate.getMonth(),
+    // Range mode local state — not committed until Done
+    const [rangeStart, setRangeStart] = useState<string | null>(null);
+    const [rangeEnd, setRangeEnd] = useState<string | null>(null);
+    const [tapCount, setTapCount] = useState(0);
+
+    // Figure out initial date for the month display
+    const initDateStr = isRange ? (props as RangePickerProps).startDate : (props as SinglePickerProps).selectedDate;
+    const [displayMonth, setDisplayMonth] = useState(() => {
+        const d = new Date(initDateStr + 'T00:00:00');
+        return { year: d.getFullYear(), month: d.getMonth() };
     });
 
-    // Reset month when picker opens with a new date
     React.useEffect(() => {
         if (visible) {
-            const d = new Date(selectedDate + 'T00:00:00');
+            const dateStr = isRange ? (props as RangePickerProps).startDate : (props as SinglePickerProps).selectedDate;
+            const d = new Date(dateStr + 'T00:00:00');
             setDisplayMonth({ year: d.getFullYear(), month: d.getMonth() });
+            if (isRange) {
+                const rp = props as RangePickerProps;
+                setRangeStart(rp.startDate);
+                setRangeEnd(rp.endDate);
+                setTapCount(0);
+            }
             setIsRendered(true);
             Animated.spring(slideAnim, {
                 toValue: 1,
@@ -82,23 +90,65 @@ export default function CalendarPicker({
         }
     }, [visible]);
 
-    const handleClose = useCallback(() => {
+    const animateOut = useCallback((cb: () => void) => {
         Animated.timing(slideAnim, {
             toValue: 0,
             duration: 200,
             useNativeDriver: true,
         }).start(() => {
             setIsRendered(false);
-            onClose();
+            cb();
         });
-    }, [onClose]);
+    }, []);
 
-    const handleSelect = useCallback(
+    const handleClose = useCallback(() => {
+        if (isRange && rangeStart && rangeEnd) {
+            // Confirm the range on close too
+            const [s, e] = rangeStart <= rangeEnd ? [rangeStart, rangeEnd] : [rangeEnd, rangeStart];
+            animateOut(() => (props as RangePickerProps).onConfirm(s, e));
+        } else {
+            animateOut(onClose);
+        }
+    }, [isRange, rangeStart, rangeEnd, onClose, animateOut]);
+
+    const handleDone = useCallback(() => {
+        if (isRange && rangeStart && rangeEnd) {
+            const [s, e] = rangeStart <= rangeEnd ? [rangeStart, rangeEnd] : [rangeEnd, rangeStart];
+            animateOut(() => (props as RangePickerProps).onConfirm(s, e));
+        } else {
+            animateOut(onClose);
+        }
+    }, [isRange, rangeStart, rangeEnd, onClose, animateOut]);
+
+    const handleDayPress = useCallback(
         (date: Date) => {
-            onSelect(toDateStr(date));
-            handleClose();
+            const ds = toDateStr(date);
+            if (!isRange) {
+                (props as SinglePickerProps).onSelect(ds);
+                animateOut(onClose);
+                return;
+            }
+            // Range mode: first tap = start, second tap = end
+            if (tapCount === 0) {
+                setRangeStart(ds);
+                setRangeEnd(ds);
+                setTapCount(1);
+            } else {
+                // Second tap — if before start, reset start and wait for new end
+                if (rangeStart && ds < rangeStart) {
+                    setRangeStart(ds);
+                    setRangeEnd(ds);
+                    // stay at tapCount 1 — user still needs to pick end
+                } else if (ds === rangeStart) {
+                    // Same date tapped — single-day range, done
+                    setTapCount(0);
+                } else {
+                    setRangeEnd(ds);
+                    setTapCount(0);
+                }
+            }
         },
-        [onSelect, handleClose],
+        [isRange, tapCount, rangeStart, onClose, animateOut],
     );
 
     const grid = useMemo(
@@ -120,21 +170,29 @@ export default function CalendarPicker({
         });
     };
 
-    // Determine range for highlighting
-    const rangeStart = rangeEnd && selectedDate < rangeEnd ? selectedDate : undefined;
-    const rangeEndStr = rangeEnd && selectedDate < rangeEnd ? rangeEnd : undefined;
+    // Computed range boundaries (sorted)
+    const rS = rangeStart && rangeEnd ? (rangeStart <= rangeEnd ? rangeStart : rangeEnd) : null;
+    const rE = rangeStart && rangeEnd ? (rangeStart <= rangeEnd ? rangeEnd : rangeStart) : null;
+    const selectedSingle = !isRange ? (props as SinglePickerProps).selectedDate : null;
 
     const translateY = slideAnim.interpolate({
         inputRange: [0, 1],
         outputRange: [500, 0],
     });
-
     const backdropOpacity = slideAnim.interpolate({
         inputRange: [0, 1],
         outputRange: [0, 0.4],
     });
 
     if (!visible && !isRendered) return null;
+
+    // Range summary label
+    const rangeSummary =
+        isRange && rS && rE && rS !== rE
+            ? `${formatDateLabel(rS)} – ${formatDateLabel(rE)}`
+            : isRange && rS
+              ? formatDateLabel(rS)
+              : null;
 
     return (
         <Modal visible={visible || isRendered} transparent animationType="none" onRequestClose={handleClose}>
@@ -144,24 +202,30 @@ export default function CalendarPicker({
                 </Animated.View>
 
                 <Animated.View
-                    style={[
-                        s.sheet,
-                        {
-                            backgroundColor: colors.cardBackground,
-                            transform: [{ translateY }],
-                        },
-                    ]}
+                    style={[s.sheet, { backgroundColor: colors.cardBackground, transform: [{ translateY }] }]}
                 >
-                    {/* Handle */}
                     <View style={[s.handle, { backgroundColor: colors.border }]} />
 
                     {/* Header */}
                     <View style={s.header}>
-                        <Text style={[s.title, { color: colors.textPrimary }]}>{title}</Text>
-                        <TouchableOpacity onPress={handleClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <Text style={[s.title, { color: colors.textPrimary }]}>
+                            {title ?? (isRange ? 'Select Dates' : 'Select Date')}
+                        </Text>
+                        <TouchableOpacity onPress={handleDone} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                             <Text style={{ fontSize: 15, fontWeight: '600', color: colors.accent }}>Done</Text>
                         </TouchableOpacity>
                     </View>
+
+                    {/* Range hint */}
+                    {isRange && (
+                        <View style={s.rangeHintRow}>
+                            {tapCount === 1 ? (
+                                <Text style={[s.rangeHint, { color: colors.textTertiary }]}>Now tap the end date</Text>
+                            ) : rangeSummary ? (
+                                <Text style={[s.rangeHint, { color: colors.accent }]}>{rangeSummary}</Text>
+                            ) : null}
+                        </View>
+                    )}
 
                     {/* Month navigation */}
                     <View style={s.monthNav}>
@@ -194,37 +258,52 @@ export default function CalendarPicker({
                         {grid.map((week, wi) => (
                             <View key={wi} style={s.weekRow}>
                                 {week.map((date, di) => {
-                                    if (!date) {
-                                        return <View key={di} style={[s.dayCell, { width: DAY_SIZE }]} />;
-                                    }
-
                                     const ds = toDateStr(date);
                                     const isCurrentMonth = date.getMonth() === displayMonth.month;
-                                    const isSelected = ds === selectedDate;
                                     const isToday = ds === todayStr;
-                                    const isRangeEnd = ds === rangeEndStr;
-                                    const isInRange = rangeStart && rangeEndStr && ds > rangeStart && ds < rangeEndStr;
+
+                                    // Range highlighting
+                                    const isStart = isRange && ds === rS;
+                                    const isEnd = isRange && rS !== rE && ds === rE;
+                                    const isInRange = isRange && rS && rE && rS !== rE && ds > rS && ds < rE;
+                                    const isEndpoint = isStart || isEnd;
+
+                                    // Single mode
+                                    const isSingleSelected = !isRange && ds === selectedSingle;
 
                                     return (
                                         <TouchableOpacity
                                             key={di}
                                             style={[s.dayCell, { width: DAY_SIZE }]}
-                                            onPress={() => handleSelect(date)}
+                                            onPress={() => handleDayPress(date)}
                                             activeOpacity={0.6}
                                         >
-                                            {/* Range highlight background */}
+                                            {/* Range band — full width for mid-range cells */}
                                             {isInRange && (
-                                                <View style={[s.rangeBg, { backgroundColor: colors.accent + '15' }]} />
+                                                <View style={[s.rangeBg, { backgroundColor: colors.accent + '30' }]} />
                                             )}
-                                            {(isSelected || isRangeEnd) && rangeStart && (
+                                            {/* Half-band on start date (right half) */}
+                                            {isStart && rS !== rE && (
                                                 <View
                                                     style={[
                                                         s.rangeBg,
                                                         {
-                                                            backgroundColor: colors.accent + '15',
-                                                            width: '50%',
-                                                            [isSelected ? 'right' : 'left']: 0,
-                                                            [isSelected ? 'left' : 'right']: undefined,
+                                                            backgroundColor: colors.accent + '30',
+                                                            left: '50%',
+                                                            right: 0,
+                                                        },
+                                                    ]}
+                                                />
+                                            )}
+                                            {/* Half-band on end date (left half) */}
+                                            {isEnd && (
+                                                <View
+                                                    style={[
+                                                        s.rangeBg,
+                                                        {
+                                                            backgroundColor: colors.accent + '30',
+                                                            left: 0,
+                                                            right: '50%',
                                                         },
                                                     ]}
                                                 />
@@ -233,11 +312,12 @@ export default function CalendarPicker({
                                             <View
                                                 style={[
                                                     s.dayCircle,
-                                                    isSelected && { backgroundColor: colors.accent },
-                                                    isRangeEnd && { backgroundColor: colors.accent },
+                                                    (isEndpoint || isSingleSelected) && {
+                                                        backgroundColor: colors.accent,
+                                                    },
                                                     isToday &&
-                                                        !isSelected &&
-                                                        !isRangeEnd && {
+                                                        !isEndpoint &&
+                                                        !isSingleSelected && {
                                                             borderWidth: 1.5,
                                                             borderColor: colors.accent,
                                                         },
@@ -248,7 +328,7 @@ export default function CalendarPicker({
                                                         s.dayText,
                                                         {
                                                             color:
-                                                                isSelected || isRangeEnd
+                                                                isEndpoint || isSingleSelected
                                                                     ? '#FFFFFF'
                                                                     : isToday
                                                                       ? colors.accent
@@ -256,7 +336,9 @@ export default function CalendarPicker({
                                                                         ? colors.textPrimary
                                                                         : colors.textTertiary + '60',
                                                             fontWeight:
-                                                                isSelected || isRangeEnd || isToday ? '700' : '400',
+                                                                isEndpoint || isSingleSelected || isToday
+                                                                    ? '700'
+                                                                    : '400',
                                                         },
                                                     ]}
                                                 >
@@ -270,17 +352,19 @@ export default function CalendarPicker({
                         ))}
                     </View>
 
-                    {/* Today shortcut */}
-                    <TouchableOpacity
-                        style={[s.todayBtn, { borderColor: colors.accent }]}
-                        onPress={() => {
-                            const now = new Date();
-                            setDisplayMonth({ year: now.getFullYear(), month: now.getMonth() });
-                            handleSelect(now);
-                        }}
-                    >
-                        <Text style={[s.todayBtnText, { color: colors.accent }]}>Today</Text>
-                    </TouchableOpacity>
+                    {/* Today shortcut — single mode only */}
+                    {!isRange && (
+                        <TouchableOpacity
+                            style={[s.todayBtn, { borderColor: colors.accent }]}
+                            onPress={() => {
+                                const now = new Date();
+                                setDisplayMonth({ year: now.getFullYear(), month: now.getMonth() });
+                                handleDayPress(now);
+                            }}
+                        >
+                            <Text style={[s.todayBtnText, { color: colors.accent }]}>Today</Text>
+                        </TouchableOpacity>
+                    )}
                 </Animated.View>
             </View>
         </Modal>
@@ -302,10 +386,17 @@ const s = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 8,
         paddingHorizontal: 4,
     },
     title: { fontSize: 17, fontWeight: '600' },
+
+    rangeHintRow: {
+        minHeight: 22,
+        marginBottom: 8,
+        paddingHorizontal: 4,
+    },
+    rangeHint: { fontSize: 13, fontWeight: '500' },
 
     monthNav: {
         flexDirection: 'row',
@@ -327,6 +418,7 @@ const s = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
+        overflow: 'hidden',
     },
     dayCircle: {
         width: 36,
@@ -334,6 +426,7 @@ const s = StyleSheet.create({
         borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
+        zIndex: 1,
     },
     dayText: { fontSize: 15 },
     rangeBg: {
@@ -342,7 +435,6 @@ const s = StyleSheet.create({
         bottom: 4,
         left: 0,
         right: 0,
-        borderRadius: 0,
     },
 
     todayBtn: {

@@ -83,7 +83,7 @@ export default function CreateEventScreen() {
     const [endMinIdx, setEndMinIdx] = useState(0);
     const [endAmPm, setEndAmPm] = useState(1); // 1 = PM
     const [showTimePicker, setShowTimePicker] = useState<'start' | 'end' | null>(null);
-    const [showDatePicker, setShowDatePicker] = useState<'single' | 'rsStart' | 'rsEnd' | null>(null);
+    const [showDatePicker, setShowDatePicker] = useState<'single' | 'range' | null>(null);
     const [location, setLocation] = useState('');
     const [description, setDescription] = useState('');
     const [selectedAttendees, setSelectedAttendees] = useState<SelectedAttendee[]>([]);
@@ -497,38 +497,26 @@ export default function CreateEventScreen() {
                     ) : (
                         <View style={styles.field}>
                             <Text style={labelStyle}>Date Range *</Text>
-                            <View
+                            <TouchableOpacity
                                 style={[
-                                    styles.timeRowCard,
+                                    styles.datePickerRow,
                                     {
                                         backgroundColor: colors.inputBackground,
                                         borderColor:
                                             errors.rsStartDate || errors.rsEndDate ? colors.danger : colors.inputBorder,
                                     },
                                 ]}
+                                onPress={() => setShowDatePicker('range')}
+                                activeOpacity={0.7}
                             >
-                                <TouchableOpacity
-                                    style={styles.timeCell}
-                                    onPress={() => setShowDatePicker('rsStart')}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={[styles.timeCellLabel, { color: colors.textTertiary }]}>From</Text>
-                                    <Text style={[styles.timeCellValue, { color: colors.textPrimary }]}>
-                                        {formatDateLabel(rsStartDate)}
-                                    </Text>
-                                </TouchableOpacity>
-                                <View style={[styles.timeCellDivider, { backgroundColor: colors.border }]} />
-                                <TouchableOpacity
-                                    style={styles.timeCell}
-                                    onPress={() => setShowDatePicker('rsEnd')}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={[styles.timeCellLabel, { color: colors.textTertiary }]}>To</Text>
-                                    <Text style={[styles.timeCellValue, { color: colors.textPrimary }]}>
-                                        {formatDateLabel(rsEndDate)}
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
+                                <Ionicons name="calendar-outline" size={18} color={colors.accent} />
+                                <Text style={[styles.datePickerText, { color: colors.textPrimary }]}>
+                                    {rsStartDate === rsEndDate
+                                        ? formatDateLabel(rsStartDate)
+                                        : `${formatDateLabel(rsStartDate)} – ${formatDateLabel(rsEndDate)}`}
+                                </Text>
+                                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                            </TouchableOpacity>
                             {errors.rsStartDate ? (
                                 <Text style={[styles.errorText, { color: colors.danger }]}>{errors.rsStartDate}</Text>
                             ) : null}
@@ -1085,7 +1073,7 @@ export default function CreateEventScreen() {
                 </View>
             </Modal>
 
-            {/* Date Picker */}
+            {/* Date Picker — single */}
             <CalendarPicker
                 visible={showDatePicker === 'single'}
                 selectedDate={eventDate}
@@ -1097,30 +1085,21 @@ export default function CreateEventScreen() {
                 colors={colors}
                 title="Event Date"
             />
+            {/* Date Picker — range (roadshow) */}
             <CalendarPicker
-                visible={showDatePicker === 'rsStart'}
-                selectedDate={rsStartDate}
-                onSelect={(d) => {
-                    setRsStartDate(d);
-                    if (d > rsEndDate) setRsEndDate(d);
+                mode="range"
+                visible={showDatePicker === 'range'}
+                startDate={rsStartDate}
+                endDate={rsEndDate}
+                onConfirm={(start, end) => {
+                    setRsStartDate(start);
+                    setRsEndDate(end);
                     setErrors((e) => ({ ...e, rsStartDate: '', rsEndDate: '' }));
+                    setShowDatePicker(null);
                 }}
                 onClose={() => setShowDatePicker(null)}
                 colors={colors}
-                title="Start Date"
-                rangeEnd={rsEndDate}
-            />
-            <CalendarPicker
-                visible={showDatePicker === 'rsEnd'}
-                selectedDate={rsEndDate}
-                onSelect={(d) => {
-                    setRsEndDate(d);
-                    if (d < rsStartDate) setRsStartDate(d);
-                    setErrors((e) => ({ ...e, rsStartDate: '', rsEndDate: '' }));
-                }}
-                onClose={() => setShowDatePicker(null)}
-                colors={colors}
-                title="End Date"
+                title="Date Range"
             />
 
             {/* Attendee Picker Modal */}
