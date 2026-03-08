@@ -15,7 +15,6 @@
         "ios": {
             "supportsTablet": false,
             "bundleIdentifier": "com.shawnlee.lyfe",
-            "developmentTeam": "Y953XF3N6C",
             "infoPlist": {
                 "NSFaceIDUsageDescription": "Use Face ID to sign in to Lyfe quickly and securely.",
                 "NSCameraUsageDescription": "Allow Lyfe to take a profile photo.",
