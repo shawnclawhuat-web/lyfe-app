@@ -3,10 +3,15 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 // Public routes that don't require authentication
 const PUBLIC_PATHS = ['/support', '/privacy'];
+const PUBLIC_PREFIXES = ['/invite'];
 
 export async function updateSession(request: NextRequest) {
   // Skip auth for public pages
-  if (PUBLIC_PATHS.includes(request.nextUrl.pathname)) {
+  const pathname = request.nextUrl.pathname;
+  if (
+    PUBLIC_PATHS.includes(pathname) ||
+    PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))
+  ) {
     return NextResponse.next({ request });
   }
 

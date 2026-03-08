@@ -74,7 +74,7 @@ export default function AddCandidateScreen() {
         }
 
         setIsSaving(false);
-        setInviteLink(`https://lyfe.app/invite/${inviteToken}`);
+        setInviteLink(`https://lyfe-admin.vercel.app/invite/${inviteToken}`);
         setShowSuccess(true);
     };
 
