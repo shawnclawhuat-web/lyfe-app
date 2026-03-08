@@ -16,6 +16,7 @@ import {
     toDateStr,
     timeAgo,
     getRoadshowStatus,
+    isEventLive,
 } from '@/lib/dateTime';
 
 // ── formatTime ──
@@ -315,5 +316,43 @@ describe('getRoadshowStatus', () => {
 
     it('returns "live" when no start or end time on event day', () => {
         expect(getRoadshowStatus('2026-03-08', null, null, at(15, 0))).toBe('live');
+    });
+});
+
+// ── isEventLive ──
+
+describe('isEventLive', () => {
+    const at = (h: number, m: number) => new Date(2026, 2, 8, h, m, 0);
+
+    it('returns true when event is within time window', () => {
+        expect(isEventLive('2026-03-08', '09:00', '17:00', at(12, 0))).toBe(true);
+    });
+
+    it('returns false when event is before start time', () => {
+        expect(isEventLive('2026-03-08', '14:00', '17:00', at(12, 0))).toBe(false);
+    });
+
+    it('returns false when event is after end time', () => {
+        expect(isEventLive('2026-03-08', '09:00', '12:00', at(14, 0))).toBe(false);
+    });
+
+    it('returns false when start_time is null', () => {
+        expect(isEventLive('2026-03-08', null, '17:00', at(12, 0))).toBe(false);
+    });
+
+    it('returns false when end_time is null', () => {
+        expect(isEventLive('2026-03-08', '09:00', null, at(12, 0))).toBe(false);
+    });
+
+    it('returns false when both times are null', () => {
+        expect(isEventLive('2026-03-08', null, null, at(12, 0))).toBe(false);
+    });
+
+    it('returns false when event date is in the past', () => {
+        expect(isEventLive('2026-03-07', '09:00', '17:00', at(12, 0))).toBe(false);
+    });
+
+    it('returns false when event date is in the future', () => {
+        expect(isEventLive('2026-03-09', '09:00', '17:00', at(12, 0))).toBe(false);
     });
 });

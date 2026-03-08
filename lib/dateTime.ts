@@ -134,6 +134,15 @@ export function getRoadshowStatus(
     return 'live';
 }
 
+/**
+ * Determine if an event is currently live based on date and time window.
+ * Events with null end_time are excluded (can't determine when they end).
+ */
+export function isEventLive(eventDate: string, startTime: string | null, endTime: string | null, now?: Date): boolean {
+    if (!startTime || !endTime) return false;
+    return getRoadshowStatus(eventDate, startTime, endTime, now) === 'live';
+}
+
 /** Format ISO timestamp as relative time (e.g. "now", "5m ago", "2h ago", "3d ago") */
 export function timeAgo(dateStr: string): string {
     const diffMin = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
