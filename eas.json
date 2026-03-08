@@ -6,22 +6,13 @@
     "build": {
         "development": {
             "developmentClient": true,
-            "distribution": "internal",
-            "ios": {
-                "developmentTeam": "Y953XF3N6C"
-            }
+            "distribution": "internal"
         },
         "preview": {
-            "distribution": "internal",
-            "ios": {
-                "developmentTeam": "Y953XF3N6C"
-            }
+            "distribution": "internal"
         },
         "production": {
-            "autoIncrement": true,
-            "ios": {
-                "developmentTeam": "Y953XF3N6C"
-            }
+            "autoIncrement": true
         }
     },
     "submit": {
