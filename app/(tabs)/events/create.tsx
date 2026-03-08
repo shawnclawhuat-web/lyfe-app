@@ -1,11 +1,34 @@
 import Avatar from '@/components/Avatar';
 import ScreenHeader from '@/components/ScreenHeader';
 import WheelPicker, { WHEEL_ITEM_H } from '@/components/WheelPicker';
-import { ATTENDEE_ROLES, AVATAR_COLORS, ERROR_BG, ERROR_TEXT, getAvatarColor, formatPickerTime, hhmm24ToPickerState, PICKER_AMPM, PICKER_HOURS, PICKER_MINUTES, pickerToHHMM24, TIME_PICKER_VISIBLE } from '@/constants/ui';
+import {
+    ATTENDEE_ROLES,
+    AVATAR_COLORS,
+    ERROR_BG,
+    ERROR_TEXT,
+    getAvatarColor,
+    formatPickerTime,
+    hhmm24ToPickerState,
+    PICKER_AMPM,
+    PICKER_HOURS,
+    PICKER_MINUTES,
+    pickerToHHMM24,
+    TIME_PICKER_VISIBLE,
+} from '@/constants/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { dateDiffDays, dateRange, formatDateLabel, isValidDate, todayStr } from '@/lib/dateTime';
-import { createEvent, createRoadshowBulk, fetchAllUsers, fetchEventById, fetchRoadshowConfig, saveRoadshowConfig, updateEvent, type RoadshowConfigInput, type SimpleUser } from '@/lib/events';
+import {
+    createEvent,
+    createRoadshowBulk,
+    fetchAllUsers,
+    fetchEventById,
+    fetchRoadshowConfig,
+    saveRoadshowConfig,
+    updateEvent,
+    type RoadshowConfigInput,
+    type SimpleUser,
+} from '@/lib/events';
 import { supabase } from '@/lib/supabase';
 import type { AttendeeRole, CreateEventInput, EventType, ExternalAttendee } from '@/types/event';
 import { EVENT_TYPE_COLORS, EVENT_TYPE_LABELS } from '@/types/event';
@@ -50,14 +73,14 @@ export default function CreateEventScreen() {
     const [eventType, setEventType] = useState<EventType>('team_meeting');
     const [eventDate, setEventDate] = useState(todayStr());
     // Start time picker (default 9:00 AM)
-    const [startHour, setStartHour] = useState(8);      // index 8 → '9'
+    const [startHour, setStartHour] = useState(8); // index 8 → '9'
     const [startMinIdx, setStartMinIdx] = useState(0);
-    const [startAmPm, setStartAmPm] = useState(0);      // 0 = AM
+    const [startAmPm, setStartAmPm] = useState(0); // 0 = AM
     // End time picker (default 5:00 PM, optional)
     const [hasEndTime, setHasEndTime] = useState(false);
-    const [endHour, setEndHour] = useState(4);           // index 4 → '5'
+    const [endHour, setEndHour] = useState(4); // index 4 → '5'
     const [endMinIdx, setEndMinIdx] = useState(0);
-    const [endAmPm, setEndAmPm] = useState(1);           // 1 = PM
+    const [endAmPm, setEndAmPm] = useState(1); // 1 = PM
     const [showTimePicker, setShowTimePicker] = useState<'start' | 'end' | null>(null);
     const [location, setLocation] = useState('');
     const [description, setDescription] = useState('');
@@ -97,7 +120,9 @@ export default function CreateEventScreen() {
         setLoadingUsers(false);
     }, []);
 
-    useEffect(() => { loadUsers(); }, [loadUsers]);
+    useEffect(() => {
+        loadUsers();
+    }, [loadUsers]);
 
     // Supabase returns time as "HH:MM:SS" — strip seconds for the form
     const toHHMM = (t: string | null | undefined) => (t ?? '').slice(0, 5);
@@ -112,26 +137,34 @@ export default function CreateEventScreen() {
                 setEventType(data.event_type);
                 setEventDate(data.event_date);
                 const sp = hhmm24ToPickerState(toHHMM(data.start_time) || '09:00');
-                setStartHour(sp.hour); setStartMinIdx(sp.minIdx); setStartAmPm(sp.ampm);
+                setStartHour(sp.hour);
+                setStartMinIdx(sp.minIdx);
+                setStartAmPm(sp.ampm);
                 if (data.end_time) {
                     const ep = hhmm24ToPickerState(toHHMM(data.end_time));
-                    setEndHour(ep.hour); setEndMinIdx(ep.minIdx); setEndAmPm(ep.ampm);
+                    setEndHour(ep.hour);
+                    setEndMinIdx(ep.minIdx);
+                    setEndAmPm(ep.ampm);
                     setHasEndTime(true);
                 }
                 setLocation(data.location || '');
                 setDescription(data.description || '');
-                setSelectedAttendees(data.attendees.map(a => ({
-                    user_id: a.user_id,
-                    full_name: a.full_name ?? '',
-                    role: '',
-                    attendee_role: a.attendee_role,
-                    avatar_url: a.avatar_url,
-                })));
-                setExternalAttendees((data.external_attendees || []).map((a, i) => ({
-                    _key: `ext_${i}_${Date.now()}`,
-                    name: a.name,
-                    attendee_role: a.attendee_role,
-                })));
+                setSelectedAttendees(
+                    data.attendees.map((a) => ({
+                        user_id: a.user_id,
+                        full_name: a.full_name ?? '',
+                        role: '',
+                        attendee_role: a.attendee_role,
+                        avatar_url: a.avatar_url,
+                    })),
+                );
+                setExternalAttendees(
+                    (data.external_attendees || []).map((a, i) => ({
+                        _key: `ext_${i}_${Date.now()}`,
+                        name: a.name,
+                        attendee_role: a.attendee_role,
+                    })),
+                );
 
                 if (data.event_type === 'roadshow') {
                     setIsEditingRoadshow(true);
@@ -147,7 +180,11 @@ export default function CreateEventScreen() {
                         setRsEndDate(data.event_date);
                     }
                     // Lock config if any attendance exists
-                    const { data: att } = await supabase.from('roadshow_attendance').select('id').eq('event_id', eventId).limit(1);
+                    const { data: att } = await supabase
+                        .from('roadshow_attendance')
+                        .select('id')
+                        .eq('event_id', eventId)
+                        .limit(1);
                     setRsConfigLocked((att ?? []).length > 0);
                 }
             }
@@ -156,18 +193,25 @@ export default function CreateEventScreen() {
     }, [isEditing, eventId]);
 
     const toggleAttendee = (u: SimpleUser) => {
-        setSelectedAttendees(prev => {
-            if (prev.find(a => a.user_id === u.id)) {
-                return prev.filter(a => a.user_id !== u.id);
+        setSelectedAttendees((prev) => {
+            if (prev.find((a) => a.user_id === u.id)) {
+                return prev.filter((a) => a.user_id !== u.id);
             }
-            return [...prev, { user_id: u.id, full_name: u.full_name, role: u.role, attendee_role: 'attendee', avatar_url: u.avatar_url }];
+            return [
+                ...prev,
+                {
+                    user_id: u.id,
+                    full_name: u.full_name,
+                    role: u.role,
+                    attendee_role: 'attendee',
+                    avatar_url: u.avatar_url,
+                },
+            ];
         });
     };
 
     const updateAttendeeRole = (userId: string, role: AttendeeRole) => {
-        setSelectedAttendees(prev =>
-            prev.map(a => a.user_id === userId ? { ...a, attendee_role: role } : a)
-        );
+        setSelectedAttendees((prev) => prev.map((a) => (a.user_id === userId ? { ...a, attendee_role: role } : a)));
     };
 
     const validate = (): boolean => {
@@ -176,10 +220,12 @@ export default function CreateEventScreen() {
         if (eventType === 'roadshow') {
             if (!isValidDate(rsStartDate)) e.rsStartDate = 'Enter a valid start date (YYYY-MM-DD)';
             if (!isValidDate(rsEndDate)) e.rsEndDate = 'Enter a valid end date (YYYY-MM-DD)';
-            if (rsStartDate && rsEndDate && rsEndDate < rsStartDate) e.rsEndDate = 'End date must be on or after start date';
+            if (rsStartDate && rsEndDate && rsEndDate < rsStartDate)
+                e.rsEndDate = 'End date must be on or after start date';
             const dayCount = rsStartDate && rsEndDate ? dateDiffDays(rsStartDate, rsEndDate) + 1 : 0;
             if (dayCount > 31) e.rsEndDate = 'Range cannot exceed 31 days';
-            if (!rsWeeklyCost || isNaN(Number(rsWeeklyCost)) || Number(rsWeeklyCost) <= 0) e.rsWeeklyCost = 'Enter a valid weekly cost';
+            if (!rsWeeklyCost || isNaN(Number(rsWeeklyCost)) || Number(rsWeeklyCost) <= 0)
+                e.rsWeeklyCost = 'Enter a valid weekly cost';
             if (rsSlots < 1) e.rsSlots = 'Slots must be at least 1';
         } else {
             if (!isValidDate(eventDate)) e.eventDate = 'Enter a valid date (YYYY-MM-DD)';
@@ -202,14 +248,16 @@ export default function CreateEventScreen() {
             const dayCount = dates.length;
 
             if (dayCount > 14) {
-                const confirmed = await new Promise<boolean>(resolve =>
-                    Alert.alert(
-                        'Large Roadshow',
-                        `This will create ${dayCount} events. Continue?`,
-                        [{ text: 'Cancel', onPress: () => resolve(false), style: 'cancel' }, { text: 'Create', onPress: () => resolve(true) }],
-                    )
+                const confirmed = await new Promise<boolean>((resolve) =>
+                    Alert.alert('Large Roadshow', `This will create ${dayCount} events. Continue?`, [
+                        { text: 'Cancel', onPress: () => resolve(false), style: 'cancel' },
+                        { text: 'Create', onPress: () => resolve(true) },
+                    ]),
                 );
-                if (!confirmed) { setSubmitting(false); return; }
+                if (!confirmed) {
+                    setSubmitting(false);
+                    return;
+                }
             }
 
             const rsConfig: RoadshowConfigInput = {
@@ -222,7 +270,7 @@ export default function CreateEventScreen() {
                 suggested_closed: rsClosed,
             };
 
-            const events = dates.map(d => ({
+            const events = dates.map((d) => ({
                 title: title.trim(),
                 event_date: d,
                 start_time: startTime,
@@ -233,12 +281,12 @@ export default function CreateEventScreen() {
             const { error } = await createRoadshowBulk(
                 events,
                 rsConfig,
-                selectedAttendees.map(a => ({ user_id: a.user_id, attendee_role: a.attendee_role })),
+                selectedAttendees.map((a) => ({ user_id: a.user_id, attendee_role: a.attendee_role })),
                 user!.id,
             );
             setSubmitting(false);
             if (error) {
-                setErrors(e => ({ ...e, _submit: error }));
+                setErrors((e) => ({ ...e, _submit: error }));
             } else {
                 Alert.alert('Created', `${dayCount} roadshow event${dayCount > 1 ? 's' : ''} created.`, [
                     { text: 'OK', onPress: () => router.back() },
@@ -256,7 +304,7 @@ export default function CreateEventScreen() {
             start_time: startTime,
             end_time: endTime,
             location: location.trim() || null,
-            attendees: selectedAttendees.map(a => ({
+            attendees: selectedAttendees.map((a) => ({
                 user_id: a.user_id,
                 attendee_role: a.attendee_role,
             })),
@@ -269,7 +317,7 @@ export default function CreateEventScreen() {
 
         if (eventError) {
             setSubmitting(false);
-            setErrors(e => ({ ...e, _submit: eventError }));
+            setErrors((e) => ({ ...e, _submit: eventError }));
             return;
         }
 
@@ -297,12 +345,16 @@ export default function CreateEventScreen() {
         router.back();
     };
 
-    const filteredUsers = allUsers.filter(u =>
-        u.full_name.toLowerCase().includes(userSearch.toLowerCase()) ||
-        u.role.toLowerCase().includes(userSearch.toLowerCase())
+    const filteredUsers = allUsers.filter(
+        (u) =>
+            u.full_name.toLowerCase().includes(userSearch.toLowerCase()) ||
+            u.role.toLowerCase().includes(userSearch.toLowerCase()),
     );
 
-    const inputStyle = [styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.textPrimary }];
+    const inputStyle = [
+        styles.input,
+        { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.textPrimary },
+    ];
     const labelStyle = [styles.label, { color: colors.textSecondary }];
 
     if (loadingEvent) {
@@ -326,40 +378,57 @@ export default function CreateEventScreen() {
                         disabled={submitting}
                         style={[styles.saveBtn, { backgroundColor: colors.accent, opacity: submitting ? 0.6 : 1 }]}
                     >
-                        {submitting
-                            ? <ActivityIndicator size="small" color="#FFFFFF" />
-                            : <Text style={styles.saveBtnText}>
-                                {isEditing ? 'Save' : (eventType === 'roadshow' && !isEditing && rsStartDate && rsEndDate && isValidDate(rsStartDate) && isValidDate(rsEndDate) && rsEndDate >= rsStartDate)
-                                    ? `Create ${dateDiffDays(rsStartDate, rsEndDate) + 1}`
-                                    : 'Create'}
-                              </Text>
-                        }
+                        {submitting ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                            <Text style={styles.saveBtnText}>
+                                {isEditing
+                                    ? 'Save'
+                                    : eventType === 'roadshow' &&
+                                        !isEditing &&
+                                        rsStartDate &&
+                                        rsEndDate &&
+                                        isValidDate(rsStartDate) &&
+                                        isValidDate(rsEndDate) &&
+                                        rsEndDate >= rsStartDate
+                                      ? `Create ${dateDiffDays(rsStartDate, rsEndDate) + 1}`
+                                      : 'Create'}
+                            </Text>
+                        )}
                     </TouchableOpacity>
                 }
             />
 
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
                     {/* Title */}
                     <View style={styles.field}>
                         <Text style={labelStyle}>Title *</Text>
                         <TextInput
-                            style={[inputStyle, isEditingRoadshow && { opacity: 0.5 }, errors.title && { borderColor: colors.danger }]}
+                            style={[
+                                inputStyle,
+                                isEditingRoadshow && { opacity: 0.5 },
+                                errors.title && { borderColor: colors.danger },
+                            ]}
                             placeholder="Event title"
                             placeholderTextColor={colors.textTertiary}
                             value={title}
-                            onChangeText={t => { setTitle(t); setErrors(e => ({ ...e, title: '' })); }}
+                            onChangeText={(t) => {
+                                setTitle(t);
+                                setErrors((e) => ({ ...e, title: '' }));
+                            }}
                             editable={!isEditingRoadshow}
                         />
-                        {errors.title ? <Text style={[styles.errorText, { color: colors.danger }]}>{errors.title}</Text> : null}
+                        {errors.title ? (
+                            <Text style={[styles.errorText, { color: colors.danger }]}>{errors.title}</Text>
+                        ) : null}
                     </View>
 
                     {/* Event Type */}
                     <View style={styles.field}>
                         <Text style={labelStyle}>Event Type *</Text>
                         <View style={styles.typeRow}>
-                            {EVENT_TYPES.map(t => {
+                            {EVENT_TYPES.map((t) => {
                                 const isActive = eventType === t;
                                 const color = EVENT_TYPE_COLORS[t];
                                 return (
@@ -376,7 +445,12 @@ export default function CreateEventScreen() {
                                         onPress={() => !isEditingRoadshow && setEventType(t)}
                                         activeOpacity={isEditingRoadshow ? 1 : 0.7}
                                     >
-                                        <Text style={[styles.typeChipText, { color: isActive ? color : colors.textSecondary }]}>
+                                        <Text
+                                            style={[
+                                                styles.typeChipText,
+                                                { color: isActive ? color : colors.textSecondary },
+                                            ]}
+                                        >
                                             {EVENT_TYPE_LABELS[t]}
                                         </Text>
                                     </TouchableOpacity>
@@ -386,15 +460,22 @@ export default function CreateEventScreen() {
                     </View>
 
                     {/* Date — single for non-roadshow or editing, date range for new roadshow */}
-                    {(eventType !== 'roadshow' || isEditing) ? (
+                    {eventType !== 'roadshow' || isEditing ? (
                         <View style={styles.field}>
                             <Text style={labelStyle}>Date {isEditingRoadshow ? '' : '* (YYYY-MM-DD)'}</Text>
                             <TextInput
-                                style={[inputStyle, isEditingRoadshow && { opacity: 0.5 }, errors.eventDate && { borderColor: colors.danger }]}
+                                style={[
+                                    inputStyle,
+                                    isEditingRoadshow && { opacity: 0.5 },
+                                    errors.eventDate && { borderColor: colors.danger },
+                                ]}
                                 placeholder="e.g. 2026-03-15"
                                 placeholderTextColor={colors.textTertiary}
                                 value={isEditingRoadshow ? formatDateLabel(eventDate) : eventDate}
-                                onChangeText={v => { setEventDate(v); setErrors(e => ({ ...e, eventDate: '' })); }}
+                                onChangeText={(v) => {
+                                    setEventDate(v);
+                                    setErrors((e) => ({ ...e, eventDate: '' }));
+                                }}
                                 keyboardType="numbers-and-punctuation"
                                 maxLength={10}
                                 editable={!isEditingRoadshow}
@@ -404,76 +485,117 @@ export default function CreateEventScreen() {
                                     Date is locked for roadshow events. To add more days, create a new roadshow.
                                 </Text>
                             )}
-                            {errors.eventDate ? <Text style={[styles.errorText, { color: colors.danger }]}>{errors.eventDate}</Text> : null}
+                            {errors.eventDate ? (
+                                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.eventDate}</Text>
+                            ) : null}
                         </View>
                     ) : (
                         <View style={styles.field}>
                             <Text style={labelStyle}>Date Range *</Text>
                             <View style={styles.timeRow}>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={[styles.label, { color: colors.textTertiary, fontSize: 11 }]}>From (YYYY-MM-DD)</Text>
+                                    <Text style={[styles.label, { color: colors.textTertiary, fontSize: 11 }]}>
+                                        From (YYYY-MM-DD)
+                                    </Text>
                                     <TextInput
                                         style={[inputStyle, errors.rsStartDate && { borderColor: colors.danger }]}
                                         placeholder="2026-03-09"
                                         placeholderTextColor={colors.textTertiary}
                                         value={rsStartDate}
-                                        onChangeText={v => { setRsStartDate(v); setErrors(e => ({ ...e, rsStartDate: '' })); }}
+                                        onChangeText={(v) => {
+                                            setRsStartDate(v);
+                                            setErrors((e) => ({ ...e, rsStartDate: '' }));
+                                        }}
                                         keyboardType="numbers-and-punctuation"
                                         maxLength={10}
                                     />
-                                    {errors.rsStartDate ? <Text style={[styles.errorText, { color: colors.danger }]}>{errors.rsStartDate}</Text> : null}
+                                    {errors.rsStartDate ? (
+                                        <Text style={[styles.errorText, { color: colors.danger }]}>
+                                            {errors.rsStartDate}
+                                        </Text>
+                                    ) : null}
                                 </View>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={[styles.label, { color: colors.textTertiary, fontSize: 11 }]}>To (YYYY-MM-DD)</Text>
+                                    <Text style={[styles.label, { color: colors.textTertiary, fontSize: 11 }]}>
+                                        To (YYYY-MM-DD)
+                                    </Text>
                                     <TextInput
                                         style={[inputStyle, errors.rsEndDate && { borderColor: colors.danger }]}
                                         placeholder="2026-03-15"
                                         placeholderTextColor={colors.textTertiary}
                                         value={rsEndDate}
-                                        onChangeText={v => { setRsEndDate(v); setErrors(e => ({ ...e, rsEndDate: '' })); }}
+                                        onChangeText={(v) => {
+                                            setRsEndDate(v);
+                                            setErrors((e) => ({ ...e, rsEndDate: '' }));
+                                        }}
                                         keyboardType="numbers-and-punctuation"
                                         maxLength={10}
                                     />
-                                    {errors.rsEndDate ? <Text style={[styles.errorText, { color: colors.danger }]}>{errors.rsEndDate}</Text> : null}
+                                    {errors.rsEndDate ? (
+                                        <Text style={[styles.errorText, { color: colors.danger }]}>
+                                            {errors.rsEndDate}
+                                        </Text>
+                                    ) : null}
                                 </View>
                             </View>
-                            {rsStartDate && rsEndDate && isValidDate(rsStartDate) && isValidDate(rsEndDate) && rsEndDate >= rsStartDate && (
-                                <Text style={[styles.rsPreviewHint, { color: colors.textTertiary }]}>
-                                    Creates {dateDiffDays(rsStartDate, rsEndDate) + 1} daily event{dateDiffDays(rsStartDate, rsEndDate) + 1 > 1 ? 's' : ''} · {formatDateLabel(rsStartDate)} – {formatDateLabel(rsEndDate)}
-                                </Text>
-                            )}
+                            {rsStartDate &&
+                                rsEndDate &&
+                                isValidDate(rsStartDate) &&
+                                isValidDate(rsEndDate) &&
+                                rsEndDate >= rsStartDate && (
+                                    <Text style={[styles.rsPreviewHint, { color: colors.textTertiary }]}>
+                                        Creates {dateDiffDays(rsStartDate, rsEndDate) + 1} daily event
+                                        {dateDiffDays(rsStartDate, rsEndDate) + 1 > 1 ? 's' : ''} ·{' '}
+                                        {formatDateLabel(rsStartDate)} – {formatDateLabel(rsEndDate)}
+                                    </Text>
+                                )}
                         </View>
                     )}
 
                     {/* Roadshow Settings */}
                     {eventType === 'roadshow' && (
                         <View style={[styles.rsSection, { backgroundColor: colors.cardBackground }]}>
-                            <Text style={[styles.rsSectionTitle, { color: colors.textPrimary }]}>Roadshow Settings</Text>
+                            <Text style={[styles.rsSectionTitle, { color: colors.textPrimary }]}>
+                                Roadshow Settings
+                            </Text>
                             {rsConfigLocked && (
                                 <View style={[styles.rsLockedBanner, { backgroundColor: colors.surfaceSecondary }]}>
                                     <Ionicons name="lock-closed-outline" size={14} color={colors.textTertiary} />
-                                    <Text style={[{ color: colors.textTertiary, fontSize: 12, flex: 1 }]}>Config locked — agents have already checked in.</Text>
+                                    <Text style={[{ color: colors.textTertiary, fontSize: 12, flex: 1 }]}>
+                                        Config locked — agents have already checked in.
+                                    </Text>
                                 </View>
                             )}
                             <View style={styles.field}>
                                 <Text style={labelStyle}>Weekly Cost ($) *</Text>
                                 <TextInput
-                                    style={[inputStyle, errors.rsWeeklyCost && { borderColor: colors.danger }, rsConfigLocked && { opacity: 0.5 }]}
+                                    style={[
+                                        inputStyle,
+                                        errors.rsWeeklyCost && { borderColor: colors.danger },
+                                        rsConfigLocked && { opacity: 0.5 },
+                                    ]}
                                     placeholder="e.g. 1800"
                                     placeholderTextColor={colors.textTertiary}
                                     value={rsWeeklyCost}
-                                    onChangeText={v => { setRsWeeklyCost(v.replace(/[^0-9.]/g, '')); setErrors(e => ({ ...e, rsWeeklyCost: '' })); }}
+                                    onChangeText={(v) => {
+                                        setRsWeeklyCost(v.replace(/[^0-9.]/g, ''));
+                                        setErrors((e) => ({ ...e, rsWeeklyCost: '' }));
+                                    }}
                                     keyboardType="decimal-pad"
                                     editable={!rsConfigLocked}
                                 />
-                                {errors.rsWeeklyCost ? <Text style={[styles.errorText, { color: colors.danger }]}>{errors.rsWeeklyCost}</Text> : null}
+                                {errors.rsWeeklyCost ? (
+                                    <Text style={[styles.errorText, { color: colors.danger }]}>
+                                        {errors.rsWeeklyCost}
+                                    </Text>
+                                ) : null}
                             </View>
                             <View style={styles.rsStepper}>
                                 <Text style={labelStyle}>Agents per slot / day</Text>
                                 <View style={styles.rsStepperRow}>
                                     <TouchableOpacity
                                         style={[styles.rsStepBtn, { backgroundColor: colors.surfaceSecondary }]}
-                                        onPress={() => setRsSlots(v => Math.max(1, v - 1))}
+                                        onPress={() => setRsSlots((v) => Math.max(1, v - 1))}
                                         disabled={rsConfigLocked}
                                         accessibilityLabel="Decrease agents per slot"
                                     >
@@ -482,7 +604,7 @@ export default function CreateEventScreen() {
                                     <Text style={[styles.rsStepValue, { color: colors.textPrimary }]}>{rsSlots}</Text>
                                     <TouchableOpacity
                                         style={[styles.rsStepBtn, { backgroundColor: colors.surfaceSecondary }]}
-                                        onPress={() => setRsSlots(v => v + 1)}
+                                        onPress={() => setRsSlots((v) => v + 1)}
                                         disabled={rsConfigLocked}
                                         accessibilityLabel="Increase agents per slot"
                                     >
@@ -495,7 +617,7 @@ export default function CreateEventScreen() {
                                 <View style={styles.rsStepperRow}>
                                     <TouchableOpacity
                                         style={[styles.rsStepBtn, { backgroundColor: colors.surfaceSecondary }]}
-                                        onPress={() => setRsGrace(v => Math.max(0, v - 5))}
+                                        onPress={() => setRsGrace((v) => Math.max(0, v - 5))}
                                         accessibilityLabel="Decrease grace period"
                                     >
                                         <Ionicons name="remove" size={18} color={colors.textPrimary} />
@@ -503,7 +625,7 @@ export default function CreateEventScreen() {
                                     <Text style={[styles.rsStepValue, { color: colors.textPrimary }]}>{rsGrace}</Text>
                                     <TouchableOpacity
                                         style={[styles.rsStepBtn, { backgroundColor: colors.surfaceSecondary }]}
-                                        onPress={() => setRsGrace(v => v + 5)}
+                                        onPress={() => setRsGrace((v) => v + 5)}
                                         accessibilityLabel="Increase grace period"
                                     >
                                         <Ionicons name="add" size={18} color={colors.textPrimary} />
@@ -511,8 +633,10 @@ export default function CreateEventScreen() {
                                 </View>
                             </View>
 
-                            <Text style={[styles.rsSectionTitle, { color: colors.textPrimary, marginTop: 8 }]}>Suggested Daily Targets</Text>
-                            {(['sitdowns', 'pitches', 'closed'] as const).map(key => {
+                            <Text style={[styles.rsSectionTitle, { color: colors.textPrimary, marginTop: 8 }]}>
+                                Suggested Daily Targets
+                            </Text>
+                            {(['sitdowns', 'pitches', 'closed'] as const).map((key) => {
                                 const labels = { sitdowns: 'Sitdowns', pitches: 'Pitches', closed: 'Cases Closed' };
                                 const values = { sitdowns: rsSitdowns, pitches: rsPitches, closed: rsClosed };
                                 const setters = { sitdowns: setRsSitdowns, pitches: setRsPitches, closed: setRsClosed };
@@ -522,15 +646,17 @@ export default function CreateEventScreen() {
                                         <View style={styles.rsStepperRow}>
                                             <TouchableOpacity
                                                 style={[styles.rsStepBtn, { backgroundColor: colors.surfaceSecondary }]}
-                                                onPress={() => setters[key](v => Math.max(0, v - 1))}
+                                                onPress={() => setters[key]((v) => Math.max(0, v - 1))}
                                                 accessibilityLabel={`Decrease ${labels[key]} target`}
                                             >
                                                 <Ionicons name="remove" size={18} color={colors.textPrimary} />
                                             </TouchableOpacity>
-                                            <Text style={[styles.rsStepValue, { color: colors.textPrimary }]}>{values[key]}</Text>
+                                            <Text style={[styles.rsStepValue, { color: colors.textPrimary }]}>
+                                                {values[key]}
+                                            </Text>
                                             <TouchableOpacity
                                                 style={[styles.rsStepBtn, { backgroundColor: colors.surfaceSecondary }]}
-                                                onPress={() => setters[key](v => v + 1)}
+                                                onPress={() => setters[key]((v) => v + 1)}
                                                 accessibilityLabel={`Increase ${labels[key]} target`}
                                             >
                                                 <Ionicons name="add" size={18} color={colors.textPrimary} />
@@ -543,15 +669,21 @@ export default function CreateEventScreen() {
                             {/* Cost preview */}
                             {rsWeeklyCost && !isNaN(Number(rsWeeklyCost)) && Number(rsWeeklyCost) > 0 && (
                                 <View style={[styles.rsPreview, { backgroundColor: colors.background }]}>
-                                    <Text style={[styles.rsPreviewTitle, { color: colors.textSecondary }]}>Cost Preview</Text>
+                                    <Text style={[styles.rsPreviewTitle, { color: colors.textSecondary }]}>
+                                        Cost Preview
+                                    </Text>
                                     <View style={styles.rsPreviewRow}>
-                                        <Text style={[styles.rsPreviewLabel, { color: colors.textTertiary }]}>Daily cost</Text>
+                                        <Text style={[styles.rsPreviewLabel, { color: colors.textTertiary }]}>
+                                            Daily cost
+                                        </Text>
                                         <Text style={[styles.rsPreviewValue, { color: colors.textPrimary }]}>
                                             ${(Number(rsWeeklyCost) / 7).toFixed(2)}
                                         </Text>
                                     </View>
                                     <View style={styles.rsPreviewRow}>
-                                        <Text style={[styles.rsPreviewLabel, { color: colors.textTertiary }]}>Per agent / slot</Text>
+                                        <Text style={[styles.rsPreviewLabel, { color: colors.textTertiary }]}>
+                                            Per agent / slot
+                                        </Text>
                                         <Text style={[styles.rsPreviewValue, { color: '#EC4899', fontWeight: '700' }]}>
                                             ${(Number(rsWeeklyCost) / 7 / Math.max(1, rsSlots)).toFixed(2)}
                                         </Text>
@@ -570,7 +702,12 @@ export default function CreateEventScreen() {
                     {/* Time row — tapping either cell opens the picker modal */}
                     <View style={styles.field}>
                         <Text style={labelStyle}>Time *</Text>
-                        <View style={[styles.timeRowCard, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+                        <View
+                            style={[
+                                styles.timeRowCard,
+                                { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
+                            ]}
+                        >
                             {/* Start time cell */}
                             <TouchableOpacity
                                 style={styles.timeCell}
@@ -588,7 +725,10 @@ export default function CreateEventScreen() {
                             {/* End time cell */}
                             <TouchableOpacity
                                 style={styles.timeCell}
-                                onPress={() => { if (!hasEndTime) setHasEndTime(true); setShowTimePicker('end'); }}
+                                onPress={() => {
+                                    if (!hasEndTime) setHasEndTime(true);
+                                    setShowTimePicker('end');
+                                }}
                                 activeOpacity={0.7}
                             >
                                 {hasEndTime ? (
@@ -658,10 +798,13 @@ export default function CreateEventScreen() {
                             </View>
                         ) : (
                             <>
-                                {selectedAttendees.map(a => {
+                                {selectedAttendees.map((a) => {
                                     const aColor = getAvatarColor(a.full_name);
                                     return (
-                                        <View key={a.user_id} style={[styles.attendeeItem, { backgroundColor: colors.cardBackground }]}>
+                                        <View
+                                            key={a.user_id}
+                                            style={[styles.attendeeItem, { backgroundColor: colors.cardBackground }]}
+                                        >
                                             <Avatar
                                                 name={a.full_name}
                                                 avatarUrl={a.avatar_url}
@@ -674,21 +817,31 @@ export default function CreateEventScreen() {
                                                     {a.full_name}
                                                 </Text>
                                                 <View style={styles.roleRow}>
-                                                    {ATTENDEE_ROLES.map(r => {
+                                                    {ATTENDEE_ROLES.map((r) => {
                                                         const active = a.attendee_role === r.key;
                                                         return (
                                                             <TouchableOpacity
                                                                 key={r.key}
                                                                 style={[
                                                                     styles.roleChip,
-                                                                    { backgroundColor: active ? colors.accent : colors.surfaceSecondary },
+                                                                    {
+                                                                        backgroundColor: active
+                                                                            ? colors.accent
+                                                                            : colors.surfaceSecondary,
+                                                                    },
                                                                 ]}
                                                                 onPress={() => updateAttendeeRole(a.user_id, r.key)}
                                                             >
-                                                                <Text style={[
-                                                                    styles.roleChipText,
-                                                                    { color: active ? '#FFFFFF' : colors.textTertiary },
-                                                                ]}>
+                                                                <Text
+                                                                    style={[
+                                                                        styles.roleChipText,
+                                                                        {
+                                                                            color: active
+                                                                                ? '#FFFFFF'
+                                                                                : colors.textTertiary,
+                                                                        },
+                                                                    ]}
+                                                                >
                                                                     {r.label}
                                                                 </Text>
                                                             </TouchableOpacity>
@@ -697,7 +850,11 @@ export default function CreateEventScreen() {
                                                 </View>
                                             </View>
                                             <TouchableOpacity
-                                                onPress={() => setSelectedAttendees(prev => prev.filter(x => x.user_id !== a.user_id))}
+                                                onPress={() =>
+                                                    setSelectedAttendees((prev) =>
+                                                        prev.filter((x) => x.user_id !== a.user_id),
+                                                    )
+                                                }
                                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                                             >
                                                 <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
@@ -705,10 +862,13 @@ export default function CreateEventScreen() {
                                         </View>
                                     );
                                 })}
-                                {externalAttendees.map(a => {
+                                {externalAttendees.map((a) => {
                                     const aColor = getAvatarColor(a.name);
                                     return (
-                                        <View key={a._key} style={[styles.attendeeItem, { backgroundColor: colors.cardBackground }]}>
+                                        <View
+                                            key={a._key}
+                                            style={[styles.attendeeItem, { backgroundColor: colors.cardBackground }]}
+                                        >
                                             <Avatar
                                                 name={a.name}
                                                 avatarUrl={null}
@@ -721,28 +881,56 @@ export default function CreateEventScreen() {
                                                     <Text style={[styles.attendeeName, { color: colors.textPrimary }]}>
                                                         {a.name}
                                                     </Text>
-                                                    <View style={[styles.guestBadge, { backgroundColor: colors.surfaceSecondary }]}>
-                                                        <Text style={[styles.guestBadgeText, { color: colors.textTertiary }]}>Guest</Text>
+                                                    <View
+                                                        style={[
+                                                            styles.guestBadge,
+                                                            { backgroundColor: colors.surfaceSecondary },
+                                                        ]}
+                                                    >
+                                                        <Text
+                                                            style={[
+                                                                styles.guestBadgeText,
+                                                                { color: colors.textTertiary },
+                                                            ]}
+                                                        >
+                                                            Guest
+                                                        </Text>
                                                     </View>
                                                 </View>
                                                 <View style={styles.roleRow}>
-                                                    {ATTENDEE_ROLES.map(r => {
+                                                    {ATTENDEE_ROLES.map((r) => {
                                                         const active = a.attendee_role === r.key;
                                                         return (
                                                             <TouchableOpacity
                                                                 key={r.key}
                                                                 style={[
                                                                     styles.roleChip,
-                                                                    { backgroundColor: active ? colors.accent : colors.surfaceSecondary },
+                                                                    {
+                                                                        backgroundColor: active
+                                                                            ? colors.accent
+                                                                            : colors.surfaceSecondary,
+                                                                    },
                                                                 ]}
-                                                                onPress={() => setExternalAttendees(prev =>
-                                                                    prev.map(x => x._key === a._key ? { ...x, attendee_role: r.key } : x)
-                                                                )}
+                                                                onPress={() =>
+                                                                    setExternalAttendees((prev) =>
+                                                                        prev.map((x) =>
+                                                                            x._key === a._key
+                                                                                ? { ...x, attendee_role: r.key }
+                                                                                : x,
+                                                                        ),
+                                                                    )
+                                                                }
                                                             >
-                                                                <Text style={[
-                                                                    styles.roleChipText,
-                                                                    { color: active ? '#FFFFFF' : colors.textTertiary },
-                                                                ]}>
+                                                                <Text
+                                                                    style={[
+                                                                        styles.roleChipText,
+                                                                        {
+                                                                            color: active
+                                                                                ? '#FFFFFF'
+                                                                                : colors.textTertiary,
+                                                                        },
+                                                                    ]}
+                                                                >
                                                                     {r.label}
                                                                 </Text>
                                                             </TouchableOpacity>
@@ -751,7 +939,11 @@ export default function CreateEventScreen() {
                                                 </View>
                                             </View>
                                             <TouchableOpacity
-                                                onPress={() => setExternalAttendees(prev => prev.filter(x => x._key !== a._key))}
+                                                onPress={() =>
+                                                    setExternalAttendees((prev) =>
+                                                        prev.filter((x) => x._key !== a._key),
+                                                    )
+                                                }
                                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                                             >
                                                 <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
@@ -773,7 +965,11 @@ export default function CreateEventScreen() {
                 onRequestClose={() => setShowTimePicker(null)}
             >
                 <View style={styles.timeModalOverlay}>
-                    <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setShowTimePicker(null)} />
+                    <TouchableOpacity
+                        style={StyleSheet.absoluteFillObject}
+                        activeOpacity={1}
+                        onPress={() => setShowTimePicker(null)}
+                    />
                     <View style={[styles.timeModalSheet, { backgroundColor: colors.cardBackground }]}>
                         <View style={[styles.timeModalHandle, { backgroundColor: colors.border }]} />
                         <View style={styles.timeModalHeader}>
@@ -783,36 +979,107 @@ export default function CreateEventScreen() {
                             <View style={styles.timeModalActions}>
                                 {showTimePicker === 'end' && hasEndTime && (
                                     <TouchableOpacity
-                                        onPress={() => { setHasEndTime(false); setShowTimePicker(null); }}
+                                        onPress={() => {
+                                            setHasEndTime(false);
+                                            setShowTimePicker(null);
+                                        }}
                                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                                     >
                                         <Text style={{ fontSize: 15, color: colors.danger }}>Remove</Text>
                                     </TouchableOpacity>
                                 )}
-                                <TouchableOpacity onPress={() => setShowTimePicker(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                <TouchableOpacity
+                                    onPress={() => setShowTimePicker(null)}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
                                     <Text style={{ fontSize: 15, fontWeight: '600', color: colors.accent }}>Done</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
                         {/* Picker */}
-                        <View style={[styles.timePickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, marginHorizontal: 16, marginBottom: 16 }]}>
-                            <View pointerEvents="none" style={[styles.timePickerBand, { borderColor: colors.border }]} />
-                            <View style={styles.timePickerWheels}>
+                        <View
+                            style={[
+                                styles.timePickerContainer,
+                                {
+                                    backgroundColor: colors.inputBackground,
+                                    borderColor: colors.inputBorder,
+                                    marginHorizontal: 16,
+                                    marginBottom: 16,
+                                },
+                            ]}
+                        >
+                            <View
+                                pointerEvents="none"
+                                style={[styles.timePickerBand, { borderColor: colors.border }]}
+                            />
+                            <View key={showTimePicker} style={styles.timePickerWheels}>
                                 {showTimePicker === 'start' ? (
                                     <>
-                                        <WheelPicker items={PICKER_HOURS} selectedIndex={startHour} onChange={setStartHour} colors={colors} width={60} showIndicator={false} visibleItems={TIME_PICKER_VISIBLE} />
-                                        <View style={styles.timePickerColon}><Text style={[styles.timeColonText, { color: colors.textPrimary }]}>:</Text></View>
-                                        <WheelPicker items={PICKER_MINUTES} selectedIndex={startMinIdx} onChange={setStartMinIdx} colors={colors} width={60} showIndicator={false} visibleItems={TIME_PICKER_VISIBLE} />
+                                        <WheelPicker
+                                            items={PICKER_HOURS}
+                                            selectedIndex={startHour}
+                                            onChange={setStartHour}
+                                            colors={colors}
+                                            width={60}
+                                            showIndicator={false}
+                                            visibleItems={TIME_PICKER_VISIBLE}
+                                        />
+                                        <View style={styles.timePickerColon}>
+                                            <Text style={[styles.timeColonText, { color: colors.textPrimary }]}>:</Text>
+                                        </View>
+                                        <WheelPicker
+                                            items={PICKER_MINUTES}
+                                            selectedIndex={startMinIdx}
+                                            onChange={setStartMinIdx}
+                                            colors={colors}
+                                            width={60}
+                                            showIndicator={false}
+                                            visibleItems={TIME_PICKER_VISIBLE}
+                                        />
                                         <View style={{ flex: 1 }} />
-                                        <WheelPicker items={PICKER_AMPM} selectedIndex={startAmPm} onChange={setStartAmPm} colors={colors} width={70} showIndicator={false} visibleItems={TIME_PICKER_VISIBLE} />
+                                        <WheelPicker
+                                            items={PICKER_AMPM}
+                                            selectedIndex={startAmPm}
+                                            onChange={setStartAmPm}
+                                            colors={colors}
+                                            width={70}
+                                            showIndicator={false}
+                                            visibleItems={TIME_PICKER_VISIBLE}
+                                        />
                                     </>
                                 ) : (
                                     <>
-                                        <WheelPicker items={PICKER_HOURS} selectedIndex={endHour} onChange={setEndHour} colors={colors} width={60} showIndicator={false} visibleItems={TIME_PICKER_VISIBLE} />
-                                        <View style={styles.timePickerColon}><Text style={[styles.timeColonText, { color: colors.textPrimary }]}>:</Text></View>
-                                        <WheelPicker items={PICKER_MINUTES} selectedIndex={endMinIdx} onChange={setEndMinIdx} colors={colors} width={60} showIndicator={false} visibleItems={TIME_PICKER_VISIBLE} />
+                                        <WheelPicker
+                                            items={PICKER_HOURS}
+                                            selectedIndex={endHour}
+                                            onChange={setEndHour}
+                                            colors={colors}
+                                            width={60}
+                                            showIndicator={false}
+                                            visibleItems={TIME_PICKER_VISIBLE}
+                                        />
+                                        <View style={styles.timePickerColon}>
+                                            <Text style={[styles.timeColonText, { color: colors.textPrimary }]}>:</Text>
+                                        </View>
+                                        <WheelPicker
+                                            items={PICKER_MINUTES}
+                                            selectedIndex={endMinIdx}
+                                            onChange={setEndMinIdx}
+                                            colors={colors}
+                                            width={60}
+                                            showIndicator={false}
+                                            visibleItems={TIME_PICKER_VISIBLE}
+                                        />
                                         <View style={{ flex: 1 }} />
-                                        <WheelPicker items={PICKER_AMPM} selectedIndex={endAmPm} onChange={setEndAmPm} colors={colors} width={70} showIndicator={false} visibleItems={TIME_PICKER_VISIBLE} />
+                                        <WheelPicker
+                                            items={PICKER_AMPM}
+                                            selectedIndex={endAmPm}
+                                            onChange={setEndAmPm}
+                                            colors={colors}
+                                            width={70}
+                                            showIndicator={false}
+                                            visibleItems={TIME_PICKER_VISIBLE}
+                                        />
                                     </>
                                 )}
                             </View>
@@ -826,25 +1093,43 @@ export default function CreateEventScreen() {
                 visible={showAttendeePicker}
                 animationType="slide"
                 presentationStyle="pageSheet"
-                onRequestClose={() => { setShowAttendeePicker(false); setUserSearch(''); setExternalName(''); }}
+                onRequestClose={() => {
+                    setShowAttendeePicker(false);
+                    setUserSearch('');
+                    setExternalName('');
+                }}
             >
                 <SafeAreaView style={[styles.pickerScreen, { backgroundColor: colors.background }]}>
                     <View style={[styles.pickerSheetHeader, { borderBottomColor: colors.border }]}>
                         <Text style={[styles.pickerSheetTitle, { color: colors.textPrimary }]}>Add Attendees</Text>
-                        <TouchableOpacity onPress={() => { setShowAttendeePicker(false); setUserSearch(''); setExternalName(''); }}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                setShowAttendeePicker(false);
+                                setUserSearch('');
+                                setExternalName('');
+                            }}
+                        >
                             <Text style={[styles.pickerDone, { color: colors.accent }]}>Done</Text>
                         </TouchableOpacity>
                     </View>
 
                     {/* Tabs */}
                     <View style={[styles.pickerTabs, { borderBottomColor: colors.border }]}>
-                        {(['team', 'external'] as const).map(tab => (
+                        {(['team', 'external'] as const).map((tab) => (
                             <TouchableOpacity
                                 key={tab}
-                                style={[styles.pickerTab, pickerTab === tab && { borderBottomColor: colors.accent, borderBottomWidth: 2 }]}
+                                style={[
+                                    styles.pickerTab,
+                                    pickerTab === tab && { borderBottomColor: colors.accent, borderBottomWidth: 2 },
+                                ]}
                                 onPress={() => setPickerTab(tab)}
                             >
-                                <Text style={[styles.pickerTabText, { color: pickerTab === tab ? colors.accent : colors.textSecondary }]}>
+                                <Text
+                                    style={[
+                                        styles.pickerTabText,
+                                        { color: pickerTab === tab ? colors.accent : colors.textSecondary },
+                                    ]}
+                                >
                                     {tab === 'team' ? 'Team' : 'External'}
                                 </Text>
                             </TouchableOpacity>
@@ -853,7 +1138,12 @@ export default function CreateEventScreen() {
 
                     {pickerTab === 'team' ? (
                         <>
-                            <View style={[styles.searchBar, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                            <View
+                                style={[
+                                    styles.searchBar,
+                                    { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                                ]}
+                            >
                                 <Ionicons name="search" size={16} color={colors.textTertiary} />
                                 <TextInput
                                     style={[styles.searchInput, { color: colors.textPrimary }]}
@@ -877,17 +1167,19 @@ export default function CreateEventScreen() {
                             ) : (
                                 <FlatList
                                     data={filteredUsers}
-                                    keyExtractor={u => u.id}
+                                    keyExtractor={(u) => u.id}
                                     contentContainerStyle={{ padding: 16 }}
                                     renderItem={({ item }) => {
-                                        const isSelected = selectedAttendees.some(a => a.user_id === item.id);
+                                        const isSelected = selectedAttendees.some((a) => a.user_id === item.id);
                                         const avatarColor = getAvatarColor(item.full_name);
                                         return (
                                             <TouchableOpacity
                                                 style={[
                                                     styles.userRow,
                                                     {
-                                                        backgroundColor: isSelected ? colors.accentLight : colors.cardBackground,
+                                                        backgroundColor: isSelected
+                                                            ? colors.accentLight
+                                                            : colors.cardBackground,
                                                         borderColor: isSelected ? colors.accent : 'transparent',
                                                     },
                                                 ]}
@@ -902,12 +1194,16 @@ export default function CreateEventScreen() {
                                                     textColor={avatarColor}
                                                 />
                                                 <View style={styles.userInfo}>
-                                                    <Text style={[styles.userName, { color: colors.textPrimary }]}>{item.full_name}</Text>
+                                                    <Text style={[styles.userName, { color: colors.textPrimary }]}>
+                                                        {item.full_name}
+                                                    </Text>
                                                     <Text style={[styles.userRole, { color: colors.textTertiary }]}>
                                                         {item.role.charAt(0).toUpperCase() + item.role.slice(1)}
                                                     </Text>
                                                 </View>
-                                                {isSelected && <Ionicons name="checkmark-circle" size={22} color={colors.accent} />}
+                                                {isSelected && (
+                                                    <Ionicons name="checkmark-circle" size={22} color={colors.accent} />
+                                                )}
                                             </TouchableOpacity>
                                         );
                                     }}
@@ -915,7 +1211,10 @@ export default function CreateEventScreen() {
                             )}
                         </>
                     ) : (
-                        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                        <KeyboardAvoidingView
+                            style={{ flex: 1 }}
+                            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                        >
                             <ScrollView contentContainerStyle={styles.externalTab}>
                                 <Text style={[styles.externalHint, { color: colors.textTertiary }]}>
                                     Add guests not in the system — clients, prospects, or external partners.
@@ -924,7 +1223,14 @@ export default function CreateEventScreen() {
                                 {/* Name input + role chips + Add button */}
                                 <View style={[styles.externalForm, { backgroundColor: colors.cardBackground }]}>
                                     <TextInput
-                                        style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.textPrimary }]}
+                                        style={[
+                                            styles.input,
+                                            {
+                                                backgroundColor: colors.inputBackground,
+                                                borderColor: colors.inputBorder,
+                                                color: colors.textPrimary,
+                                            },
+                                        ]}
                                         placeholder="Full name"
                                         placeholderTextColor={colors.textTertiary}
                                         value={externalName}
@@ -932,15 +1238,27 @@ export default function CreateEventScreen() {
                                         returnKeyType="done"
                                     />
                                     <View style={styles.roleRow}>
-                                        {ATTENDEE_ROLES.map(r => {
+                                        {ATTENDEE_ROLES.map((r) => {
                                             const active = externalRole === r.key;
                                             return (
                                                 <TouchableOpacity
                                                     key={r.key}
-                                                    style={[styles.roleChip, { backgroundColor: active ? colors.accent : colors.surfaceSecondary }]}
+                                                    style={[
+                                                        styles.roleChip,
+                                                        {
+                                                            backgroundColor: active
+                                                                ? colors.accent
+                                                                : colors.surfaceSecondary,
+                                                        },
+                                                    ]}
                                                     onPress={() => setExternalRole(r.key)}
                                                 >
-                                                    <Text style={[styles.roleChipText, { color: active ? '#FFFFFF' : colors.textTertiary }]}>
+                                                    <Text
+                                                        style={[
+                                                            styles.roleChipText,
+                                                            { color: active ? '#FFFFFF' : colors.textTertiary },
+                                                        ]}
+                                                    >
                                                         {r.label}
                                                     </Text>
                                                 </TouchableOpacity>
@@ -948,13 +1266,20 @@ export default function CreateEventScreen() {
                                         })}
                                     </View>
                                     <TouchableOpacity
-                                        style={[styles.externalAddBtn, { backgroundColor: externalName.trim() ? colors.accent : colors.border }]}
+                                        style={[
+                                            styles.externalAddBtn,
+                                            { backgroundColor: externalName.trim() ? colors.accent : colors.border },
+                                        ]}
                                         disabled={!externalName.trim()}
                                         onPress={() => {
                                             if (!externalName.trim()) return;
-                                            setExternalAttendees(prev => [
+                                            setExternalAttendees((prev) => [
                                                 ...prev,
-                                                { _key: `ext_${Date.now()}`, name: externalName.trim(), attendee_role: externalRole },
+                                                {
+                                                    _key: `ext_${Date.now()}`,
+                                                    name: externalName.trim(),
+                                                    attendee_role: externalRole,
+                                                },
                                             ]);
                                             setExternalName('');
                                             setExternalRole('attendee');
@@ -968,23 +1293,51 @@ export default function CreateEventScreen() {
                                 {/* Already-added external attendees */}
                                 {externalAttendees.length > 0 && (
                                     <View style={{ gap: 8, marginTop: 4 }}>
-                                        <Text style={[styles.label, { color: colors.textSecondary }]}>Added guests</Text>
-                                        {externalAttendees.map(a => {
+                                        <Text style={[styles.label, { color: colors.textSecondary }]}>
+                                            Added guests
+                                        </Text>
+                                        {externalAttendees.map((a) => {
                                             const aColor = getAvatarColor(a.name);
                                             return (
-                                                <View key={a._key} style={[styles.userRow, { backgroundColor: colors.cardBackground, borderColor: 'transparent' }]}>
-                                                    <Avatar name={a.name} avatarUrl={null} size={36} backgroundColor={aColor + '18'} textColor={aColor} />
+                                                <View
+                                                    key={a._key}
+                                                    style={[
+                                                        styles.userRow,
+                                                        {
+                                                            backgroundColor: colors.cardBackground,
+                                                            borderColor: 'transparent',
+                                                        },
+                                                    ]}
+                                                >
+                                                    <Avatar
+                                                        name={a.name}
+                                                        avatarUrl={null}
+                                                        size={36}
+                                                        backgroundColor={aColor + '18'}
+                                                        textColor={aColor}
+                                                    />
                                                     <View style={styles.userInfo}>
-                                                        <Text style={[styles.userName, { color: colors.textPrimary }]}>{a.name}</Text>
+                                                        <Text style={[styles.userName, { color: colors.textPrimary }]}>
+                                                            {a.name}
+                                                        </Text>
                                                         <Text style={[styles.userRole, { color: colors.textTertiary }]}>
-                                                            {ATTENDEE_ROLES.find(r => r.key === a.attendee_role)?.label ?? a.attendee_role}
+                                                            {ATTENDEE_ROLES.find((r) => r.key === a.attendee_role)
+                                                                ?.label ?? a.attendee_role}
                                                         </Text>
                                                     </View>
                                                     <TouchableOpacity
-                                                        onPress={() => setExternalAttendees(prev => prev.filter(x => x._key !== a._key))}
+                                                        onPress={() =>
+                                                            setExternalAttendees((prev) =>
+                                                                prev.filter((x) => x._key !== a._key),
+                                                            )
+                                                        }
                                                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                                                     >
-                                                        <Ionicons name="close-circle" size={22} color={colors.textTertiary} />
+                                                        <Ionicons
+                                                            name="close-circle"
+                                                            size={22}
+                                                            color={colors.textTertiary}
+                                                        />
                                                     </TouchableOpacity>
                                                 </View>
                                             );
@@ -1025,7 +1378,13 @@ const styles = StyleSheet.create({
     timeModalOverlay: { flex: 1, justifyContent: 'flex-end' },
     timeModalSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 12, paddingBottom: 32 },
     timeModalHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
-    timeModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 16 },
+    timeModalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        marginBottom: 16,
+    },
     timeModalTitle: { fontSize: 17, fontWeight: '600' },
     timeModalActions: { flexDirection: 'row', alignItems: 'center', gap: 20 },
 
@@ -1034,7 +1393,8 @@ const styles = StyleSheet.create({
     timePickerBand: {
         position: 'absolute',
         top: WHEEL_ITEM_H,
-        left: 0, right: 0,
+        left: 0,
+        right: 0,
         height: WHEEL_ITEM_H,
         borderTopWidth: StyleSheet.hairlineWidth,
         borderBottomWidth: StyleSheet.hairlineWidth,
@@ -1048,13 +1408,28 @@ const styles = StyleSheet.create({
     typeChipText: { fontSize: 13, fontWeight: '600' },
 
     sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-    addAttendeeBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1.5, borderRadius: 8 },
+    addAttendeeBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderWidth: 1.5,
+        borderRadius: 8,
+    },
     addAttendeeBtnText: { fontSize: 13, fontWeight: '600' },
 
     emptyAttendees: { borderRadius: 12, padding: 20, alignItems: 'center' },
     emptyAttendeesText: { fontSize: 14 },
 
-    attendeeItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderRadius: 12, padding: 12, marginBottom: 8 },
+    attendeeItem: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 10,
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 8,
+    },
     avatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
     avatarText: { fontSize: 13, fontWeight: '700' },
     attendeeItemInfo: { flex: 1, gap: 6 },
@@ -1067,18 +1442,50 @@ const styles = StyleSheet.create({
     saveBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
 
     pickerScreen: { flex: 1 },
-    pickerSheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth },
+    pickerSheetHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+    },
     pickerSheetTitle: { fontSize: 17, fontWeight: '700' },
     pickerDone: { fontSize: 16, fontWeight: '600' },
-    searchBar: { flexDirection: 'row', alignItems: 'center', gap: 8, margin: 16, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10 },
+    searchBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        margin: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+    },
     searchInput: { flex: 1, fontSize: 15, padding: 0 },
 
-    userRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1.5 },
+    userRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 8,
+        borderWidth: 1.5,
+    },
     userInfo: { flex: 1 },
     userName: { fontSize: 15, fontWeight: '600' },
     userRole: { fontSize: 12, marginTop: 1 },
 
-    retryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, margin: 32, borderRadius: 12, padding: 16 },
+    retryBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        margin: 32,
+        borderRadius: 12,
+        padding: 16,
+    },
     retryText: { fontSize: 14, fontWeight: '600' },
 
     pickerTabs: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth },
@@ -1091,7 +1498,14 @@ const styles = StyleSheet.create({
     externalTab: { padding: 16, gap: 16 },
     externalHint: { fontSize: 13, lineHeight: 19 },
     externalForm: { borderRadius: 12, padding: 14, gap: 12 },
-    externalAddBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 10, paddingVertical: 11 },
+    externalAddBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        borderRadius: 10,
+        paddingVertical: 11,
+    },
     externalAddBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
 
     // Roadshow

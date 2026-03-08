@@ -23,7 +23,10 @@ export function formatActivityTime(iso: string): string {
 /** Format YYYY-MM-DD as "Monday, 8 March 2026" */
 export function formatDateLong(dateStr: string): string {
     return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-SG', {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
     });
 }
 
@@ -36,7 +39,9 @@ export function formatDateShort(dateStr: string): string {
 /** Format YYYY-MM-DD as "Sat, 8 Mar" (used in create form) */
 export function formatDateLabel(s: string): string {
     return new Date(s + 'T00:00:00').toLocaleDateString('en-SG', {
-        weekday: 'short', day: 'numeric', month: 'short',
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
     });
 }
 
@@ -48,7 +53,11 @@ export function formatCreatedAt(iso: string): string {
 /** Format ISO timestamp as "8 Mar 2026, 09:00 AM" (date + time) */
 export function formatDateTime(iso: string): string {
     return new Date(iso).toLocaleDateString('en-SG', {
-        day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
     });
 }
 
@@ -94,6 +103,35 @@ export function dateRange(start: string, end: string): string[] {
 /** Convert Date to YYYY-MM-DD */
 export function toDateStr(d: Date): string {
     return d.toISOString().split('T')[0];
+}
+
+/**
+ * Determine roadshow live/past status based on event date and time window.
+ * Returns 'live' if now is within [start_time, end_time) on event_date,
+ * 'past' if event_date is before today or end_time has passed today,
+ * 'upcoming' otherwise.
+ */
+export function getRoadshowStatus(
+    eventDate: string,
+    startTime: string | null,
+    endTime: string | null,
+    now?: Date,
+): 'live' | 'past' | 'upcoming' {
+    const n = now ?? new Date();
+    const today = toDateStr(n);
+    if (eventDate < today) return 'past';
+    if (eventDate > today) return 'upcoming';
+    // eventDate === today — check time window
+    const nowMins = n.getHours() * 60 + n.getMinutes();
+    if (startTime) {
+        const [sh, sm] = startTime.split(':').map(Number);
+        if (nowMins < sh * 60 + sm) return 'upcoming';
+    }
+    if (endTime) {
+        const [eh, em] = endTime.split(':').map(Number);
+        if (nowMins >= eh * 60 + em) return 'past';
+    }
+    return 'live';
 }
 
 /** Format ISO timestamp as relative time (e.g. "now", "5m ago", "2h ago", "3d ago") */

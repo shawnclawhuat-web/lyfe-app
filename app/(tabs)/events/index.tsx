@@ -4,7 +4,7 @@ import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { fetchAllEvents, fetchEvents } from '@/lib/events';
-import { formatTime, toDateStr } from '@/lib/dateTime';
+import { formatTime, getRoadshowStatus, toDateStr } from '@/lib/dateTime';
 import { AVATAR_COLORS } from '@/constants/ui';
 import type { AgencyEvent } from '@/types/event';
 import { EVENT_TYPE_COLORS, EVENT_TYPE_LABELS } from '@/types/event';
@@ -30,9 +30,9 @@ const CELL_W = Math.floor(SCREEN_W / 7);
 const WEEKS_BUFFER = 26; // ~6 months each direction
 
 const CAL_HEADER_H = 40;
-const STRIP_H = 68;       // week strip cell height
+const STRIP_H = 68; // week strip cell height
 const GRID_LABELS_H = 24; // Mon–Sun initials
-const GRID_ROW_H = 44;    // each month-grid row
+const GRID_ROW_H = 44; // each month-grid row
 const CAL_HANDLE_H = 20;
 const CAL_WEEK_H = CAL_HEADER_H + STRIP_H + CAL_HANDLE_H;
 const CAL_MONTH_H = CAL_HEADER_H + GRID_LABELS_H + GRID_ROW_H * 6 + CAL_HANDLE_H;
@@ -113,10 +113,7 @@ function CalendarPicker({ selectedDate, onSelectDate, eventDates, colors, scroll
         return { year: d.getFullYear(), month: d.getMonth() };
     });
 
-    const monthGrid = useMemo(
-        () => buildMonthGrid(displayMonth.year, displayMonth.month),
-        [displayMonth],
-    );
+    const monthGrid = useMemo(() => buildMonthGrid(displayMonth.year, displayMonth.month), [displayMonth]);
 
     // ── Animated values ──
     const calHeight = expandAnim.interpolate({
@@ -126,16 +123,24 @@ function CalendarPicker({ selectedDate, onSelectDate, eventDates, colors, scroll
     });
 
     const stripOpacity = expandAnim.interpolate({
-        inputRange: [0, 0.3], outputRange: [1, 0], extrapolate: 'clamp',
+        inputRange: [0, 0.3],
+        outputRange: [1, 0],
+        extrapolate: 'clamp',
     });
     const gridOpacity = expandAnim.interpolate({
-        inputRange: [0.7, 1], outputRange: [0, 1], extrapolate: 'clamp',
+        inputRange: [0.7, 1],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
     });
     const weekLabelOpacity = expandAnim.interpolate({
-        inputRange: [0, 0.3], outputRange: [1, 0], extrapolate: 'clamp',
+        inputRange: [0, 0.3],
+        outputRange: [1, 0],
+        extrapolate: 'clamp',
     });
     const monthLabelOpacity = expandAnim.interpolate({
-        inputRange: [0.7, 1], outputRange: [0, 1], extrapolate: 'clamp',
+        inputRange: [0.7, 1],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
     });
 
     const contentH = expandAnim.interpolate({
@@ -145,12 +150,15 @@ function CalendarPicker({ selectedDate, onSelectDate, eventDates, colors, scroll
     });
 
     // ── Scroll strip to place a date at position 3 (0-indexed) ──
-    const scrollStripToDate = useCallback((dateStr: string, animated = true) => {
-        const idx = stripDates.indexOf(dateStr);
-        if (idx >= 3) {
-            stripRef.current?.scrollToIndex({ index: idx - 3, animated, viewPosition: 0 });
-        }
-    }, [stripDates]);
+    const scrollStripToDate = useCallback(
+        (dateStr: string, animated = true) => {
+            const idx = stripDates.indexOf(dateStr);
+            if (idx >= 3) {
+                stripRef.current?.scrollToIndex({ index: idx - 3, animated, viewPosition: 0 });
+            }
+        },
+        [stripDates],
+    );
 
     // Expose scroll-to-today for parent to call on tab focus
     useEffect(() => {
@@ -194,8 +202,7 @@ function CalendarPicker({ selectedDate, onSelectDate, eventDates, colors, scroll
     const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => false,
-            onMoveShouldSetPanResponder: (_, gs) =>
-                Math.abs(gs.dy) > 6 && Math.abs(gs.dy) > Math.abs(gs.dx) * 1.5,
+            onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dy) > 6 && Math.abs(gs.dy) > Math.abs(gs.dx) * 1.5,
             onPanResponderMove: (_, gs) => {
                 const base = isExpandedRef.current ? 1 : 0;
                 const range = CAL_MONTH_H - CAL_WEEK_H;
@@ -212,79 +219,101 @@ function CalendarPicker({ selectedDate, onSelectDate, eventDates, colors, scroll
 
     // ── Month grid navigation ──
     const navigateMonth = (delta: number) => {
-        setDisplayMonth(prev => {
+        setDisplayMonth((prev) => {
             const d = new Date(prev.year, prev.month + delta, 1);
             return { year: d.getFullYear(), month: d.getMonth() };
         });
     };
 
-    const monthLabel = new Date(displayMonth.year, displayMonth.month, 1)
-        .toLocaleDateString('en-SG', { month: 'long', year: 'numeric' });
+    const monthLabel = new Date(displayMonth.year, displayMonth.month, 1).toLocaleDateString('en-SG', {
+        month: 'long',
+        year: 'numeric',
+    });
 
     // ── Strip scroll → update month label + today visibility ──
-    const onStripScroll = useCallback((e: any) => {
-        const offsetX = e.nativeEvent.contentOffset.x;
-        const firstVisibleIdx = Math.round(offsetX / CELL_W);
-        const centerIdx = firstVisibleIdx + 3;
-        const clamped = Math.max(0, Math.min(centerIdx, stripDates.length - 1));
-        const dateStr = stripDates[clamped];
-        if (dateStr) {
-            const d = new Date(dateStr + 'T00:00:00');
-            const label = d.toLocaleDateString('en-SG', { month: 'long', year: 'numeric' });
-            setWeekMonthLabel(prev => prev === label ? prev : label);
-        }
-        const isVisible = todayIdx >= firstVisibleIdx && todayIdx < firstVisibleIdx + 7;
-        setTodayVisible(isVisible);
-    }, [stripDates, todayIdx]);
+    const onStripScroll = useCallback(
+        (e: any) => {
+            const offsetX = e.nativeEvent.contentOffset.x;
+            const firstVisibleIdx = Math.round(offsetX / CELL_W);
+            const centerIdx = firstVisibleIdx + 3;
+            const clamped = Math.max(0, Math.min(centerIdx, stripDates.length - 1));
+            const dateStr = stripDates[clamped];
+            if (dateStr) {
+                const d = new Date(dateStr + 'T00:00:00');
+                const label = d.toLocaleDateString('en-SG', { month: 'long', year: 'numeric' });
+                setWeekMonthLabel((prev) => (prev === label ? prev : label));
+            }
+            const isVisible = todayIdx >= firstVisibleIdx && todayIdx < firstVisibleIdx + 7;
+            setTodayVisible(isVisible);
+        },
+        [stripDates, todayIdx],
+    );
 
     // ── Render strip day cell ──
-    const renderStripDay = useCallback(({ item: dateStr }: { item: string }) => {
-        const d = new Date(dateStr + 'T00:00:00');
-        const dow = DOW_LETTERS[(d.getDay() + 6) % 7];
-        const isSelected = dateStr === selectedDate;
-        const isToday = dateStr === today;
-        const hasEvent = eventDates.has(dateStr);
+    const renderStripDay = useCallback(
+        ({ item: dateStr }: { item: string }) => {
+            const d = new Date(dateStr + 'T00:00:00');
+            const dow = DOW_LETTERS[(d.getDay() + 6) % 7];
+            const isSelected = dateStr === selectedDate;
+            const isToday = dateStr === today;
+            const hasEvent = eventDates.has(dateStr);
 
-        return (
-            <TouchableOpacity
-                style={[calStyles.stripCell, { width: CELL_W }]}
-                onPress={() => { onSelectDate(dateStr); scrollStripToDate(dateStr); }}
-                activeOpacity={0.7}
-            >
-                <Text style={[
-                    calStyles.stripDow,
-                    { color: isToday && !isSelected ? colors.accent : colors.textTertiary },
-                ]}>
-                    {dow}
-                </Text>
-                <View style={[
-                    calStyles.stripCircle,
-                    isSelected && { backgroundColor: colors.accent },
-                    isToday && !isSelected && { borderWidth: 1.5, borderColor: colors.accent },
-                ]}>
-                    <Text style={[
-                        calStyles.stripDayText,
-                        {
-                            color: isSelected ? '#FFFFFF' : isToday ? colors.accent : colors.textPrimary,
-                            fontWeight: isSelected || isToday ? '700' : '500',
-                        },
-                    ]}>
-                        {d.getDate()}
+            return (
+                <TouchableOpacity
+                    style={[calStyles.stripCell, { width: CELL_W }]}
+                    onPress={() => {
+                        onSelectDate(dateStr);
+                        scrollStripToDate(dateStr);
+                    }}
+                    activeOpacity={0.7}
+                >
+                    <Text
+                        style={[
+                            calStyles.stripDow,
+                            { color: isToday && !isSelected ? colors.accent : colors.textTertiary },
+                        ]}
+                    >
+                        {dow}
                     </Text>
-                </View>
-                <View style={[
-                    calStyles.dot,
-                    { backgroundColor: hasEvent ? (isSelected ? '#FFFFFF' : colors.accent) : 'transparent' },
-                ]} />
-            </TouchableOpacity>
-        );
-    }, [selectedDate, today, eventDates, colors, onSelectDate, scrollStripToDate]);
+                    <View
+                        style={[
+                            calStyles.stripCircle,
+                            isSelected && { backgroundColor: colors.accent },
+                            isToday && !isSelected && { borderWidth: 1.5, borderColor: colors.accent },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                calStyles.stripDayText,
+                                {
+                                    color: isSelected ? '#FFFFFF' : isToday ? colors.accent : colors.textPrimary,
+                                    fontWeight: isSelected || isToday ? '700' : '500',
+                                },
+                            ]}
+                        >
+                            {d.getDate()}
+                        </Text>
+                    </View>
+                    <View
+                        style={[
+                            calStyles.dot,
+                            { backgroundColor: hasEvent ? (isSelected ? '#FFFFFF' : colors.accent) : 'transparent' },
+                        ]}
+                    />
+                </TouchableOpacity>
+            );
+        },
+        [selectedDate, today, eventDates, colors, onSelectDate, scrollStripToDate],
+    );
 
-    const getItemLayout = useCallback((_: any, index: number) => ({
-        length: CELL_W,
-        offset: CELL_W * index,
-        index,
-    }), []);
+    const getItemLayout = useCallback(
+        (_: any, index: number) => ({
+            length: CELL_W,
+            offset: CELL_W * index,
+            index,
+        }),
+        [],
+    );
 
     return (
         <Animated.View
@@ -301,9 +330,7 @@ function CalendarPicker({ selectedDate, onSelectDate, eventDates, colors, scroll
                     style={[calStyles.headerRow, { opacity: weekLabelOpacity }]}
                     pointerEvents={isExpanded ? 'none' : 'auto'}
                 >
-                    <Text style={[calStyles.monthText, { color: colors.textPrimary }]}>
-                        {weekMonthLabel}
-                    </Text>
+                    <Text style={[calStyles.monthText, { color: colors.textPrimary }]}>{weekMonthLabel}</Text>
                     {!todayVisible && (
                         <TouchableOpacity
                             onPress={() => {
@@ -343,7 +370,7 @@ function CalendarPicker({ selectedDate, onSelectDate, eventDates, colors, scroll
                     <FlatList
                         ref={stripRef}
                         data={stripDates}
-                        keyExtractor={item => item}
+                        keyExtractor={(item) => item}
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         decelerationRate="fast"
@@ -395,32 +422,39 @@ function CalendarPicker({ selectedDate, onSelectDate, eventDates, colors, scroll
                                         }}
                                         activeOpacity={0.7}
                                     >
-                                        <View style={[
-                                            calStyles.gridCircle,
-                                            isSelected && { backgroundColor: colors.accent },
-                                            isToday && !isSelected && { borderWidth: 1.5, borderColor: colors.accent },
-                                        ]}>
-                                            <Text style={[
-                                                calStyles.gridDayText,
-                                                {
-                                                    color: isSelected
-                                                        ? '#FFFFFF'
-                                                        : isToday
-                                                            ? colors.accent
-                                                            : isOtherMon
+                                        <View
+                                            style={[
+                                                calStyles.gridCircle,
+                                                isSelected && { backgroundColor: colors.accent },
+                                                isToday &&
+                                                    !isSelected && { borderWidth: 1.5, borderColor: colors.accent },
+                                            ]}
+                                        >
+                                            <Text
+                                                style={[
+                                                    calStyles.gridDayText,
+                                                    {
+                                                        color: isSelected
+                                                            ? '#FFFFFF'
+                                                            : isToday
+                                                              ? colors.accent
+                                                              : isOtherMon
                                                                 ? colors.textTertiary
                                                                 : colors.textPrimary,
-                                                    fontWeight: isSelected ? '700' : '500',
-                                                },
-                                            ]}>
+                                                        fontWeight: isSelected ? '700' : '500',
+                                                    },
+                                                ]}
+                                            >
                                                 {date.getDate()}
                                             </Text>
                                         </View>
                                         {hasEvent && (
-                                            <View style={[
-                                                calStyles.dot,
-                                                { backgroundColor: isSelected ? '#FFFFFF' : colors.accent },
-                                            ]} />
+                                            <View
+                                                style={[
+                                                    calStyles.dot,
+                                                    { backgroundColor: isSelected ? '#FFFFFF' : colors.accent },
+                                                ]}
+                                            />
                                         )}
                                     </TouchableOpacity>
                                 );
@@ -565,18 +599,9 @@ interface EventCardProps {
 function EventCard({ event, onPress, colors }: EventCardProps) {
     const typeColor = EVENT_TYPE_COLORS[event.event_type];
     const todayStr = toDateStr(new Date());
-    const isLiveRoadshow = (() => {
-        if (event.event_type !== 'roadshow' || event.event_date !== todayStr) return false;
-        const now = new Date();
-        const nowMins = now.getHours() * 60 + now.getMinutes();
-        const [sh, sm] = event.start_time.split(':').map(Number);
-        if (nowMins < sh * 60 + sm) return false;
-        if (event.end_time) {
-            const [eh, em] = event.end_time.split(':').map(Number);
-            if (nowMins >= eh * 60 + em) return false;
-        }
-        return true;
-    })();
+    const isLiveRoadshow =
+        event.event_type === 'roadshow' &&
+        getRoadshowStatus(event.event_date, event.start_time, event.end_time) === 'live';
 
     const livePulse = useRef(new Animated.Value(1)).current;
     useEffect(() => {
@@ -592,7 +617,7 @@ function EventCard({ event, onPress, colors }: EventCardProps) {
     }, [isLiveRoadshow]);
 
     const allAttendeeNames: { key: string; name: string; avatarUrl?: string | null }[] = [
-        ...event.attendees.map(a => ({ key: a.id, name: a.full_name ?? '?', avatarUrl: a.avatar_url })),
+        ...event.attendees.map((a) => ({ key: a.id, name: a.full_name ?? '?', avatarUrl: a.avatar_url })),
         ...(event.external_attendees ?? []).map((a, i) => ({ key: `ext_${i}`, name: a.name, avatarUrl: null })),
     ];
     const visibleAttendees = allAttendeeNames.slice(0, 3);
@@ -650,7 +675,11 @@ function EventCard({ event, onPress, colors }: EventCardProps) {
                                     key={a.key}
                                     style={[
                                         cardStyles.avatarChip,
-                                        { marginLeft: i === 0 ? 0 : -10, borderColor: colors.cardBackground, zIndex: visibleAttendees.length - i },
+                                        {
+                                            marginLeft: i === 0 ? 0 : -10,
+                                            borderColor: colors.cardBackground,
+                                            zIndex: visibleAttendees.length - i,
+                                        },
                                     ]}
                                 >
                                     <Avatar
@@ -664,8 +693,19 @@ function EventCard({ event, onPress, colors }: EventCardProps) {
                             );
                         })}
                         {overflow > 0 && (
-                            <View style={[cardStyles.overflowChip, { backgroundColor: colors.surfaceSecondary, borderColor: colors.cardBackground, marginLeft: -10 }]}>
-                                <Text style={[cardStyles.overflowText, { color: colors.textTertiary }]}>+{overflow}</Text>
+                            <View
+                                style={[
+                                    cardStyles.overflowChip,
+                                    {
+                                        backgroundColor: colors.surfaceSecondary,
+                                        borderColor: colors.cardBackground,
+                                        marginLeft: -10,
+                                    },
+                                ]}
+                            >
+                                <Text style={[cardStyles.overflowText, { color: colors.textTertiary }]}>
+                                    +{overflow}
+                                </Text>
                             </View>
                         )}
                     </View>
@@ -695,18 +735,32 @@ const cardStyles = StyleSheet.create({
     location: { fontSize: 12 },
     attendees: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
     avatarChip: {
-        width: 26, height: 26, borderRadius: 13,
-        alignItems: 'center', justifyContent: 'center',
-        borderWidth: 1.5, borderColor: '#FFFFFF',
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1.5,
+        borderColor: '#FFFFFF',
         overflow: 'hidden',
     },
     overflowChip: {
-        width: 26, height: 26, borderRadius: 13,
-        alignItems: 'center', justifyContent: 'center',
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        alignItems: 'center',
+        justifyContent: 'center',
         borderWidth: 1.5,
     },
     overflowText: { fontSize: 9, fontWeight: '700' },
-    livePill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
+    livePill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 5,
+    },
     liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' },
     liveText: { fontSize: 10, fontWeight: '800', color: '#22C55E', letterSpacing: 0.5 },
 });
@@ -724,7 +778,7 @@ export default function EventsScreen() {
     useFocusEffect(
         useCallback(() => {
             scrollToTodayRef.current?.();
-        }, [])
+        }, []),
     );
 
     // Scroll to today when re-tapping the already-active Events tab
@@ -748,16 +802,16 @@ export default function EventsScreen() {
     const loadEvents = useCallback(async () => {
         if (!user?.id) return;
 
-        const { data, error } = isPA
-            ? await fetchAllEvents()
-            : await fetchEvents(user.id);
+        const { data, error } = isPA ? await fetchAllEvents() : await fetchEvents(user.id);
 
         if (!error) setAllEvents(data);
         setIsLoading(false);
     }, [user?.id, isPA]);
 
     useFocusEffect(
-        useCallback(() => { loadEvents(); }, [loadEvents])
+        useCallback(() => {
+            loadEvents();
+        }, [loadEvents]),
     );
 
     const onRefresh = useCallback(async () => {
@@ -766,15 +820,9 @@ export default function EventsScreen() {
         setRefreshing(false);
     }, [loadEvents]);
 
-    const eventDates = useMemo(
-        () => new Set(allEvents.map(e => e.event_date)),
-        [allEvents],
-    );
+    const eventDates = useMemo(() => new Set(allEvents.map((e) => e.event_date)), [allEvents]);
 
-    const dayEvents = useMemo(
-        () => allEvents.filter(e => e.event_date === selectedDate),
-        [allEvents, selectedDate],
-    );
+    const dayEvents = useMemo(() => allEvents.filter((e) => e.event_date === selectedDate), [allEvents, selectedDate]);
 
     if (isLoading) {
         return (
@@ -799,7 +847,7 @@ export default function EventsScreen() {
 
             <FlatList
                 data={dayEvents}
-                keyExtractor={item => item.id}
+                keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
