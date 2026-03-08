@@ -13,7 +13,8 @@
         "lint": "eslint . --ext .ts,.tsx",
         "lint:fix": "eslint . --ext .ts,.tsx --fix",
         "format": "prettier --write '**/*.{ts,tsx,js,json}'",
-        "prepare": "husky"
+        "prepare": "husky",
+        "gen:types": "npx supabase gen types typescript --project-id nvtedkyjwulkzjeoqjgx > types/supabase.ts"
     },
     "lint-staged": {
         "*.{ts,tsx}": [

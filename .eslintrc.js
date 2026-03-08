@@ -12,5 +12,14 @@ module.exports = {
         'import/order': 'off',
         'import/no-unresolved': 'off',
     },
-    ignorePatterns: ['node_modules/', '.expo/', 'dist/', 'android/', 'ios/', '__mocks__/', 'supabase/functions/'],
+    ignorePatterns: [
+        'node_modules/',
+        '.expo/',
+        'dist/',
+        'android/',
+        'ios/',
+        '__mocks__/',
+        'supabase/functions/',
+        'types/supabase.ts',
+    ],
 };
