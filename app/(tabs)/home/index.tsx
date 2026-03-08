@@ -20,8 +20,8 @@ import { fetchUpcomingEvents } from '@/lib/events';
 import { EVENT_TYPE_COLORS, type AgencyEvent } from '@/types/event';
 import { supabase } from '@/lib/supabase';
 import { STATUS_CONFIG, type LeadActivity, type LeadActivityType } from '@/types/lead';
+import { useTypedRouter } from '@/hooks/useTypedRouter';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Modal,
@@ -86,7 +86,7 @@ export default function HomeScreen() {
     const { colors } = useTheme();
     const { user, enableBiometrics } = useAuth();
     const { viewMode, canToggle } = useViewMode();
-    const router = useRouter();
+    const router = useTypedRouter();
     const [refreshing, setRefreshing] = useState(false);
     const isManagerView = canToggle && viewMode === 'manager';
 
@@ -206,7 +206,7 @@ export default function HomeScreen() {
                 rightAction={
                     <TouchableOpacity
                         style={styles.avatarBtn}
-                        onPress={() => router.push('/(tabs)/profile' as any)}
+                        onPress={() => router.push('/(tabs)/profile')}
                         activeOpacity={0.7}
                         accessibilityRole="button"
                         accessibilityLabel="Go to profile"
@@ -296,31 +296,31 @@ export default function HomeScreen() {
                     <View style={styles.quickActionsGrid}>
                         {isCandidate ? (
                             <>
-                                <QuickActionBtn icon="school" label="Exams" colors={colors} onPress={() => router.push('/(tabs)/exams' as any)} />
-                                <QuickActionBtn icon="book" label="Study" colors={colors} onPress={() => router.push('/(tabs)/exams/study' as any)} />
+                                <QuickActionBtn icon="school" label="Exams" colors={colors} onPress={() => router.push('/(tabs)/exams')} />
+                                <QuickActionBtn icon="book" label="Study" colors={colors} onPress={() => router.push('/(tabs)/exams/study')} />
                                 <QuickActionBtn icon="help-circle" label="Support" colors={colors} onPress={() => { }} />
-                                <QuickActionBtn icon="person" label="Profile" colors={colors} onPress={() => router.push('/(tabs)/profile' as any)} />
+                                <QuickActionBtn icon="person" label="Profile" colors={colors} onPress={() => router.push('/(tabs)/profile')} />
                             </>
                         ) : isPa ? (
                             <>
-                                <QuickActionBtn icon="document-text" label="Candidates" colors={colors} onPress={() => router.push('/(tabs)/pa' as any)} />
-                                <QuickActionBtn icon="calendar" label="Events" colors={colors} onPress={() => router.push('/(tabs)/events' as any)} />
-                                <QuickActionBtn icon="person-add" label="Add Candidate" colors={colors} onPress={() => router.push('/(tabs)/pa/add-candidate' as any)} />
-                                <QuickActionBtn icon="person" label="Profile" colors={colors} onPress={() => router.push('/(tabs)/profile' as any)} />
+                                <QuickActionBtn icon="document-text" label="Candidates" colors={colors} onPress={() => router.push('/(tabs)/pa')} />
+                                <QuickActionBtn icon="calendar" label="Events" colors={colors} onPress={() => router.push('/(tabs)/events')} />
+                                <QuickActionBtn icon="person-add" label="Add Candidate" colors={colors} onPress={() => router.push('/(tabs)/pa/add-candidate')} />
+                                <QuickActionBtn icon="person" label="Profile" colors={colors} onPress={() => router.push('/(tabs)/profile')} />
                             </>
                         ) : isManagerView ? (
                             <>
-                                <QuickActionBtn icon="briefcase" label="Team" colors={colors} onPress={() => router.push('/(tabs)/team' as any)} />
-                                <QuickActionBtn icon="people" label="Leads" colors={colors} onPress={() => router.push('/(tabs)/leads' as any)} />
-                                <QuickActionBtn icon="document-text" label="Candidates" colors={colors} onPress={() => router.push('/(tabs)/candidates' as any)} />
-                                <QuickActionBtn icon="person" label="Profile" colors={colors} onPress={() => router.push('/(tabs)/profile' as any)} />
+                                <QuickActionBtn icon="briefcase" label="Team" colors={colors} onPress={() => router.push('/(tabs)/team')} />
+                                <QuickActionBtn icon="people" label="Leads" colors={colors} onPress={() => router.push('/(tabs)/leads')} />
+                                <QuickActionBtn icon="document-text" label="Candidates" colors={colors} onPress={() => router.push('/(tabs)/candidates')} />
+                                <QuickActionBtn icon="person" label="Profile" colors={colors} onPress={() => router.push('/(tabs)/profile')} />
                             </>
                         ) : (
                             <>
-                                <QuickActionBtn icon="person-add" label="Add Lead" colors={colors} onPress={() => router.push('/(tabs)/leads/add' as any)} />
-                                <QuickActionBtn icon="list" label="All Leads" colors={colors} onPress={() => router.push('/(tabs)/leads' as any)} />
-                                <QuickActionBtn icon="calendar" label="Follow-ups" colors={colors} onPress={() => router.push('/(tabs)/leads' as any)} />
-                                <QuickActionBtn icon="person" label="Profile" colors={colors} onPress={() => router.push('/(tabs)/profile' as any)} />
+                                <QuickActionBtn icon="person-add" label="Add Lead" colors={colors} onPress={() => router.push('/(tabs)/leads/add')} />
+                                <QuickActionBtn icon="list" label="All Leads" colors={colors} onPress={() => router.push('/(tabs)/leads')} />
+                                <QuickActionBtn icon="calendar" label="Follow-ups" colors={colors} onPress={() => router.push('/(tabs)/leads')} />
+                                <QuickActionBtn icon="person" label="Profile" colors={colors} onPress={() => router.push('/(tabs)/profile')} />
                             </>
                         )}
                     </View>
@@ -331,7 +331,7 @@ export default function HomeScreen() {
                     <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
                         <View style={styles.sectionHeaderRow}>
                             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>My Events</Text>
-                            <TouchableOpacity onPress={() => router.push('/(tabs)/events' as any)}>
+                            <TouchableOpacity onPress={() => router.push('/(tabs)/events')}>
                                 <Text style={[styles.seeAllText, { color: colors.accent }]}>See All</Text>
                             </TouchableOpacity>
                         </View>
@@ -345,7 +345,7 @@ export default function HomeScreen() {
                                     <TouchableOpacity
                                         key={event.id}
                                         style={styles.managerEventRow}
-                                        onPress={() => router.push(`/(tabs)/pa/event/${event.id}` as any)}
+                                        onPress={() => router.push(`/(tabs)/pa/event/${event.id}`)}
                                         activeOpacity={0.7}
                                     >
                                         <View style={[styles.managerEventStripe, { backgroundColor: typeColor }]} />
@@ -412,7 +412,7 @@ export default function HomeScreen() {
                         <View style={styles.sectionHeaderRow}>
                             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Recent Activity</Text>
                             <TouchableOpacity
-                                onPress={() => router.push('/(tabs)/leads' as any)}
+                                onPress={() => router.push('/(tabs)/leads')}
                                 accessibilityRole="button"
                                 accessibilityLabel="See all recent activity"
                             >

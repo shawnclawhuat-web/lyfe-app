@@ -1,4 +1,5 @@
 import EmptyState from '@/components/EmptyState';
+import ErrorBanner from '@/components/ErrorBanner';
 import LoadingState from '@/components/LoadingState';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,7 +36,7 @@ export default function TeamScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const isDirector = user?.role === 'director' || user?.role === 'admin';
+    const isDirector = user?.role === 'director' || user?.role === 'admin'; // UI branching for filter chips
 
     const loadMembers = useCallback(async () => {
         if (!user?.id) return;
@@ -221,16 +222,7 @@ export default function TeamScreen() {
                         </View>
 
                         {/* Error Banner */}
-                        {error && (
-                            <TouchableOpacity
-                                style={[styles.errorBanner, { backgroundColor: colors.dangerLight }]}
-                                onPress={loadMembers}
-                            >
-                                <Ionicons name="alert-circle" size={16} color={colors.danger} />
-                                <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
-                                <Text style={[styles.retryText, { color: colors.danger }]}>Tap to retry</Text>
-                            </TouchableOpacity>
-                        )}
+                        {error && <ErrorBanner message={error} onRetry={loadMembers} />}
 
                         {/* Filter Chips */}
                         {filters.length > 1 && (
@@ -338,17 +330,6 @@ const styles = StyleSheet.create({
         padding: 0,
     },
 
-    // ── Error ──
-    errorBanner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        padding: 12,
-        borderRadius: 10,
-        marginBottom: 12,
-    },
-    errorText: { flex: 1, fontSize: 13 },
-    retryText: { fontSize: 12, fontWeight: '600' },
 
     // ── Filters ──
     filterRow: {

@@ -1,3 +1,4 @@
+import ErrorBanner from '@/components/ErrorBanner';
 import ExamCard from '@/components/ExamCard';
 import LoadingState from '@/components/LoadingState';
 import ScreenHeader from '@/components/ScreenHeader';
@@ -153,17 +154,7 @@ export default function ExamsListScreen() {
                 </View>
 
                 {/* Error Banner */}
-                {error && (
-                    <TouchableOpacity
-                        style={[styles.errorBanner, { backgroundColor: colors.dangerLight }]}
-                        onPress={fetchData}
-                        activeOpacity={0.7}
-                    >
-                        <Ionicons name="alert-circle" size={18} color={colors.danger} />
-                        <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
-                        <Text style={[styles.retryText, { color: colors.danger }]}>Tap to retry</Text>
-                    </TouchableOpacity>
-                )}
+                {error && <ErrorBanner message={error} onRetry={fetchData} />}
 
                 {/* Exam Cards */}
                 {papers.map((paper) => (
@@ -223,16 +214,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     progressSegmentText: { fontSize: 11, fontWeight: '700' },
-    errorBanner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        padding: 12,
-        borderRadius: 10,
-        marginBottom: 12,
-    },
-    errorText: { flex: 1, fontSize: 13 },
-    retryText: { fontSize: 12, fontWeight: '600' },
     emptyContainer: {
         alignItems: 'center',
         justifyContent: 'center',
