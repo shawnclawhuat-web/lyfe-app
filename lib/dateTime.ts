@@ -100,9 +100,9 @@ export function dateRange(start: string, end: string): string[] {
     return dates;
 }
 
-/** Convert Date to YYYY-MM-DD */
+/** Convert Date to YYYY-MM-DD (local timezone) */
 export function toDateStr(d: Date): string {
-    return d.toISOString().split('T')[0];
+    return d.toLocaleDateString('en-CA');
 }
 
 /**

@@ -223,9 +223,15 @@ describe('dateRange', () => {
 // ── toDateStr ──
 
 describe('toDateStr', () => {
-    it('converts Date object to YYYY-MM-DD', () => {
-        const d = new Date('2026-03-08T15:30:00Z');
+    it('converts Date object to YYYY-MM-DD in local timezone', () => {
+        const d = new Date(2026, 2, 8, 12, 0, 0); // local noon March 8
         expect(toDateStr(d)).toBe('2026-03-08');
+    });
+
+    it('uses local date, not UTC date', () => {
+        // 12:01 AM local on March 9 — should return March 9 regardless of UTC offset
+        const d = new Date(2026, 2, 9, 0, 1, 0);
+        expect(toDateStr(d)).toBe('2026-03-09');
     });
 });
 
