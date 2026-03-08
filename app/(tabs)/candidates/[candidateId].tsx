@@ -2,18 +2,27 @@ import LoadingState from '@/components/LoadingState';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { addCandidateActivity, deleteCandidateDocument, deleteInterview, fetchCandidate, fetchCandidateDocuments, scheduleInterview, updateInterview, uploadCandidateDocument } from '@/lib/recruitment';
+import {
+    addCandidateActivity,
+    deleteCandidateDocument,
+    deleteInterview,
+    fetchCandidate,
+    fetchCandidateDocuments,
+    scheduleInterview,
+    updateInterview,
+    uploadCandidateDocument,
+} from '@/lib/recruitment';
 import { timeAgo } from '@/lib/utils';
-
-// expo-document-picker requires a native build — lazy-load so the app doesn't
-// crash on older dev clients that were built before the package was installed.
-let DocumentPicker: typeof import('expo-document-picker') | null = null;
-try {
-    DocumentPicker = require('expo-document-picker');
-} catch {
-    // Native module not yet compiled into this build — upload will be disabled.
-}
-import { CANDIDATE_STATUS_CONFIG, DOCUMENT_LABELS, type CandidateActivity, type CandidateDocument, type CandidateOutcome, type CandidateStatus, type Interview, type RecruitmentCandidate } from '@/types/recruitment';
+import {
+    CANDIDATE_STATUS_CONFIG,
+    DOCUMENT_LABELS,
+    type CandidateActivity,
+    type CandidateDocument,
+    type CandidateOutcome,
+    type CandidateStatus,
+    type Interview,
+    type RecruitmentCandidate,
+} from '@/types/recruitment';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -27,6 +36,7 @@ import {
     Pressable,
     SafeAreaView,
     ScrollView,
+    Share,
     StyleSheet,
     Text,
     TextInput,
@@ -36,7 +46,21 @@ import {
 import { ERROR_BG, ERROR_TEXT, INTERVIEW_STATUS_COLORS } from '@/constants/ui';
 import { formatCreatedAt, formatDateTime } from '@/lib/dateTime';
 import { WebView } from 'react-native-webview';
+let Clipboard: typeof import('expo-clipboard') | null = null;
+try {
+    Clipboard = require('expo-clipboard');
+} catch (e) {
+    console.warn('expo-clipboard not available:', e);
+}
 
+// expo-document-picker requires a native build — lazy-load so the app doesn't
+// crash on older dev clients that were built before the package was installed.
+let DocumentPicker: typeof import('expo-document-picker') | null = null;
+try {
+    DocumentPicker = require('expo-document-picker');
+} catch {
+    // Native module not yet compiled into this build — upload will be disabled.
+}
 
 // ── Helpers ──
 
@@ -51,7 +75,15 @@ function getTimeAgo(dateStr: string): string {
 // ── Status Stepper ──
 
 function StatusStepper({ currentStatus, colors }: { currentStatus: CandidateStatus; colors: any }) {
-    const steps: CandidateStatus[] = ['applied', 'interview_scheduled', 'interviewed', 'approved', 'exam_prep', 'licensed', 'active_agent'];
+    const steps: CandidateStatus[] = [
+        'applied',
+        'interview_scheduled',
+        'interviewed',
+        'approved',
+        'exam_prep',
+        'licensed',
+        'active_agent',
+    ];
     const currentIdx = steps.indexOf(currentStatus);
 
     return (
@@ -70,14 +102,27 @@ function StatusStepper({ currentStatus, colors }: { currentStatus: CandidateStat
                                 {isCurrent && <View style={stepperStyles.activeDotInner} />}
                             </View>
                             {idx < steps.length - 1 && (
-                                <View style={[stepperStyles.line, { backgroundColor: isComplete ? cfg.color : colors.border }]} />
+                                <View
+                                    style={[
+                                        stepperStyles.line,
+                                        { backgroundColor: isComplete ? cfg.color : colors.border },
+                                    ]}
+                                />
                             )}
                         </View>
-                        <Text style={[
-                            stepperStyles.label,
-                            { color: isCurrent ? cfg.color : isComplete ? colors.textPrimary : colors.textTertiary },
-                            isCurrent && { fontWeight: '700' },
-                        ]}>
+                        <Text
+                            style={[
+                                stepperStyles.label,
+                                {
+                                    color: isCurrent
+                                        ? cfg.color
+                                        : isComplete
+                                          ? colors.textPrimary
+                                          : colors.textTertiary,
+                                },
+                                isCurrent && { fontWeight: '700' },
+                            ]}
+                        >
                             {cfg.label}
                         </Text>
                     </View>
@@ -89,14 +134,27 @@ function StatusStepper({ currentStatus, colors }: { currentStatus: CandidateStat
 
 // ── Interview Card ──
 
-function InterviewCard({ interview, colors, onEdit, onDelete }: {
-    interview: Interview; colors: any; onEdit: () => void; onDelete: () => void;
+function InterviewCard({
+    interview,
+    colors,
+    onEdit,
+    onDelete,
+}: {
+    interview: Interview;
+    colors: any;
+    onEdit: () => void;
+    onDelete: () => void;
 }) {
     const isUpcoming = new Date(interview.datetime) > new Date();
     const statusColor = INTERVIEW_STATUS_COLORS[interview.status] ?? INTERVIEW_STATUS_COLORS.scheduled;
 
     return (
-        <View style={[interviewStyles.card, { backgroundColor: colors.surfacePrimary || colors.background, borderColor: colors.border }]}>
+        <View
+            style={[
+                interviewStyles.card,
+                { backgroundColor: colors.surfacePrimary || colors.background, borderColor: colors.border },
+            ]}
+        >
             <View style={interviewStyles.headerRow}>
                 <View style={interviewStyles.roundBadge}>
                     <Text style={interviewStyles.roundText}>R{interview.round_number}</Text>
@@ -114,10 +172,18 @@ function InterviewCard({ interview, colors, onEdit, onDelete }: {
                         {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
                     </Text>
                 </View>
-                <TouchableOpacity onPress={onEdit} hitSlop={{ top: 12, bottom: 12, left: 12, right: 8 }} style={{ marginLeft: 8, padding: 4 }}>
+                <TouchableOpacity
+                    onPress={onEdit}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 8 }}
+                    style={{ marginLeft: 8, padding: 4 }}
+                >
                     <Ionicons name="pencil-outline" size={16} color={colors.textTertiary} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={onDelete} hitSlop={{ top: 12, bottom: 12, left: 8, right: 12 }} style={{ marginLeft: 4, padding: 4 }}>
+                <TouchableOpacity
+                    onPress={onDelete}
+                    hitSlop={{ top: 12, bottom: 12, left: 8, right: 12 }}
+                    style={{ marginLeft: 4, padding: 4 }}
+                >
                     <Ionicons name="trash-outline" size={16} color={colors.textTertiary} />
                 </TouchableOpacity>
             </View>
@@ -125,7 +191,9 @@ function InterviewCard({ interview, colors, onEdit, onDelete }: {
             {interview.location && (
                 <View style={interviewStyles.detailRow}>
                     <Ionicons name="location-outline" size={14} color={colors.textTertiary} />
-                    <Text style={[interviewStyles.detailText, { color: colors.textSecondary }]}>{interview.location}</Text>
+                    <Text style={[interviewStyles.detailText, { color: colors.textSecondary }]}>
+                        {interview.location}
+                    </Text>
                 </View>
             )}
             {interview.zoom_link && isUpcoming && (
@@ -140,9 +208,7 @@ function InterviewCard({ interview, colors, onEdit, onDelete }: {
             {interview.notes && (
                 <View style={interviewStyles.detailRow}>
                     <Ionicons name="chatbubble-outline" size={14} color={colors.textTertiary} />
-                    <Text style={[interviewStyles.detailText, { color: colors.textSecondary }]}>
-                        {interview.notes}
-                    </Text>
+                    <Text style={[interviewStyles.detailText, { color: colors.textSecondary }]}>{interview.notes}</Text>
                 </View>
             )}
         </View>
@@ -151,15 +217,23 @@ function InterviewCard({ interview, colors, onEdit, onDelete }: {
 
 // ── Wheel Picker ──
 
-const HOURS  = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+const HOURS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
 const MINUTES = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
-const AMPM   = ['AM', 'PM'];
+const AMPM = ['AM', 'PM'];
 const WHEEL_ITEM_H = 44;
 
 function WheelPicker({
-    items, selectedIndex, onChange, colors, width = 80,
+    items,
+    selectedIndex,
+    onChange,
+    colors,
+    width = 80,
 }: {
-    items: string[]; selectedIndex: number; onChange: (i: number) => void; colors: any; width?: number;
+    items: string[];
+    selectedIndex: number;
+    onChange: (i: number) => void;
+    colors: any;
+    width?: number;
 }) {
     const scrollRef = useRef<ScrollView>(null);
     const [scrollY, setScrollY] = useState(selectedIndex * WHEEL_ITEM_H);
@@ -169,7 +243,7 @@ function WheelPicker({
             scrollRef.current?.scrollTo({ y: selectedIndex * WHEEL_ITEM_H, animated: false });
         }, 50);
         return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleEnd = (e: any) => {
@@ -202,7 +276,7 @@ function WheelPicker({
                 showsVerticalScrollIndicator={false}
                 snapToInterval={WHEEL_ITEM_H}
                 decelerationRate="fast"
-                onScroll={e => setScrollY(e.nativeEvent.contentOffset.y)}
+                onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
                 scrollEventThrottle={16}
                 onMomentumScrollEnd={handleEnd}
                 onScrollEndDrag={handleEnd}
@@ -214,13 +288,15 @@ function WheelPicker({
                     const isSelected = dist < 0.5;
                     return (
                         <View key={i} style={{ height: WHEEL_ITEM_H, alignItems: 'center', justifyContent: 'center' }}>
-                            <Text style={{
-                                fontSize: isSelected ? 22 : 16,
-                                fontWeight: isSelected ? '700' : '400',
-                                opacity,
-                                color: isSelected ? colors.accent : colors.textPrimary,
-                                letterSpacing: -0.3,
-                            }}>
+                            <Text
+                                style={{
+                                    fontSize: isSelected ? 22 : 16,
+                                    fontWeight: isSelected ? '700' : '400',
+                                    opacity,
+                                    color: isSelected ? colors.accent : colors.textPrimary,
+                                    letterSpacing: -0.3,
+                                }}
+                            >
                                 {item}
                             </Text>
                         </View>
@@ -272,10 +348,14 @@ export default function CandidateDetailScreen() {
     const [showScheduleSheet, setShowScheduleSheet] = useState(false);
     const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
     const [scheduleStatus, setScheduleStatus] = useState<Interview['status']>('scheduled');
-    const [scheduleDate, setScheduleDate] = useState(() => { const d = new Date(); d.setSeconds(0, 0); return d; });
-    const [scheduleHour, setScheduleHour]   = useState(10);           // 1–12
-    const [scheduleMinute, setScheduleMinute] = useState(0);           // 0, 5, 10, …, 55
-    const [scheduleAmPm, setScheduleAmPm]   = useState<'AM' | 'PM'>('AM');
+    const [scheduleDate, setScheduleDate] = useState(() => {
+        const d = new Date();
+        d.setSeconds(0, 0);
+        return d;
+    });
+    const [scheduleHour, setScheduleHour] = useState(10); // 1–12
+    const [scheduleMinute, setScheduleMinute] = useState(0); // 0, 5, 10, …, 55
+    const [scheduleAmPm, setScheduleAmPm] = useState<'AM' | 'PM'>('AM');
     const [scheduleType, setScheduleType] = useState<'zoom' | 'in_person'>('zoom');
     const [scheduleLink, setScheduleLink] = useState('');
     const [scheduleLocation, setScheduleLocation] = useState('');
@@ -344,7 +424,7 @@ export default function CandidateDetailScreen() {
 
     const statusConfig = CANDIDATE_STATUS_CONFIG[candidate.status];
     const sortedInterviews = [...candidate.interviews].sort(
-        (a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime()
+        (a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime(),
     );
 
     // ── Document handlers ──
@@ -356,7 +436,7 @@ export default function CandidateDetailScreen() {
     };
 
     const handleDeleteDocument = async (doc: CandidateDocument) => {
-        setDocuments(prev => prev.filter(d => d.id !== doc.id));
+        setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
         deleteCandidateDocument(doc.id);
     };
 
@@ -380,7 +460,7 @@ export default function CandidateDetailScreen() {
         const { data: newDoc, error } = await uploadCandidateDocument(candidate.id, label, asset.uri, asset.name);
         setAddDocStep('label');
         if (newDoc) {
-            setDocuments(prev => [newDoc, ...prev]);
+            setDocuments((prev) => [newDoc, ...prev]);
             setShowAddDoc(false);
             setAddDocLabel('');
             setAddDocCustomLabel('');
@@ -410,7 +490,7 @@ export default function CandidateDetailScreen() {
 
     const handleSaveActivity = (skipNote = false) => {
         if (!pendingType || !selectedOutcome) return;
-        const note = skipNote ? null : (noteText.trim() || null);
+        const note = skipNote ? null : noteText.trim() || null;
         const activity: CandidateActivity = {
             id: `ca_${Date.now()}`,
             candidate_id: candidate.id,
@@ -421,7 +501,7 @@ export default function CandidateDetailScreen() {
             created_at: new Date().toISOString(),
             actor_name: user?.full_name || undefined,
         };
-        setCallLog(prev => [activity, ...prev]);
+        setCallLog((prev) => [activity, ...prev]);
         if (user?.id) {
             addCandidateActivity(candidate.id, user.id, pendingType, selectedOutcome, note);
         }
@@ -452,7 +532,7 @@ export default function CandidateDetailScreen() {
             created_at: new Date().toISOString(),
             actor_name: user?.full_name || undefined,
         };
-        setCallLog(prev => [activity, ...prev]);
+        setCallLog((prev) => [activity, ...prev]);
         if (user?.id) {
             addCandidateActivity(candidate.id, user.id, 'note', null, text);
         }
@@ -478,8 +558,8 @@ export default function CandidateDetailScreen() {
         const dt = new Date(interview.datetime);
         const h24 = dt.getHours();
         const mins = dt.getMinutes();
-        const h12   = h24 % 12 === 0 ? 12 : h24 % 12;
-        const ampm  = h24 >= 12 ? 'PM' : 'AM';
+        const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+        const ampm = h24 >= 12 ? 'PM' : 'AM';
         const nearestMin = Math.min(55, Math.round(mins / 5) * 5);
         setEditingInterview(interview);
         setScheduleDate(dt);
@@ -512,22 +592,24 @@ export default function CandidateDetailScreen() {
     };
 
     const handleDeleteInterview = (interview: Interview) => {
-        Alert.alert(
-            'Delete Interview',
-            `Delete Round ${interview.round_number} interview? This cannot be undone.`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete', style: 'destructive', onPress: () => {
-                        setCandidate(prev => prev ? {
-                            ...prev,
-                            interviews: prev.interviews.filter(iv => iv.id !== interview.id),
-                        } : prev);
-                        deleteInterview(interview.id);
-                    },
+        Alert.alert('Delete Interview', `Delete Round ${interview.round_number} interview? This cannot be undone.`, [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: () => {
+                    setCandidate((prev) =>
+                        prev
+                            ? {
+                                  ...prev,
+                                  interviews: prev.interviews.filter((iv) => iv.id !== interview.id),
+                              }
+                            : prev,
+                    );
+                    deleteInterview(interview.id);
                 },
-            ],
-        );
+            },
+        ]);
     };
 
     const handleSubmitSchedule = async () => {
@@ -541,9 +623,14 @@ export default function CandidateDetailScreen() {
 
         // Warn if datetime is in the past
         const dt = new Date(scheduleDate);
-        const h24 = scheduleAmPm === 'AM'
-            ? (scheduleHour === 12 ? 0 : scheduleHour)
-            : (scheduleHour === 12 ? 12 : scheduleHour + 12);
+        const h24 =
+            scheduleAmPm === 'AM'
+                ? scheduleHour === 12
+                    ? 0
+                    : scheduleHour
+                : scheduleHour === 12
+                  ? 12
+                  : scheduleHour + 12;
         dt.setHours(h24, scheduleMinute, 0, 0);
 
         if (dt < new Date()) {
@@ -563,19 +650,34 @@ export default function CandidateDetailScreen() {
         const link = scheduleType === 'zoom' ? scheduleLink.trim() || null : null;
         const notes = scheduleNotes.trim() || null;
 
-        if (!user?.id) { setScheduleError('Not authenticated'); return; }
+        if (!user?.id) {
+            setScheduleError('Not authenticated');
+            return;
+        }
         setIsScheduling(true);
 
         if (editingInterview) {
             const { data: updated, error: updErr } = await updateInterview(editingInterview.id, {
-                type: scheduleType, datetime: isoDatetime, location: loc, zoomLink: link, notes, status: scheduleStatus,
+                type: scheduleType,
+                datetime: isoDatetime,
+                location: loc,
+                zoomLink: link,
+                notes,
+                status: scheduleStatus,
             });
             setIsScheduling(false);
-            if (updErr || !updated) { setScheduleError(updErr ?? 'Failed to update interview'); return; }
-            setCandidate(prev => prev ? {
-                ...prev,
-                interviews: prev.interviews.map(iv => iv.id === updated.id ? updated : iv),
-            } : prev);
+            if (updErr || !updated) {
+                setScheduleError(updErr ?? 'Failed to update interview');
+                return;
+            }
+            setCandidate((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          interviews: prev.interviews.map((iv) => (iv.id === updated.id ? updated : iv)),
+                      }
+                    : prev,
+            );
             closeScheduleSheet();
             Alert.alert('Saved', 'Interview updated.');
         } else {
@@ -591,32 +693,40 @@ export default function CandidateDetailScreen() {
                 notes,
             });
             setIsScheduling(false);
-            if (schedErr || !newInterview) { setScheduleError(schedErr ?? 'Failed to schedule interview'); return; }
-            setCandidate(prev => prev ? { ...prev, interviews: [newInterview, ...prev.interviews] } : prev);
+            if (schedErr || !newInterview) {
+                setScheduleError(schedErr ?? 'Failed to schedule interview');
+                return;
+            }
+            setCandidate((prev) => (prev ? { ...prev, interviews: [newInterview, ...prev.interviews] } : prev));
             closeScheduleSheet();
         }
     };
 
     const resetScheduleForm = () => {
-        const d = new Date(); d.setSeconds(0, 0);
+        const d = new Date();
+        d.setSeconds(0, 0);
         setScheduleDate(d);
         setScheduleHour(10);
         setScheduleMinute(0);
         setScheduleAmPm('AM');
-        setScheduleType('zoom'); setScheduleLink(''); setScheduleLocation('');
-        setScheduleNotes(''); setScheduleError(null); setScheduleStatus('scheduled');
+        setScheduleType('zoom');
+        setScheduleLink('');
+        setScheduleLocation('');
+        setScheduleNotes('');
+        setScheduleError(null);
+        setScheduleStatus('scheduled');
         setEditingInterview(null);
     };
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-            <ScreenHeader
-                showBack
-                backLabel="Candidates"
-                title={candidate.name}
-            />
+            <ScreenHeader showBack backLabel="Candidates" title={candidate.name} />
 
-            <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
                 {/* Profile Card */}
                 <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
                     <View style={styles.profileRow}>
@@ -644,7 +754,9 @@ export default function CandidateDetailScreen() {
                         {candidate.email && (
                             <View style={styles.contactRow}>
                                 <Ionicons name="mail-outline" size={16} color={colors.textTertiary} />
-                                <Text style={[styles.contactText, { color: colors.textSecondary }]}>{candidate.email}</Text>
+                                <Text style={[styles.contactText, { color: colors.textSecondary }]}>
+                                    {candidate.email}
+                                </Text>
                             </View>
                         )}
                         <View style={styles.contactRow}>
@@ -656,21 +768,43 @@ export default function CandidateDetailScreen() {
                         <View style={styles.contactRow}>
                             <Ionicons name="calendar-outline" size={16} color={colors.textTertiary} />
                             <Text style={[styles.contactText, { color: colors.textSecondary }]}>
-                                Applied {formatCreatedAt(candidate.created_at)} · Updated {getTimeAgo(candidate.updated_at)}
+                                Applied {formatCreatedAt(candidate.created_at)} · Updated{' '}
+                                {getTimeAgo(candidate.updated_at)}
                             </Text>
                         </View>
                     </View>
+
+                    {candidate.status === 'applied' && candidate.invite_token && (
+                        <TouchableOpacity
+                            style={[styles.inviteBanner, { backgroundColor: colors.accentLight }]}
+                            activeOpacity={0.7}
+                            onPress={async () => {
+                                const link = `https://lyfe-admin.vercel.app/invite/${candidate.invite_token}`;
+                                if (Clipboard) {
+                                    await Clipboard.setStringAsync(link);
+                                    Alert.alert('Copied', 'Invite link copied to clipboard');
+                                } else {
+                                    Share.share({ message: link });
+                                }
+                            }}
+                        >
+                            <Ionicons name="link-outline" size={16} color={colors.accent} />
+                            <Text style={{ color: colors.accent, fontSize: 14, fontWeight: '600' }} numberOfLines={1}>
+                                Copy Invite Link
+                            </Text>
+                            <Ionicons name="copy-outline" size={14} color={colors.accent} />
+                        </TouchableOpacity>
+                    )}
                 </View>
 
                 {/* Quick Actions */}
-                <View style={[styles.actionsCard, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
-                    <QuickAction
-                        icon="call"
-                        label="Call"
-                        color="#16A34A"
-                        bgColor="#DCFCE7"
-                        onPress={handleCall}
-                    />
+                <View
+                    style={[
+                        styles.actionsCard,
+                        { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                    ]}
+                >
+                    <QuickAction icon="call" label="Call" color="#16A34A" bgColor="#DCFCE7" onPress={handleCall} />
                     <QuickAction
                         icon="logo-whatsapp"
                         label="WhatsApp"
@@ -709,14 +843,17 @@ export default function CandidateDetailScreen() {
                             <Text style={[docStyles.emptyText, { color: colors.textTertiary }]}>No documents yet</Text>
                         </View>
                     ) : (
-                        documents.map(doc => (
+                        documents.map((doc) => (
                             <View key={doc.id} style={[docStyles.docRow, { backgroundColor: colors.surfacePrimary }]}>
                                 <View style={[docStyles.labelChip, { backgroundColor: colors.accentLight }]}>
                                     <Text style={[docStyles.labelChipText, { color: colors.accent }]} numberOfLines={1}>
                                         {doc.label}
                                     </Text>
                                 </View>
-                                <Text style={[docStyles.docFileName, { color: colors.textSecondary }]} numberOfLines={1}>
+                                <Text
+                                    style={[docStyles.docFileName, { color: colors.textSecondary }]}
+                                    numberOfLines={1}
+                                >
                                     {doc.file_name}
                                 </Text>
                                 <TouchableOpacity
@@ -740,7 +877,13 @@ export default function CandidateDetailScreen() {
 
                     <TouchableOpacity
                         style={[docStyles.addBtn, { borderColor: colors.accent, opacity: !DocumentPicker ? 0.4 : 1 }]}
-                        onPress={() => { setAddDocLabel(''); setAddDocCustomLabel(''); setAddDocError(null); setAddDocStep('label'); setShowAddDoc(true); }}
+                        onPress={() => {
+                            setAddDocLabel('');
+                            setAddDocCustomLabel('');
+                            setAddDocError(null);
+                            setAddDocStep('label');
+                            setShowAddDoc(true);
+                        }}
                         activeOpacity={0.7}
                         disabled={!DocumentPicker}
                     >
@@ -784,7 +927,12 @@ export default function CandidateDetailScreen() {
 
                 {/* Notes */}
                 {candidate.notes && (
-                    <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+                    <View
+                        style={[
+                            styles.card,
+                            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                        ]}
+                    >
                         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Notes</Text>
                         <Text style={[styles.notesBody, { color: colors.textSecondary }]}>{candidate.notes}</Text>
                     </View>
@@ -823,10 +971,7 @@ export default function CandidateDetailScreen() {
                 animationType="slide"
                 onRequestClose={confirmStep === 'outcome' ? handleDismissSheet : () => handleSaveActivity(true)}
             >
-                <KeyboardAvoidingView
-                    style={{ flex: 1 }}
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                >
+                <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
                     <TouchableOpacity
                         style={sheetStyles.overlay}
                         activeOpacity={1}
@@ -842,9 +987,14 @@ export default function CandidateDetailScreen() {
                             {confirmStep === 'outcome' ? (
                                 /* ── Step 1: Outcome selection ── */
                                 <>
-                                    <View style={[sheetStyles.iconWrap, {
-                                        backgroundColor: pendingType === 'whatsapp' ? '#D1FAE5' : '#DCFCE7',
-                                    }]}>
+                                    <View
+                                        style={[
+                                            sheetStyles.iconWrap,
+                                            {
+                                                backgroundColor: pendingType === 'whatsapp' ? '#D1FAE5' : '#DCFCE7',
+                                            },
+                                        ]}
+                                    >
                                         <Ionicons
                                             name={pendingType === 'whatsapp' ? 'logo-whatsapp' : 'call'}
                                             size={30}
@@ -870,12 +1020,29 @@ export default function CandidateDetailScreen() {
                                                 <Text style={sheetStyles.primaryBtnText}>Connected</Text>
                                             </TouchableOpacity>
                                             <TouchableOpacity
-                                                style={[sheetStyles.secondaryBtn, { borderColor: colors.border, backgroundColor: colors.surfacePrimary }]}
+                                                style={[
+                                                    sheetStyles.secondaryBtn,
+                                                    {
+                                                        borderColor: colors.border,
+                                                        backgroundColor: colors.surfacePrimary,
+                                                    },
+                                                ]}
                                                 onPress={() => handleOutcomeSelect('no_answer')}
                                                 activeOpacity={0.85}
                                             >
-                                                <Ionicons name="close-circle-outline" size={20} color={colors.textSecondary} />
-                                                <Text style={[sheetStyles.secondaryBtnText, { color: colors.textSecondary }]}>No answer</Text>
+                                                <Ionicons
+                                                    name="close-circle-outline"
+                                                    size={20}
+                                                    color={colors.textSecondary}
+                                                />
+                                                <Text
+                                                    style={[
+                                                        sheetStyles.secondaryBtnText,
+                                                        { color: colors.textSecondary },
+                                                    ]}
+                                                >
+                                                    No answer
+                                                </Text>
                                             </TouchableOpacity>
                                         </>
                                     ) : (
@@ -889,43 +1056,68 @@ export default function CandidateDetailScreen() {
                                         </TouchableOpacity>
                                     )}
 
-                                    <TouchableOpacity onPress={handleDismissSheet} style={sheetStyles.skipRow} hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}>
-                                        <Text style={[sheetStyles.skipText, { color: colors.textTertiary }]}>Don't log this</Text>
+                                    <TouchableOpacity
+                                        onPress={handleDismissSheet}
+                                        style={sheetStyles.skipRow}
+                                        hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
+                                    >
+                                        <Text style={[sheetStyles.skipText, { color: colors.textTertiary }]}>
+                                            Don't log this
+                                        </Text>
                                     </TouchableOpacity>
                                 </>
                             ) : (
                                 /* ── Step 2: Optional note ── */
                                 <>
                                     {/* Outcome recap pill */}
-                                    <View style={[sheetStyles.outcomePill, {
-                                        backgroundColor: selectedOutcome === 'no_answer'
-                                            ? colors.surfacePrimary
-                                            : '#DCFCE7',
-                                    }]}>
+                                    <View
+                                        style={[
+                                            sheetStyles.outcomePill,
+                                            {
+                                                backgroundColor:
+                                                    selectedOutcome === 'no_answer' ? colors.surfacePrimary : '#DCFCE7',
+                                            },
+                                        ]}
+                                    >
                                         <Ionicons
                                             name={selectedOutcome === 'no_answer' ? 'close-circle' : 'checkmark-circle'}
                                             size={14}
                                             color={selectedOutcome === 'no_answer' ? colors.textTertiary : '#16A34A'}
                                         />
-                                        <Text style={[sheetStyles.outcomePillText, {
-                                            color: selectedOutcome === 'no_answer' ? colors.textSecondary : '#16A34A',
-                                        }]}>
-                                            {selectedOutcome === 'reached' ? 'Connected'
-                                                : selectedOutcome === 'no_answer' ? 'No answer'
-                                                    : 'Sent'}
+                                        <Text
+                                            style={[
+                                                sheetStyles.outcomePillText,
+                                                {
+                                                    color:
+                                                        selectedOutcome === 'no_answer'
+                                                            ? colors.textSecondary
+                                                            : '#16A34A',
+                                                },
+                                            ]}
+                                        >
+                                            {selectedOutcome === 'reached'
+                                                ? 'Connected'
+                                                : selectedOutcome === 'no_answer'
+                                                  ? 'No answer'
+                                                  : 'Sent'}
                                         </Text>
                                     </View>
 
                                     <Text style={[sheetStyles.noteLabel, { color: colors.textPrimary }]}>
                                         Add a note{'  '}
-                                        <Text style={[sheetStyles.noteLabelOptional, { color: colors.textTertiary }]}>optional</Text>
+                                        <Text style={[sheetStyles.noteLabelOptional, { color: colors.textTertiary }]}>
+                                            optional
+                                        </Text>
                                     </Text>
 
                                     <TextInput
-                                        style={[sheetStyles.noteInput, {
-                                            color: colors.textPrimary,
-                                            backgroundColor: colors.surfacePrimary,
-                                        }]}
+                                        style={[
+                                            sheetStyles.noteInput,
+                                            {
+                                                color: colors.textPrimary,
+                                                backgroundColor: colors.surfacePrimary,
+                                            },
+                                        ]}
                                         placeholder="e.g. Very interested, wants to start soon..."
                                         placeholderTextColor={colors.textTertiary}
                                         value={noteText}
@@ -945,8 +1137,14 @@ export default function CandidateDetailScreen() {
                                         <Text style={sheetStyles.primaryBtnText}>Save & Log</Text>
                                     </TouchableOpacity>
 
-                                    <TouchableOpacity onPress={() => handleSaveActivity(true)} style={sheetStyles.skipRow} hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}>
-                                        <Text style={[sheetStyles.skipText, { color: colors.textTertiary }]}>Skip note</Text>
+                                    <TouchableOpacity
+                                        onPress={() => handleSaveActivity(true)}
+                                        style={sheetStyles.skipRow}
+                                        hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
+                                    >
+                                        <Text style={[sheetStyles.skipText, { color: colors.textTertiary }]}>
+                                            Skip note
+                                        </Text>
                                     </TouchableOpacity>
                                 </>
                             )}
@@ -956,17 +1154,32 @@ export default function CandidateDetailScreen() {
             </Modal>
 
             {/* Note Sheet */}
-            <Modal visible={showNoteSheet} transparent animationType="slide" onRequestClose={() => setShowNoteSheet(false)}>
+            <Modal
+                visible={showNoteSheet}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowNoteSheet(false)}
+            >
                 <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                    <TouchableOpacity style={sheetStyles.overlay} activeOpacity={1} onPress={() => setShowNoteSheet(false)}>
-                        <View style={[sheetStyles.sheet, { backgroundColor: colors.cardBackground }]} onStartShouldSetResponder={() => true}>
+                    <TouchableOpacity
+                        style={sheetStyles.overlay}
+                        activeOpacity={1}
+                        onPress={() => setShowNoteSheet(false)}
+                    >
+                        <View
+                            style={[sheetStyles.sheet, { backgroundColor: colors.cardBackground }]}
+                            onStartShouldSetResponder={() => true}
+                        >
                             <View style={[sheetStyles.handle, { backgroundColor: colors.border }]} />
                             <View style={[schedStyles.iconWrap, { backgroundColor: colors.surfacePrimary }]}>
                                 <Ionicons name="create-outline" size={28} color={colors.textSecondary} />
                             </View>
                             <Text style={[sheetStyles.sheetTitle, { color: colors.textPrimary }]}>Add Note</Text>
                             <TextInput
-                                style={[sheetStyles.noteInput, { color: colors.textPrimary, backgroundColor: colors.surfacePrimary }]}
+                                style={[
+                                    sheetStyles.noteInput,
+                                    { color: colors.textPrimary, backgroundColor: colors.surfacePrimary },
+                                ]}
                                 placeholder="What happened? Any follow-up actions?"
                                 placeholderTextColor={colors.textTertiary}
                                 value={noteSheetText}
@@ -977,7 +1190,10 @@ export default function CandidateDetailScreen() {
                                 autoFocus
                             />
                             <TouchableOpacity
-                                style={[sheetStyles.primaryBtn, { backgroundColor: colors.accent, opacity: noteSheetText.trim() ? 1 : 0.4 }]}
+                                style={[
+                                    sheetStyles.primaryBtn,
+                                    { backgroundColor: colors.accent, opacity: noteSheetText.trim() ? 1 : 0.4 },
+                                ]}
                                 onPress={handleSaveNote}
                                 activeOpacity={0.85}
                                 disabled={!noteSheetText.trim()}
@@ -1006,8 +1222,11 @@ export default function CandidateDetailScreen() {
                                     : `Schedule Interview · Round ${(candidate?.interviews.length ?? 0) + 1}`}
                             </Text>
 
-                            <ScrollView style={{ width: '100%' }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-
+                            <ScrollView
+                                style={{ width: '100%' }}
+                                keyboardShouldPersistTaps="handled"
+                                showsVerticalScrollIndicator={false}
+                            >
                                 {scheduleError && (
                                     <View style={[schedStyles.errorRow, { backgroundColor: ERROR_BG }]}>
                                         <Ionicons name="alert-circle" size={14} color={ERROR_TEXT} />
@@ -1018,19 +1237,35 @@ export default function CandidateDetailScreen() {
                                 {/* Date row */}
                                 <Text style={[schedStyles.fieldLabel, { color: colors.textTertiary }]}>Date</Text>
                                 <View style={[schedStyles.row, { backgroundColor: colors.surfacePrimary }]}>
-                                    <TouchableOpacity onPress={() => setScheduleDate(d => addDays(d, -1))} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                                    <TouchableOpacity
+                                        onPress={() => setScheduleDate((d) => addDays(d, -1))}
+                                        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                                    >
                                         <Ionicons name="chevron-back" size={22} color={colors.textSecondary} />
                                     </TouchableOpacity>
-                                    <Text style={[schedStyles.rowValue, { color: colors.textPrimary, flex: 1, textAlign: 'center' }]}>
+                                    <Text
+                                        style={[
+                                            schedStyles.rowValue,
+                                            { color: colors.textPrimary, flex: 1, textAlign: 'center' },
+                                        ]}
+                                    >
                                         {formatScheduleDate(scheduleDate)}
                                     </Text>
-                                    <TouchableOpacity onPress={() => setScheduleDate(d => addDays(d, 1))} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                                    <TouchableOpacity
+                                        onPress={() => setScheduleDate((d) => addDays(d, 1))}
+                                        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                                    >
                                         <Ionicons name="chevron-forward" size={22} color={colors.textSecondary} />
                                     </TouchableOpacity>
                                 </View>
                                 {!isToday(scheduleDate) && (
-                                    <TouchableOpacity onPress={() => setScheduleDate(new Date())} style={schedStyles.todayBtn}>
-                                        <Text style={[schedStyles.todayBtnText, { color: colors.accent }]}>Jump to today</Text>
+                                    <TouchableOpacity
+                                        onPress={() => setScheduleDate(new Date())}
+                                        style={schedStyles.todayBtn}
+                                    >
+                                        <Text style={[schedStyles.todayBtnText, { color: colors.accent }]}>
+                                            Jump to today
+                                        </Text>
                                     </TouchableOpacity>
                                 )}
 
@@ -1041,7 +1276,7 @@ export default function CandidateDetailScreen() {
                                         key={`hour-${editingInterview?.id ?? 'new'}`}
                                         items={HOURS}
                                         selectedIndex={Math.max(0, HOURS.indexOf(scheduleHour.toString()))}
-                                        onChange={idx => setScheduleHour(parseInt(HOURS[idx]))}
+                                        onChange={(idx) => setScheduleHour(parseInt(HOURS[idx]))}
                                         colors={colors}
                                         width={80}
                                     />
@@ -1049,8 +1284,11 @@ export default function CandidateDetailScreen() {
                                     <WheelPicker
                                         key={`min-${editingInterview?.id ?? 'new'}`}
                                         items={MINUTES}
-                                        selectedIndex={Math.max(0, MINUTES.indexOf(scheduleMinute.toString().padStart(2, '0')))}
-                                        onChange={idx => setScheduleMinute(parseInt(MINUTES[idx]))}
+                                        selectedIndex={Math.max(
+                                            0,
+                                            MINUTES.indexOf(scheduleMinute.toString().padStart(2, '0')),
+                                        )}
+                                        onChange={(idx) => setScheduleMinute(parseInt(MINUTES[idx]))}
                                         colors={colors}
                                         width={72}
                                     />
@@ -1059,7 +1297,7 @@ export default function CandidateDetailScreen() {
                                         key={`ampm-${editingInterview?.id ?? 'new'}`}
                                         items={AMPM}
                                         selectedIndex={scheduleAmPm === 'AM' ? 0 : 1}
-                                        onChange={idx => setScheduleAmPm(AMPM[idx] as 'AM' | 'PM')}
+                                        onChange={(idx) => setScheduleAmPm(AMPM[idx] as 'AM' | 'PM')}
                                         colors={colors}
                                         width={64}
                                     />
@@ -1069,25 +1307,64 @@ export default function CandidateDetailScreen() {
                                 <Text style={[schedStyles.fieldLabel, { color: colors.textTertiary }]}>Format</Text>
                                 <View style={schedStyles.typeToggle}>
                                     <TouchableOpacity
-                                        style={[schedStyles.typeBtn, { backgroundColor: scheduleType === 'zoom' ? colors.accent : colors.surfacePrimary }]}
+                                        style={[
+                                            schedStyles.typeBtn,
+                                            {
+                                                backgroundColor:
+                                                    scheduleType === 'zoom' ? colors.accent : colors.surfacePrimary,
+                                            },
+                                        ]}
                                         onPress={() => setScheduleType('zoom')}
                                     >
-                                        <Ionicons name="videocam-outline" size={16} color={scheduleType === 'zoom' ? '#FFF' : colors.textSecondary} />
-                                        <Text style={[schedStyles.typeBtnText, { color: scheduleType === 'zoom' ? '#FFF' : colors.textSecondary }]}>Zoom</Text>
+                                        <Ionicons
+                                            name="videocam-outline"
+                                            size={16}
+                                            color={scheduleType === 'zoom' ? '#FFF' : colors.textSecondary}
+                                        />
+                                        <Text
+                                            style={[
+                                                schedStyles.typeBtnText,
+                                                { color: scheduleType === 'zoom' ? '#FFF' : colors.textSecondary },
+                                            ]}
+                                        >
+                                            Zoom
+                                        </Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
-                                        style={[schedStyles.typeBtn, { backgroundColor: scheduleType === 'in_person' ? colors.accent : colors.surfacePrimary }]}
+                                        style={[
+                                            schedStyles.typeBtn,
+                                            {
+                                                backgroundColor:
+                                                    scheduleType === 'in_person'
+                                                        ? colors.accent
+                                                        : colors.surfacePrimary,
+                                            },
+                                        ]}
                                         onPress={() => setScheduleType('in_person')}
                                     >
-                                        <Ionicons name="business-outline" size={16} color={scheduleType === 'in_person' ? '#FFF' : colors.textSecondary} />
-                                        <Text style={[schedStyles.typeBtnText, { color: scheduleType === 'in_person' ? '#FFF' : colors.textSecondary }]}>In-person</Text>
+                                        <Ionicons
+                                            name="business-outline"
+                                            size={16}
+                                            color={scheduleType === 'in_person' ? '#FFF' : colors.textSecondary}
+                                        />
+                                        <Text
+                                            style={[
+                                                schedStyles.typeBtnText,
+                                                { color: scheduleType === 'in_person' ? '#FFF' : colors.textSecondary },
+                                            ]}
+                                        >
+                                            In-person
+                                        </Text>
                                     </TouchableOpacity>
                                 </View>
 
                                 {/* Link or location */}
                                 {scheduleType === 'zoom' ? (
                                     <TextInput
-                                        style={[schedStyles.input, { color: colors.textPrimary, backgroundColor: colors.surfacePrimary }]}
+                                        style={[
+                                            schedStyles.input,
+                                            { color: colors.textPrimary, backgroundColor: colors.surfacePrimary },
+                                        ]}
                                         placeholder="Zoom link (optional)"
                                         placeholderTextColor={colors.textTertiary}
                                         value={scheduleLink}
@@ -1097,7 +1374,10 @@ export default function CandidateDetailScreen() {
                                     />
                                 ) : (
                                     <TextInput
-                                        style={[schedStyles.input, { color: colors.textPrimary, backgroundColor: colors.surfacePrimary }]}
+                                        style={[
+                                            schedStyles.input,
+                                            { color: colors.textPrimary, backgroundColor: colors.surfacePrimary },
+                                        ]}
                                         placeholder="Location (optional)"
                                         placeholderTextColor={colors.textTertiary}
                                         value={scheduleLocation}
@@ -1107,7 +1387,14 @@ export default function CandidateDetailScreen() {
 
                                 {/* Notes */}
                                 <TextInput
-                                    style={[schedStyles.input, { color: colors.textPrimary, backgroundColor: colors.surfacePrimary, minHeight: 56 }]}
+                                    style={[
+                                        schedStyles.input,
+                                        {
+                                            color: colors.textPrimary,
+                                            backgroundColor: colors.surfacePrimary,
+                                            minHeight: 56,
+                                        },
+                                    ]}
                                     placeholder="Notes (optional)"
                                     placeholderTextColor={colors.textTertiary}
                                     value={scheduleNotes}
@@ -1119,39 +1406,64 @@ export default function CandidateDetailScreen() {
                                 {/* Status — edit mode only */}
                                 {editingInterview && (
                                     <>
-                                        <Text style={[schedStyles.fieldLabel, { color: colors.textTertiary }]}>Status</Text>
+                                        <Text style={[schedStyles.fieldLabel, { color: colors.textTertiary }]}>
+                                            Status
+                                        </Text>
                                         <View style={[schedStyles.typeToggle, { flexWrap: 'wrap' }]}>
-                                            {(['scheduled', 'completed', 'rescheduled', 'cancelled'] as const).map(s => (
-                                                <TouchableOpacity
-                                                    key={s}
-                                                    style={[schedStyles.typeBtn, {
-                                                        backgroundColor: scheduleStatus === s ? colors.accent : colors.surfacePrimary,
-                                                        flex: undefined,
-                                                        paddingHorizontal: 14,
-                                                    }]}
-                                                    onPress={() => setScheduleStatus(s)}
-                                                >
-                                                    <Text style={[schedStyles.typeBtnText, {
-                                                        color: scheduleStatus === s ? '#FFF' : colors.textSecondary,
-                                                        fontSize: 13,
-                                                    }]}>
-                                                        {s.charAt(0).toUpperCase() + s.slice(1)}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            ))}
+                                            {(['scheduled', 'completed', 'rescheduled', 'cancelled'] as const).map(
+                                                (s) => (
+                                                    <TouchableOpacity
+                                                        key={s}
+                                                        style={[
+                                                            schedStyles.typeBtn,
+                                                            {
+                                                                backgroundColor:
+                                                                    scheduleStatus === s
+                                                                        ? colors.accent
+                                                                        : colors.surfacePrimary,
+                                                                flex: undefined,
+                                                                paddingHorizontal: 14,
+                                                            },
+                                                        ]}
+                                                        onPress={() => setScheduleStatus(s)}
+                                                    >
+                                                        <Text
+                                                            style={[
+                                                                schedStyles.typeBtnText,
+                                                                {
+                                                                    color:
+                                                                        scheduleStatus === s
+                                                                            ? '#FFF'
+                                                                            : colors.textSecondary,
+                                                                    fontSize: 13,
+                                                                },
+                                                            ]}
+                                                        >
+                                                            {s.charAt(0).toUpperCase() + s.slice(1)}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                ),
+                                            )}
                                         </View>
                                     </>
                                 )}
 
                                 <TouchableOpacity
-                                    style={[sheetStyles.primaryBtn, { backgroundColor: '#FF9500', opacity: isScheduling ? 0.6 : 1 }]}
+                                    style={[
+                                        sheetStyles.primaryBtn,
+                                        { backgroundColor: '#FF9500', opacity: isScheduling ? 0.6 : 1 },
+                                    ]}
                                     onPress={handleSubmitSchedule}
                                     activeOpacity={0.85}
                                     disabled={isScheduling}
                                 >
                                     <Ionicons name="calendar-outline" size={18} color="#FFFFFF" />
                                     <Text style={sheetStyles.primaryBtnText}>
-                                        {isScheduling ? 'Saving…' : editingInterview ? 'Save Changes' : 'Confirm Schedule'}
+                                        {isScheduling
+                                            ? 'Saving…'
+                                            : editingInterview
+                                              ? 'Save Changes'
+                                              : 'Confirm Schedule'}
                                     </Text>
                                 </TouchableOpacity>
 
@@ -1165,8 +1477,15 @@ export default function CandidateDetailScreen() {
             {/* Add Document Sheet */}
             <Modal visible={showAddDoc} transparent animationType="slide" onRequestClose={() => setShowAddDoc(false)}>
                 <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                    <TouchableOpacity style={sheetStyles.overlay} activeOpacity={1} onPress={() => setShowAddDoc(false)}>
-                        <View style={[docStyles.addSheet, { backgroundColor: colors.cardBackground }]} onStartShouldSetResponder={() => true}>
+                    <TouchableOpacity
+                        style={sheetStyles.overlay}
+                        activeOpacity={1}
+                        onPress={() => setShowAddDoc(false)}
+                    >
+                        <View
+                            style={[docStyles.addSheet, { backgroundColor: colors.cardBackground }]}
+                            onStartShouldSetResponder={() => true}
+                        >
                             <View style={[sheetStyles.handle, { backgroundColor: colors.border }]} />
                             <Text style={[sheetStyles.sheetTitle, { color: colors.textPrimary }]}>
                                 {addDocStep === 'uploading' ? 'Uploading…' : 'Add Document'}
@@ -1182,7 +1501,9 @@ export default function CandidateDetailScreen() {
                             {addDocStep === 'uploading' ? (
                                 <View style={{ alignItems: 'center', paddingVertical: 24 }}>
                                     <Ionicons name="cloud-upload-outline" size={40} color={colors.accent} />
-                                    <Text style={[{ color: colors.textSecondary, marginTop: 12, fontSize: 14 }]}>Uploading PDF…</Text>
+                                    <Text style={[{ color: colors.textSecondary, marginTop: 12, fontSize: 14 }]}>
+                                        Uploading PDF…
+                                    </Text>
                                 </View>
                             ) : (
                                 <>
@@ -1190,22 +1511,28 @@ export default function CandidateDetailScreen() {
                                         Select a document type, then pick a PDF
                                     </Text>
                                     <View style={docStyles.labelGrid}>
-                                        {DOCUMENT_LABELS.map(lbl => (
+                                        {DOCUMENT_LABELS.map((lbl) => (
                                             <TouchableOpacity
                                                 key={lbl}
                                                 style={[
                                                     docStyles.labelPill,
                                                     {
-                                                        backgroundColor: addDocLabel === lbl ? colors.accent : colors.surfacePrimary,
+                                                        backgroundColor:
+                                                            addDocLabel === lbl ? colors.accent : colors.surfacePrimary,
                                                     },
                                                 ]}
                                                 onPress={() => handleSelectLabel(lbl)}
                                                 activeOpacity={0.75}
                                             >
-                                                <Text style={[
-                                                    docStyles.labelPillText,
-                                                    { color: addDocLabel === lbl ? '#FFFFFF' : colors.textSecondary },
-                                                ]}>
+                                                <Text
+                                                    style={[
+                                                        docStyles.labelPillText,
+                                                        {
+                                                            color:
+                                                                addDocLabel === lbl ? '#FFFFFF' : colors.textSecondary,
+                                                        },
+                                                    ]}
+                                                >
                                                     {lbl}
                                                 </Text>
                                             </TouchableOpacity>
@@ -1215,7 +1542,14 @@ export default function CandidateDetailScreen() {
                                     {addDocLabel === 'Other' && (
                                         <>
                                             <TextInput
-                                                style={[schedStyles.input, { color: colors.textPrimary, backgroundColor: colors.surfacePrimary, width: '100%' }]}
+                                                style={[
+                                                    schedStyles.input,
+                                                    {
+                                                        color: colors.textPrimary,
+                                                        backgroundColor: colors.surfacePrimary,
+                                                        width: '100%',
+                                                    },
+                                                ]}
                                                 placeholder="Document name (e.g. BCP Certificate)"
                                                 placeholderTextColor={colors.textTertiary}
                                                 value={addDocCustomLabel}
@@ -1223,7 +1557,13 @@ export default function CandidateDetailScreen() {
                                                 autoFocus
                                             />
                                             <TouchableOpacity
-                                                style={[sheetStyles.primaryBtn, { backgroundColor: colors.accent, opacity: addDocCustomLabel.trim() ? 1 : 0.4 }]}
+                                                style={[
+                                                    sheetStyles.primaryBtn,
+                                                    {
+                                                        backgroundColor: colors.accent,
+                                                        opacity: addDocCustomLabel.trim() ? 1 : 0.4,
+                                                    },
+                                                ]}
                                                 onPress={() => pickAndUploadDocument(addDocCustomLabel.trim())}
                                                 disabled={!addDocCustomLabel.trim()}
                                                 activeOpacity={0.85}
@@ -1243,22 +1583,30 @@ export default function CandidateDetailScreen() {
             {/* PDF Viewer Modal */}
             <Modal visible={showPdf} animationType="slide" onRequestClose={() => setShowPdf(false)}>
                 <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#1C1C1E' }}>
-                        <TouchableOpacity onPress={() => setShowPdf(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingHorizontal: 12,
+                            paddingVertical: 8,
+                            backgroundColor: '#1C1C1E',
+                        }}
+                    >
+                        <TouchableOpacity
+                            onPress={() => setShowPdf(false)}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
                             <Ionicons name="chevron-down" size={24} color="#FFFFFF" />
                         </TouchableOpacity>
-                        <Text style={{ flex: 1, color: '#FFFFFF', fontSize: 15, fontWeight: '600', textAlign: 'center' }} numberOfLines={1}>
+                        <Text
+                            style={{ flex: 1, color: '#FFFFFF', fontSize: 15, fontWeight: '600', textAlign: 'center' }}
+                            numberOfLines={1}
+                        >
                             {pdfTitle}
                         </Text>
                         <View style={{ width: 32 }} />
                     </View>
-                    {pdfUrl && (
-                        <WebView
-                            source={{ uri: pdfUrl }}
-                            style={{ flex: 1 }}
-                            originWhitelist={['*']}
-                        />
-                    )}
+                    {pdfUrl && <WebView source={{ uri: pdfUrl }} style={{ flex: 1 }} originWhitelist={['*']} />}
                 </SafeAreaView>
             </Modal>
         </SafeAreaView>
@@ -1267,9 +1615,20 @@ export default function CandidateDetailScreen() {
 
 // ── QuickAction Button ──
 
-function QuickAction({ icon, label, color, bgColor, onPress, disabled }: {
-    icon: string; label: string; color: string; bgColor: string;
-    onPress: () => void; disabled?: boolean;
+function QuickAction({
+    icon,
+    label,
+    color,
+    bgColor,
+    onPress,
+    disabled,
+}: {
+    icon: string;
+    label: string;
+    color: string;
+    bgColor: string;
+    onPress: () => void;
+    disabled?: boolean;
 }) {
     return (
         <TouchableOpacity
@@ -1335,6 +1694,16 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     contactText: { fontSize: 14 },
+    inviteBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        marginTop: 14,
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        borderRadius: 10,
+    },
     actionsCard: {
         flexDirection: 'row',
         borderRadius: 14,
@@ -1505,19 +1874,20 @@ const docStyles = StyleSheet.create({
 
 // ── Activity Entry ──
 
-function ActivityEntry({ entry, isLast, colors }: {
-    entry: CandidateActivity;
-    isLast: boolean;
-    colors: any;
-}) {
+function ActivityEntry({ entry, isLast, colors }: { entry: CandidateActivity; isLast: boolean; colors: any }) {
     const isNote = entry.type === 'note';
     const isPositive = entry.outcome === 'reached' || entry.outcome === 'sent';
     const dotColor = isNote ? '#6B7280' : isPositive ? '#16A34A' : colors.textTertiary;
     const iconName = isNote ? 'create-outline' : entry.type === 'whatsapp' ? 'logo-whatsapp' : 'call';
     const iconColor = isNote ? '#6B7280' : entry.type === 'whatsapp' ? '#25D366' : dotColor;
-    const outcomeLabel = entry.outcome === 'reached' ? 'Connected'
-        : entry.outcome === 'no_answer' ? 'No answer'
-        : entry.outcome === 'sent' ? 'Sent' : '';
+    const outcomeLabel =
+        entry.outcome === 'reached'
+            ? 'Connected'
+            : entry.outcome === 'no_answer'
+              ? 'No answer'
+              : entry.outcome === 'sent'
+                ? 'Sent'
+                : '';
     const typeLabel = isNote ? 'Note' : entry.type === 'whatsapp' ? 'WhatsApp' : 'Call';
 
     return (
@@ -1532,7 +1902,10 @@ function ActivityEntry({ entry, isLast, colors }: {
                 <Text style={[entryStyles.title, { color: colors.textPrimary }]}>
                     {typeLabel}
                     {outcomeLabel ? (
-                        <>{'  '}<Text style={[entryStyles.outcome, { color: dotColor }]}>{outcomeLabel}</Text></>
+                        <>
+                            {'  '}
+                            <Text style={[entryStyles.outcome, { color: dotColor }]}>{outcomeLabel}</Text>
+                        </>
                     ) : null}
                 </Text>
                 {entry.note ? (
@@ -1541,7 +1914,8 @@ function ActivityEntry({ entry, isLast, colors }: {
                     </View>
                 ) : null}
                 <Text style={[entryStyles.meta, { color: colors.textTertiary }]}>
-                    {entry.actor_name ? `${entry.actor_name} · ` : ''}{timeAgo(entry.created_at)}
+                    {entry.actor_name ? `${entry.actor_name} · ` : ''}
+                    {timeAgo(entry.created_at)}
                 </Text>
             </View>
         </View>

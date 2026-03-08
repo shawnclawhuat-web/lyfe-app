@@ -15,6 +15,7 @@ import {
     Platform,
     SafeAreaView,
     ScrollView,
+    Share,
     StyleSheet,
     Text,
     TextInput,
@@ -76,11 +77,11 @@ export default function CandidateDetailScreen() {
     const handleStatusChange = async (newStatus: CandidateStatus) => {
         if (newStatus === candidate.status) return;
         const prevStatus = candidate.status;
-        setCandidate(prev => prev ? { ...prev, status: newStatus } : null);
+        setCandidate((prev) => (prev ? { ...prev, status: newStatus } : null));
 
         const { error } = await updateCandidateStatus(candidate.id, newStatus);
         if (error) {
-            setCandidate(prev => prev ? { ...prev, status: prevStatus } : null);
+            setCandidate((prev) => (prev ? { ...prev, status: prevStatus } : null));
             Alert.alert('Error', error);
             return;
         }
@@ -92,9 +93,15 @@ export default function CandidateDetailScreen() {
                 phone: candidate.phone,
             }).then((result: { success: boolean; error?: string }) => {
                 if (result.success) {
-                    Alert.alert('Agent Activated', `${candidate.name} is now active and synced to MKTR for lead assignment.`);
+                    Alert.alert(
+                        'Agent Activated',
+                        `${candidate.name} is now active and synced to MKTR for lead assignment.`,
+                    );
                 } else {
-                    Alert.alert('Status Updated', `Changed to ${newConfig.label}\n\nMKTR sync failed: ${result.error}. The agent may need to be manually added to MKTR.`);
+                    Alert.alert(
+                        'Status Updated',
+                        `Changed to ${newConfig.label}\n\nMKTR sync failed: ${result.error}. The agent may need to be manually added to MKTR.`,
+                    );
                 }
             });
         } else {
@@ -115,8 +122,24 @@ export default function CandidateDetailScreen() {
     };
 
     const actions = [
-        { icon: 'calendar-outline', label: 'Schedule', onPress: () => router.push(isPaStack ? `/(tabs)/pa/candidate/${candidateId}` as any : `/(tabs)/candidates/${candidateId}` as any) },
-        { icon: 'create-outline', label: 'Note', onPress: () => { setNoteText(''); setShowNoteModal(true); } },
+        {
+            icon: 'calendar-outline',
+            label: 'Schedule',
+            onPress: () =>
+                router.push(
+                    isPaStack
+                        ? (`/(tabs)/pa/candidate/${candidateId}` as any)
+                        : (`/(tabs)/candidates/${candidateId}` as any),
+                ),
+        },
+        {
+            icon: 'create-outline',
+            label: 'Note',
+            onPress: () => {
+                setNoteText('');
+                setShowNoteModal(true);
+            },
+        },
         { icon: 'call-outline', label: 'Call', onPress: () => Linking.openURL(`tel:${candidate.phone}`) },
     ];
 
@@ -140,13 +163,9 @@ export default function CandidateDetailScreen() {
                                 {candidate.name.charAt(0).toUpperCase()}
                             </Text>
                         </View>
-                        <Text style={[styles.profileName, { color: colors.textPrimary }]}>
-                            {candidate.name}
-                        </Text>
+                        <Text style={[styles.profileName, { color: colors.textPrimary }]}>{candidate.name}</Text>
                         <View style={[styles.statusBadge, { backgroundColor: statusConfig.color + '14' }]}>
-                            <Text style={[styles.statusText, { color: statusConfig.color }]}>
-                                {statusConfig.label}
-                            </Text>
+                            <Text style={[styles.statusText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
                         </View>
                     </View>
 
@@ -154,9 +173,30 @@ export default function CandidateDetailScreen() {
                         <ContactRow icon="call-outline" value={candidate.phone} colors={colors} />
                         {candidate.email && <ContactRow icon="mail-outline" value={candidate.email} colors={colors} />}
                         {candidate.assigned_manager_name && (
-                            <ContactRow icon="person-outline" value={`Manager: ${candidate.assigned_manager_name}`} colors={colors} />
+                            <ContactRow
+                                icon="person-outline"
+                                value={`Manager: ${candidate.assigned_manager_name}`}
+                                colors={colors}
+                            />
                         )}
                     </View>
+
+                    {candidate.status === 'applied' && candidate.invite_token && (
+                        <TouchableOpacity
+                            style={[styles.inviteBanner, { backgroundColor: colors.accentLight }]}
+                            activeOpacity={0.7}
+                            onPress={() => {
+                                const link = `https://lyfe-admin.vercel.app/invite/${candidate.invite_token}`;
+                                Share.share({ message: link });
+                            }}
+                        >
+                            <Ionicons name="link-outline" size={16} color={colors.accent} />
+                            <Text style={[styles.inviteBannerText, { color: colors.accent }]} numberOfLines={1}>
+                                Copy Invite Link
+                            </Text>
+                            <Ionicons name="copy-outline" size={14} color={colors.accent} />
+                        </TouchableOpacity>
+                    )}
                 </View>
 
                 {/* Pipeline Progress */}
@@ -229,14 +269,19 @@ export default function CandidateDetailScreen() {
                                         <Text style={[styles.interviewType, { color: colors.textTertiary }]}>
                                             {interview.type === 'zoom' ? 'Zoom' : 'In-Person'}
                                         </Text>
-                                        <Text style={[
-                                            styles.interviewStatus,
-                                            {
-                                                color: interview.status === 'completed' ? colors.success
-                                                    : interview.status === 'scheduled' ? colors.accent
-                                                        : colors.danger,
-                                            },
-                                        ]}>
+                                        <Text
+                                            style={[
+                                                styles.interviewStatus,
+                                                {
+                                                    color:
+                                                        interview.status === 'completed'
+                                                            ? colors.success
+                                                            : interview.status === 'scheduled'
+                                                              ? colors.accent
+                                                              : colors.danger,
+                                                },
+                                            ]}
+                                        >
                                             {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
                                         </Text>
                                     </View>
@@ -250,22 +295,41 @@ export default function CandidateDetailScreen() {
                 {candidate.notes && (
                     <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
                         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Notes</Text>
-                        <Text style={[styles.notesText, { color: colors.textSecondary }]}>
-                            {candidate.notes}
-                        </Text>
+                        <Text style={[styles.notesText, { color: colors.textSecondary }]}>{candidate.notes}</Text>
                     </View>
                 )}
             </ScrollView>
 
             {/* Note Modal */}
-            <Modal visible={showNoteModal} transparent animationType="none" onRequestClose={() => setShowNoteModal(false)}>
+            <Modal
+                visible={showNoteModal}
+                transparent
+                animationType="none"
+                onRequestClose={() => setShowNoteModal(false)}
+            >
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-                    <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowNoteModal(false)}>
-                        <Animated.View style={[styles.noteSheet, { backgroundColor: colors.cardBackground, transform: [{ translateY: noteSheetY }] }]}>
+                    <TouchableOpacity
+                        style={styles.modalOverlay}
+                        activeOpacity={1}
+                        onPress={() => setShowNoteModal(false)}
+                    >
+                        <Animated.View
+                            style={[
+                                styles.noteSheet,
+                                { backgroundColor: colors.cardBackground, transform: [{ translateY: noteSheetY }] },
+                            ]}
+                        >
                             <View style={[styles.noteHandle, { backgroundColor: colors.border }]} />
                             <Text style={[styles.noteTitle, { color: colors.textPrimary }]}>Add Note</Text>
                             <TextInput
-                                style={[styles.noteInput, { backgroundColor: colors.inputBackground, color: colors.textPrimary, borderColor: colors.border }]}
+                                style={[
+                                    styles.noteInput,
+                                    {
+                                        backgroundColor: colors.inputBackground,
+                                        color: colors.textPrimary,
+                                        borderColor: colors.border,
+                                    },
+                                ]}
                                 value={noteText}
                                 onChangeText={setNoteText}
                                 placeholder="Write a note about this candidate..."
@@ -274,7 +338,13 @@ export default function CandidateDetailScreen() {
                                 autoFocus
                             />
                             <TouchableOpacity
-                                style={[styles.noteSaveBtn, { backgroundColor: colors.accent, opacity: isSavingNote || !noteText.trim() ? 0.5 : 1 }]}
+                                style={[
+                                    styles.noteSaveBtn,
+                                    {
+                                        backgroundColor: colors.accent,
+                                        opacity: isSavingNote || !noteText.trim() ? 0.5 : 1,
+                                    },
+                                ]}
                                 onPress={handleSaveNote}
                                 disabled={isSavingNote || !noteText.trim()}
                                 activeOpacity={0.8}
@@ -285,13 +355,28 @@ export default function CandidateDetailScreen() {
                     </TouchableOpacity>
                 </KeyboardAvoidingView>
             </Modal>
-
         </SafeAreaView>
     );
 }
 
-function StatusStepper({ currentStatus, colors, onStepPress }: { currentStatus: CandidateStatus; colors: any; onStepPress: (status: CandidateStatus) => void }) {
-    const steps: CandidateStatus[] = ['applied', 'interview_scheduled', 'interviewed', 'approved', 'exam_prep', 'licensed', 'active_agent'];
+function StatusStepper({
+    currentStatus,
+    colors,
+    onStepPress,
+}: {
+    currentStatus: CandidateStatus;
+    colors: any;
+    onStepPress: (status: CandidateStatus) => void;
+}) {
+    const steps: CandidateStatus[] = [
+        'applied',
+        'interview_scheduled',
+        'interviewed',
+        'approved',
+        'exam_prep',
+        'licensed',
+        'active_agent',
+    ];
     const currentIdx = steps.indexOf(currentStatus);
 
     return (
@@ -303,21 +388,39 @@ function StatusStepper({ currentStatus, colors, onStepPress }: { currentStatus: 
                 const dotColor = isComplete || isCurrent ? cfg.color : colors.border;
 
                 return (
-                    <TouchableOpacity key={step} style={stepperStyles.stepRow} activeOpacity={0.6} onPress={() => onStepPress(step)}>
+                    <TouchableOpacity
+                        key={step}
+                        style={stepperStyles.stepRow}
+                        activeOpacity={0.6}
+                        onPress={() => onStepPress(step)}
+                    >
                         <View style={stepperStyles.dotCol}>
                             <View style={[stepperStyles.dot, { backgroundColor: dotColor, borderColor: dotColor }]}>
                                 {isComplete && <Ionicons name="checkmark" size={10} color="#FFF" />}
                                 {isCurrent && <View style={stepperStyles.activeDotInner} />}
                             </View>
                             {idx < steps.length - 1 && (
-                                <View style={[stepperStyles.line, { backgroundColor: isComplete ? cfg.color : colors.border }]} />
+                                <View
+                                    style={[
+                                        stepperStyles.line,
+                                        { backgroundColor: isComplete ? cfg.color : colors.border },
+                                    ]}
+                                />
                             )}
                         </View>
-                        <Text style={[
-                            stepperStyles.label,
-                            { color: isCurrent ? cfg.color : isComplete ? colors.textPrimary : colors.textTertiary },
-                            isCurrent && { fontWeight: '700' },
-                        ]}>
+                        <Text
+                            style={[
+                                stepperStyles.label,
+                                {
+                                    color: isCurrent
+                                        ? cfg.color
+                                        : isComplete
+                                          ? colors.textPrimary
+                                          : colors.textTertiary,
+                                },
+                                isCurrent && { fontWeight: '700' },
+                            ]}
+                        >
                             {cfg.label}
                         </Text>
                     </TouchableOpacity>
@@ -393,6 +496,19 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     contactValue: { fontSize: 14 },
+
+    // Invite link
+    inviteBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        marginTop: 14,
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        borderRadius: 10,
+    },
+    inviteBannerText: { fontSize: 14, fontWeight: '600' },
 
     // Actions
     actionsGrid: {

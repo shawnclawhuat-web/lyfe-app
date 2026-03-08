@@ -2,9 +2,6 @@ import ErrorBanner from '@/components/ErrorBanner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { createCandidate, uploadCandidateDocument, type CreateCandidateInput } from '@/lib/recruitment';
-
-let DocumentPicker: typeof import('expo-document-picker') | null = null;
-try { DocumentPicker = require('expo-document-picker'); } catch { /* native module not yet compiled */ }
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -16,12 +13,26 @@ import {
     Platform,
     SafeAreaView,
     ScrollView,
+    Share,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
+let Clipboard: typeof import('expo-clipboard') | null = null;
+try {
+    Clipboard = require('expo-clipboard');
+} catch {
+    /* native module not available in this build */
+}
+
+let DocumentPicker: typeof import('expo-document-picker') | null = null;
+try {
+    DocumentPicker = require('expo-document-picker');
+} catch {
+    /* native module not yet compiled */
+}
 export default function AddCandidateScreen() {
     const { colors } = useTheme();
     const { user } = useAuth();
@@ -94,15 +105,10 @@ export default function AddCandidateScreen() {
                 <View style={{ width: 32 }} />
             </View>
 
-            <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            >
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     {/* Save Error */}
-                    {saveError && (
-                        <ErrorBanner message={saveError} style={styles.errorBannerSpacing} />
-                    )}
+                    {saveError && <ErrorBanner message={saveError} style={styles.errorBannerSpacing} />}
 
                     {/* Form Card */}
                     <View style={[styles.formCard, { backgroundColor: colors.cardBackground }]}>
@@ -156,27 +162,42 @@ export default function AddCandidateScreen() {
                             {resumeFile ? (
                                 <View style={[styles.resumeAttached, { backgroundColor: colors.background }]}>
                                     <Ionicons name="document-text" size={20} color={colors.accent} />
-                                    <Text style={[styles.resumeName, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1}>
+                                    <Text
+                                        style={[styles.resumeName, { color: colors.textPrimary, flex: 1 }]}
+                                        numberOfLines={1}
+                                    >
                                         {resumeFile.name}
                                     </Text>
-                                    <TouchableOpacity onPress={() => setResumeFile(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                    <TouchableOpacity
+                                        onPress={() => setResumeFile(null)}
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    >
                                         <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
                                     </TouchableOpacity>
                                 </View>
                             ) : (
                                 <TouchableOpacity
-                                    style={[styles.resumePickerBtn, { borderColor: colors.border, opacity: DocumentPicker ? 1 : 0.4 }]}
+                                    style={[
+                                        styles.resumePickerBtn,
+                                        { borderColor: colors.border, opacity: DocumentPicker ? 1 : 0.4 },
+                                    ]}
                                     onPress={async () => {
                                         if (!DocumentPicker) return;
-                                        const r = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
-                                        if (!r.canceled && r.assets[0]) setResumeFile({ uri: r.assets[0].uri, name: r.assets[0].name });
+                                        const r = await DocumentPicker.getDocumentAsync({
+                                            type: 'application/pdf',
+                                            copyToCacheDirectory: true,
+                                        });
+                                        if (!r.canceled && r.assets[0])
+                                            setResumeFile({ uri: r.assets[0].uri, name: r.assets[0].name });
                                     }}
                                     activeOpacity={0.7}
                                     disabled={!DocumentPicker}
                                 >
                                     <Ionicons name="cloud-upload-outline" size={18} color={colors.accent} />
                                     <Text style={[styles.resumePickerText, { color: colors.accent }]}>Attach PDF</Text>
-                                    <Text style={[styles.resumePickerHint, { color: colors.textTertiary }]}>Up to 10 MB</Text>
+                                    <Text style={[styles.resumePickerHint, { color: colors.textTertiary }]}>
+                                        Up to 10 MB
+                                    </Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -222,7 +243,16 @@ export default function AddCandidateScreen() {
                             <Text style={[styles.linkText, { color: colors.accent }]} numberOfLines={1}>
                                 {inviteLink}
                             </Text>
-                            <TouchableOpacity onPress={() => Alert.alert('Copied', 'Link copied to clipboard')}>
+                            <TouchableOpacity
+                                onPress={async () => {
+                                    if (Clipboard) {
+                                        await Clipboard.setStringAsync(inviteLink);
+                                        Alert.alert('Copied', 'Link copied to clipboard');
+                                    } else {
+                                        Share.share({ message: inviteLink });
+                                    }
+                                }}
+                            >
                                 <Ionicons name="copy-outline" size={18} color={colors.textTertiary} />
                             </TouchableOpacity>
                         </View>
@@ -239,14 +269,30 @@ export default function AddCandidateScreen() {
     );
 }
 
-function FormField({ label, value, onChangeText, placeholder, keyboardType, error, colors, required }: {
-    label: string; value: string; onChangeText: (v: string) => void; placeholder: string;
-    keyboardType?: any; error?: string; colors: any; required?: boolean;
+function FormField({
+    label,
+    value,
+    onChangeText,
+    placeholder,
+    keyboardType,
+    error,
+    colors,
+    required,
+}: {
+    label: string;
+    value: string;
+    onChangeText: (v: string) => void;
+    placeholder: string;
+    keyboardType?: any;
+    error?: string;
+    colors: any;
+    required?: boolean;
 }) {
     return (
         <View style={styles.fieldContainer}>
             <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
-                {label}{required && <Text style={{ color: colors.danger }}> *</Text>}
+                {label}
+                {required && <Text style={{ color: colors.danger }}> *</Text>}
             </Text>
             <TextInput
                 style={[styles.fieldInput, { color: colors.textPrimary }]}
