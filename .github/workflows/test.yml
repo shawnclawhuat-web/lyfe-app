@@ -1,4 +1,4 @@
-name: Tests
+name: CI
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  lint-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,4 +19,8 @@ jobs:
 
       - run: npm ci --legacy-peer-deps
 
-      - run: npm test
+      - name: Lint
+        run: npm run lint
+
+      - name: Test with coverage
+        run: npx jest --coverage
