@@ -150,6 +150,12 @@ export default memo(function LiveEventBar() {
 
     const currentEvent = liveEvents[currentIndex];
 
+    // Content slide: fades out sliding up, fades in sliding up from below
+    const contentTranslateY = fadeAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [10, 0],
+    });
+
     const translateY = entranceAnim.interpolate({
         inputRange: [0, 1],
         outputRange: [LIVE_BAR_TOTAL_H + 20, 0],
@@ -189,38 +195,36 @@ export default memo(function LiveEventBar() {
                     <Ionicons name="close" size={16} color={colors.textTertiary} />
                 </TouchableOpacity>
 
-                {/* Current event (cross-fade) */}
+                {/* Current event — LIVE chip stays solid, only content cross-fades */}
                 {currentEvent && (
-                    <Animated.View style={{ opacity: fadeAnim }}>
-                        <TouchableOpacity
-                            style={styles.slide}
-                            onPress={() => handlePress(currentEvent)}
-                            activeOpacity={0.7}
-                            accessibilityRole="button"
-                            accessibilityLabel={`${currentEvent.title}, live now at ${currentEvent.location || 'unknown location'}`}
+                    <TouchableOpacity
+                        style={styles.slide}
+                        onPress={() => handlePress(currentEvent)}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${currentEvent.title}, live now at ${currentEvent.location || 'unknown location'}`}
+                    >
+                        <View style={styles.liveChip}>
+                            <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
+                            <Text style={styles.liveText}>LIVE</Text>
+                        </View>
+                        <Animated.View
+                            style={[
+                                styles.content,
+                                { opacity: fadeAnim, transform: [{ translateY: contentTranslateY }] },
+                            ]}
                         >
-                            <View style={styles.liveChip}>
-                                <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
-                                <Text style={styles.liveText}>LIVE</Text>
-                            </View>
-                            <View style={styles.content}>
-                                <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
-                                    {currentEvent.title}
-                                </Text>
-                                <Text style={[styles.meta, { color: colors.textTertiary }]} numberOfLines={1}>
-                                    {formatTime(currentEvent.start_time)}
-                                    {currentEvent.end_time ? ` – ${formatTime(currentEvent.end_time)}` : ''}
-                                    {currentEvent.location ? `  ·  ${currentEvent.location}` : ''}
-                                </Text>
-                            </View>
-                            <Ionicons
-                                name="chevron-forward"
-                                size={16}
-                                color={colors.textTertiary}
-                                style={styles.chevron}
-                            />
-                        </TouchableOpacity>
-                    </Animated.View>
+                            <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
+                                {currentEvent.title}
+                            </Text>
+                            <Text style={[styles.meta, { color: colors.textTertiary }]} numberOfLines={1}>
+                                {formatTime(currentEvent.start_time)}
+                                {currentEvent.end_time ? ` – ${formatTime(currentEvent.end_time)}` : ''}
+                                {currentEvent.location ? `  ·  ${currentEvent.location}` : ''}
+                            </Text>
+                        </Animated.View>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} style={styles.chevron} />
+                    </TouchableOpacity>
                 )}
 
                 {/* Dot indicators */}
