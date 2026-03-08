@@ -56,7 +56,7 @@
                 "@sentry/react-native",
                 {
                     "organization": "mktr-pte-ltd",
-                    "project": "4511009413922896"
+                    "project": "apple-ios"
                 }
             ]
         ],
