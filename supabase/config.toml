@@ -62,6 +62,14 @@ enable_signup = true
 enable_confirmations = true
 template = "Your Lyfe verification code is {{ .Code }}. Valid for 10 minutes."
 
+[auth.sms.test_otp]
+"6580000001" = "555555"
+"6580000002" = "555555"
+"6580000003" = "555555"
+"6580000004" = "555555"
+"6580000005" = "555555"
+"6580000006" = "555555"
+
 [auth.sms.twilio]
 enabled = false
 account_sid = "env(TWILIO_ACCOUNT_SID)"
