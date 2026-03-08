@@ -9,8 +9,9 @@ import { getBiometryType, type BiometryType } from '@/lib/biometrics';
 import { pickAndUploadAvatar, removeAvatar, takeAndUploadAvatar } from '@/lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import type { AssignedManager } from '@/lib/mockData';
+import { useTypedRouter } from '@/hooks/useTypedRouter';
 import { supabase } from '@/lib/supabase';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Animated,
@@ -58,7 +59,7 @@ export default function ProfileScreen() {
     const { colors, isDark, mode, setMode } = useTheme();
     const { user, signOut, biometricsEnabled, enableBiometrics, disableBiometrics, updateAvatarUrl, updateProfile } = useAuth();
     const { viewMode, canToggle, setViewMode } = useViewMode();
-    const router = useRouter();
+    const router = useTypedRouter();
     const [showSignOutModal, setShowSignOutModal] = useState(false);
     const [managers, setManagers] = useState<AssignedManager[]>([]);
     const [showAvatarSheet, setShowAvatarSheet] = useState(false);
@@ -143,10 +144,10 @@ export default function ProfileScreen() {
             setShowEditModal(true);
             return;
         }
-        if (key === 'notifications') { router.push('/(tabs)/profile/notifications' as any); return; }
-        if (key === 'privacy') { router.push('/(tabs)/profile/privacy' as any); return; }
-        if (key === 'help') { router.push('/(tabs)/profile/help' as any); return; }
-        if (key === 'terms') { router.push('/(tabs)/profile/terms' as any); return; }
+        if (key === 'notifications') { router.push('/(tabs)/profile/notifications'); return; }
+        if (key === 'privacy') { router.push('/(tabs)/profile/privacy'); return; }
+        if (key === 'help') { router.push('/(tabs)/profile/terms'); return; }
+        if (key === 'terms') { router.push('/(tabs)/profile/terms'); return; }
     };
 
     const handleSaveProfile = async () => {

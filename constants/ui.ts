@@ -87,18 +87,13 @@ export const INTERVIEW_STATUS_COLORS: Record<string, string> = {
 // ── Roadshow constants ──────────────────────────────────────────
 export const ROADSHOW_PINK = '#EC4899';
 
+import { ACTIVITY_TYPE_CONFIG } from './displayConfigs';
+import type { RoadshowActivityType } from '@/types/event';
+
 export function activityLabel(type: string): string {
-    if (type === 'sitdown') return 'Sitdown';
-    if (type === 'pitch') return 'Pitch';
-    if (type === 'case_closed') return 'Case Closed';
-    if (type === 'check_in') return 'Checked in';
-    if (type === 'departure') return 'Left booth';
-    return type;
+    return ACTIVITY_TYPE_CONFIG[type as RoadshowActivityType]?.label ?? type;
 }
 
 export function activityTypeColor(type: string, fallback: string): string {
-    if (type === 'case_closed') return '#F59E0B';
-    if (type === 'check_in') return '#0D9488';
-    if (type === 'departure') return '#8E8E93';
-    return fallback;
+    return ACTIVITY_TYPE_CONFIG[type as RoadshowActivityType]?.color ?? fallback;
 }

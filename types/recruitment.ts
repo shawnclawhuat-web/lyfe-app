@@ -29,9 +29,9 @@ export const CANDIDATE_STATUS_CONFIG: Record<CandidateStatus, CandidateStatusCon
     active_agent: { label: 'Active Agent', color: '#0A7E6B', icon: 'star', order: 6 },
 };
 
-export const CANDIDATE_STATUSES: CandidateStatus[] = [
-    'applied', 'interview_scheduled', 'interviewed', 'approved', 'exam_prep', 'licensed', 'active_agent',
-];
+export const CANDIDATE_STATUSES = (Object.entries(CANDIDATE_STATUS_CONFIG) as [CandidateStatus, CandidateStatusConfig][])
+    .sort(([, a], [, b]) => a.order - b.order)
+    .map(([key]) => key);
 
 // ── Interview ──
 export type InterviewType = 'zoom' | 'in_person';

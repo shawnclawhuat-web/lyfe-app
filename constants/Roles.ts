@@ -15,6 +15,36 @@ export type LifecycleStage =
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'proposed' | 'won' | 'lost';
 
+// ── Capability-Based Permission System ──
+
+export type Capability =
+    | 'hold_agents'
+    | 'reassign_leads'
+    | 'reassign_leads_globally'
+    | 'invite_agents'
+    | 'create_candidates'
+    | 'schedule_interviews'
+    | 'view_admin'
+    | 'view_team'
+    | 'view_leads'
+    | 'view_candidates';
+
+const ROLE_CAPABILITIES: Record<UserRole, Capability[]> = {
+    admin: ['hold_agents', 'reassign_leads', 'reassign_leads_globally', 'invite_agents', 'create_candidates', 'schedule_interviews', 'view_admin'],
+    director: ['hold_agents', 'reassign_leads', 'invite_agents', 'create_candidates', 'schedule_interviews', 'view_team', 'view_leads', 'view_candidates'],
+    manager: ['hold_agents', 'reassign_leads', 'invite_agents', 'create_candidates', 'schedule_interviews', 'view_team', 'view_leads', 'view_candidates'],
+    agent: ['view_leads'],
+    pa: ['create_candidates', 'schedule_interviews', 'view_candidates'],
+    candidate: [],
+};
+
+/** Check if a role has a specific capability */
+export function hasCapability(role: UserRole, capability: Capability): boolean {
+    return ROLE_CAPABILITIES[role]?.includes(capability) ?? false;
+}
+
+// ── Tab Configuration ──
+
 /** Tabs each role can see (base configuration — use getVisibleTabs() for view-mode-aware tabs) */
 export const ROLE_TABS: Record<UserRole, string[]> = {
     admin: ['home', 'admin', 'profile'],
@@ -38,44 +68,46 @@ export function getVisibleTabs(role: UserRole, viewMode?: 'agent' | 'manager'): 
     return ROLE_TABS[role] || ['profile'];
 }
 
+// ── Backward-compatible permission wrappers ──
+
 /** Check if a role can hold agents (act as a superior in the hierarchy) */
 export function canHoldAgents(role: UserRole): boolean {
-    return role === 'director' || role === 'manager';
+    return hasCapability(role, 'hold_agents');
 }
 
 /** Check if a role can reassign leads */
 export function canReassignLeads(role: UserRole): boolean {
-    return role === 'admin' || role === 'director' || role === 'manager';
+    return hasCapability(role, 'reassign_leads');
 }
 
 /** Check if a role can reassign leads system-wide (not just within team) */
 export function canReassignLeadsGlobally(role: UserRole): boolean {
-    return role === 'admin';
+    return hasCapability(role, 'reassign_leads_globally');
 }
 
 /** Check if a role can invite agents */
 export function canInviteAgents(role: UserRole): boolean {
-    return role === 'admin' || role === 'director' || role === 'manager';
+    return hasCapability(role, 'invite_agents');
 }
 
 /** Check if a role can create candidates */
 export function canCreateCandidates(role: UserRole): boolean {
-    return role === 'pa' || role === 'manager' || role === 'director';
+    return hasCapability(role, 'create_candidates');
 }
 
 /** Check if a role can schedule interviews */
 export function canScheduleInterviews(role: UserRole): boolean {
-    return role === 'pa' || role === 'manager' || role === 'director';
+    return hasCapability(role, 'schedule_interviews');
 }
 
 /** Check if a role can access the admin panel */
 export function isAdmin(role: UserRole): boolean {
-    return role === 'admin';
+    return hasCapability(role, 'view_admin');
 }
 
 /** Check if a role can view team dashboards */
 export function canViewTeam(role: UserRole): boolean {
-    return role === 'director' || role === 'manager';
+    return hasCapability(role, 'view_team');
 }
 
 /** Tab display configuration */

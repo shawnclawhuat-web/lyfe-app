@@ -95,6 +95,7 @@ export interface RoadshowActivity {
     logged_at: string;
 }
 
+/** @deprecated Use EVENT_TYPE_CONFIG from constants/displayConfigs instead */
 export const EVENT_TYPE_COLORS: Record<EventType, string> = {
     team_meeting: '#6366F1',
     training: '#0A7E6B',

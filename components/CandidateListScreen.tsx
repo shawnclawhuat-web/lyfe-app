@@ -1,5 +1,6 @@
 import CandidateCard from '@/components/CandidateCard';
 import EmptyState from '@/components/EmptyState';
+import ErrorBanner from '@/components/ErrorBanner';
 import LoadingState from '@/components/LoadingState';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,7 +8,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { fetchCandidates } from '@/lib/recruitment';
 import { CANDIDATE_STATUSES, CANDIDATE_STATUS_CONFIG, type CandidateStatus, type RecruitmentCandidate } from '@/types/recruitment';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useTypedRouter } from '@/hooks/useTypedRouter';
+import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
     FlatList,
@@ -44,7 +46,7 @@ export default function CandidateListScreen({
 }: CandidateListScreenProps) {
     const { colors } = useTheme();
     const { user } = useAuth();
-    const router = useRouter();
+    const router = useTypedRouter();
 
     const [search, setSearch] = useState('');
     const [activeFilter, setActiveFilter] = useState<CandidateStatus | 'all'>('all');
@@ -109,7 +111,7 @@ export default function CandidateListScreen({
                 rightAction={
                     <TouchableOpacity
                         style={[styles.addButton, { backgroundColor: colors.accent }]}
-                        onPress={() => router.push(addRoute as any)}
+                        onPress={() => router.push(addRoute)}
                         accessibilityLabel="Add new candidate"
                     >
                         <Ionicons name="person-add" size={20} color="#FFFFFF" />
@@ -149,16 +151,7 @@ export default function CandidateListScreen({
                         </View>
 
                         {/* Error Banner */}
-                        {error && (
-                            <TouchableOpacity
-                                style={[styles.errorBanner, { backgroundColor: colors.dangerLight }]}
-                                onPress={loadCandidates}
-                            >
-                                <Ionicons name="alert-circle" size={16} color={colors.danger} />
-                                <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
-                                <Text style={[styles.retryText, { color: colors.danger }]}>Tap to retry</Text>
-                            </TouchableOpacity>
-                        )}
+                        {error && <ErrorBanner message={error} onRetry={loadCandidates} />}
 
                         {/* Filter Chips */}
                         <FlatList
@@ -217,7 +210,7 @@ export default function CandidateListScreen({
                 renderItem={({ item }) => (
                     <CandidateCard
                         candidate={item}
-                        onPress={() => router.push(candidateRoute(item.id) as any)}
+                        onPress={() => router.push(candidateRoute(item.id))}
                     />
                 )}
             />
@@ -252,16 +245,6 @@ const styles = StyleSheet.create({
         fontSize: 15,
         padding: 0,
     },
-    errorBanner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        padding: 12,
-        borderRadius: 10,
-        marginBottom: 12,
-    },
-    errorText: { flex: 1, fontSize: 13 },
-    retryText: { fontSize: 12, fontWeight: '600' },
     filterList: {
         flexGrow: 0,
         marginBottom: 8,
