@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import Avatar from '@/components/Avatar';
 import LyfeLogo from '@/components/LyfeLogo';
 import ScreenHeader from '@/components/ScreenHeader';
@@ -30,8 +31,7 @@ import {
     View,
 } from 'react-native';
 
-
-const VIEW_MODE_OPTIONS: Array<{ value: ViewMode; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
+const VIEW_MODE_OPTIONS: { value: ViewMode; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
     { value: 'agent', label: 'Agent View', icon: 'person-outline' },
     { value: 'manager', label: 'Manager View', icon: 'shield-outline' },
 ];
@@ -51,13 +51,12 @@ const GENERAL_SETTINGS: SettingsRow[] = [
     { key: 'privacy', icon: 'lock-closed-outline', label: 'Privacy', subtitle: 'Data and security' },
 ];
 
-const SUPPORT_SETTINGS: SettingsRow[] = [
-    { key: 'terms', icon: 'document-text-outline', label: 'Terms of Service' },
-];
+const SUPPORT_SETTINGS: SettingsRow[] = [{ key: 'terms', icon: 'document-text-outline', label: 'Terms of Service' }];
 
 export default function ProfileScreen() {
     const { colors, isDark, mode, setMode } = useTheme();
-    const { user, signOut, biometricsEnabled, enableBiometrics, disableBiometrics, updateAvatarUrl, updateProfile } = useAuth();
+    const { user, signOut, biometricsEnabled, enableBiometrics, disableBiometrics, updateAvatarUrl, updateProfile } =
+        useAuth();
     const { viewMode, canToggle, setViewMode } = useViewMode();
     const router = useTypedRouter();
     const [showSignOutModal, setShowSignOutModal] = useState(false);
@@ -84,7 +83,11 @@ export default function ProfileScreen() {
         setManagers(managers);
     }, [user?.id, user?.role]);
 
-    useFocusEffect(useCallback(() => { loadManagers(); }, [loadManagers]));
+    useFocusEffect(
+        useCallback(() => {
+            loadManagers();
+        }, [loadManagers]),
+    );
 
     // Sheet slide-up animations (overlay appears instantly; only the sheet slides)
     const avatarSheetY = useRef(new Animated.Value(400)).current;
@@ -104,16 +107,19 @@ export default function ProfileScreen() {
         }
     }, [showEditModal]);
 
-    const handleToggleBiometrics = useCallback(async (value: boolean) => {
-        if (value) {
-            const success = await enableBiometrics();
-            if (!success && Platform.OS !== 'web') {
-                Alert.alert('Could not enable', 'Biometric authentication failed. Please try again.');
+    const handleToggleBiometrics = useCallback(
+        async (value: boolean) => {
+            if (value) {
+                const success = await enableBiometrics();
+                if (!success && Platform.OS !== 'web') {
+                    Alert.alert('Could not enable', 'Biometric authentication failed. Please try again.');
+                }
+            } else {
+                await disableBiometrics();
             }
-        } else {
-            await disableBiometrics();
-        }
-    }, [enableBiometrics, disableBiometrics]);
+        },
+        [enableBiometrics, disableBiometrics],
+    );
 
     const handleSignOut = () => {
         setShowSignOutModal(true);
@@ -124,14 +130,17 @@ export default function ProfileScreen() {
         signOut();
     };
 
-    const handleViewModeChange = useCallback((newMode: ViewMode) => {
-        if (newMode === viewMode) return;
-        setViewMode(newMode);
-        // FM-01 mitigation: redirect to Home after mode switch to avoid tab stranding
-        setTimeout(() => {
-            router.replace('/(tabs)/home');
-        }, 100);
-    }, [viewMode, setViewMode, router]);
+    const handleViewModeChange = useCallback(
+        (newMode: ViewMode) => {
+            if (newMode === viewMode) return;
+            setViewMode(newMode);
+            // FM-01 mitigation: redirect to Home after mode switch to avoid tab stranding
+            setTimeout(() => {
+                router.replace('/(tabs)/home');
+            }, 100);
+        },
+        [viewMode, setViewMode, router],
+    );
 
     const handleSettingsPress = (key: string) => {
         if (key === 'edit') {
@@ -141,59 +150,83 @@ export default function ProfileScreen() {
             setShowEditModal(true);
             return;
         }
-        if (key === 'notifications') { router.push('/(tabs)/profile/notifications'); return; }
-        if (key === 'privacy') { router.push('/(tabs)/profile/privacy'); return; }
-        if (key === 'terms') { router.push('/(tabs)/profile/terms'); return; }
+        if (key === 'notifications') {
+            router.push('/(tabs)/profile/notifications');
+            return;
+        }
+        if (key === 'privacy') {
+            router.push('/(tabs)/profile/privacy');
+            return;
+        }
+        if (key === 'terms') {
+            router.push('/(tabs)/profile/terms');
+            return;
+        }
     };
 
     const handleSaveProfile = async () => {
-        if (!editName.trim()) { setEditError('Name is required'); return; }
+        if (!editName.trim()) {
+            setEditError('Name is required');
+            return;
+        }
         setEditSaving(true);
         setEditError(null);
         const { error } = await updateProfile(editName, editEmail || null);
         setEditSaving(false);
-        if (error) { setEditError(error); return; }
+        if (error) {
+            setEditError(error);
+            return;
+        }
         setShowEditModal(false);
     };
 
-    const handleAvatarAction = useCallback(async (action: 'camera' | 'library' | 'remove') => {
-        setShowAvatarSheet(false);
-        if (!user?.id) return;
+    const handleAvatarAction = useCallback(
+        async (action: 'camera' | 'library' | 'remove') => {
+            setShowAvatarSheet(false);
+            if (!user?.id) return;
 
-        setAvatarUploading(true);
-        let result: { url?: string | null; error: string | null };
+            setAvatarUploading(true);
+            let result: { url?: string | null; error: string | null };
 
-        if (action === 'remove') {
-            result = await removeAvatar(user.id);
-            if (!result.error) updateAvatarUrl(null);
-        } else if (action === 'camera') {
-            result = await takeAndUploadAvatar(user.id);
-            if (!result.error && result.url) updateAvatarUrl(result.url);
-        } else {
-            result = await pickAndUploadAvatar(user.id);
-            if (!result.error && result.url) updateAvatarUrl(result.url);
-        }
+            if (action === 'remove') {
+                result = await removeAvatar(user.id);
+                if (!result.error) updateAvatarUrl(null);
+            } else if (action === 'camera') {
+                result = await takeAndUploadAvatar(user.id);
+                if (!result.error && result.url) updateAvatarUrl(result.url);
+            } else {
+                result = await pickAndUploadAvatar(user.id);
+                if (!result.error && result.url) updateAvatarUrl(result.url);
+            }
 
-        setAvatarUploading(false);
+            setAvatarUploading(false);
 
-        if (result.error) {
-            Alert.alert('Upload Failed', result.error);
-        }
-    }, [user?.id, updateAvatarUrl]);
+            if (result.error) {
+                Alert.alert('Upload Failed', result.error);
+            }
+        },
+        [user?.id, updateAvatarUrl],
+    );
 
-    const themeOptions: Array<{ value: 'system' | 'light' | 'dark'; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
-        { value: 'system', label: 'System', icon: 'phone-portrait-outline' },
-        { value: 'light', label: 'Light', icon: 'sunny-outline' },
-        { value: 'dark', label: 'Dark', icon: 'moon-outline' },
-    ];
+    const themeOptions: { value: 'system' | 'light' | 'dark'; label: string; icon: keyof typeof Ionicons.glyphMap }[] =
+        [
+            { value: 'system', label: 'System', icon: 'phone-portrait-outline' },
+            { value: 'light', label: 'Light', icon: 'sunny-outline' },
+            { value: 'dark', label: 'Dark', icon: 'moon-outline' },
+        ];
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             <ScreenHeader title="Profile" />
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
                 {/* Hero User Card */}
-                <View style={[styles.card, styles.userCard, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                <View
+                    style={[
+                        styles.card,
+                        styles.userCard,
+                        { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
+                    ]}
+                >
                     <View style={styles.userCardRow}>
                         {/* Avatar — tappable */}
                         <TouchableOpacity
@@ -254,28 +287,44 @@ export default function ProfileScreen() {
 
                 {/* Assigned Managers — PA only */}
                 {user?.role === 'pa' && (
-                    <View style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                    <View
+                        style={[
+                            styles.card,
+                            { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
+                        ]}
+                    >
                         <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>ASSIGNED MANAGERS</Text>
                         {managers.length === 0 ? (
                             <View style={styles.mgrEmptyRow}>
                                 <Ionicons name="person-outline" size={16} color={colors.textTertiary} />
-                                <Text style={[styles.mgrEmptyText, { color: colors.textTertiary }]}>No managers assigned yet</Text>
+                                <Text style={[styles.mgrEmptyText, { color: colors.textTertiary }]}>
+                                    No managers assigned yet
+                                </Text>
                             </View>
                         ) : (
                             managers.map((mgr, index) => {
-                                const sortedIds = [...managers].sort((a, b) => a.id.localeCompare(b.id)).map(m => m.id);
+                                const sortedIds = [...managers]
+                                    .sort((a, b) => a.id.localeCompare(b.id))
+                                    .map((m) => m.id);
                                 const color = PA_MANAGER_COLORS[sortedIds.indexOf(mgr.id) % PA_MANAGER_COLORS.length];
                                 return (
                                     <React.Fragment key={mgr.id}>
                                         <View style={styles.settingsRow}>
                                             <View style={[styles.mgrAvatar, { backgroundColor: color + '18' }]}>
                                                 <Text style={[styles.mgrAvatarText, { color }]}>
-                                                    {mgr.full_name.split(' ').map(n => n[0]).join('')}
+                                                    {mgr.full_name
+                                                        .split(' ')
+                                                        .map((n) => n[0])
+                                                        .join('')}
                                                 </Text>
                                             </View>
                                             <View style={styles.settingsTextCol}>
-                                                <Text style={[styles.settingsLabel, { color: colors.textPrimary }]}>{mgr.full_name}</Text>
-                                                <Text style={[styles.settingsSubtitle, { color: colors.textTertiary }]}>Manager</Text>
+                                                <Text style={[styles.settingsLabel, { color: colors.textPrimary }]}>
+                                                    {mgr.full_name}
+                                                </Text>
+                                                <Text style={[styles.settingsSubtitle, { color: colors.textTertiary }]}>
+                                                    Manager
+                                                </Text>
                                             </View>
                                         </View>
                                         {index < managers.length - 1 && (
@@ -290,7 +339,12 @@ export default function ProfileScreen() {
 
                 {/* View Mode Toggle — T2/T3 only */}
                 {canToggle && (
-                    <View style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                    <View
+                        style={[
+                            styles.card,
+                            { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
+                        ]}
+                    >
                         <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>VIEW MODE</Text>
                         <View style={[styles.segmentContainer, { backgroundColor: colors.inputBackground }]}>
                             {VIEW_MODE_OPTIONS.map((option) => {
@@ -336,16 +390,19 @@ export default function ProfileScreen() {
                             })}
                         </View>
                         <Text style={[styles.viewModeHint, { color: colors.textTertiary }]}>
-                            {viewMode === 'agent'
-                                ? 'Manage your leads and clients'
-                                : 'Manage your team and candidates'}
+                            {viewMode === 'agent' ? 'Manage your leads and clients' : 'Manage your team and candidates'}
                         </Text>
                     </View>
                 )}
 
                 {/* Security — Face ID / Touch ID */}
                 {biometryType !== 'none' && (
-                    <View style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                    <View
+                        style={[
+                            styles.card,
+                            { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
+                        ]}
+                    >
                         <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>SECURITY</Text>
                         <View style={styles.settingsRow}>
                             <View style={[styles.settingsIconCircle, { backgroundColor: colors.accentLight }]}>
@@ -375,7 +432,9 @@ export default function ProfileScreen() {
                 )}
 
                 {/* General Settings */}
-                <View style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                <View
+                    style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}
+                >
                     <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>GENERAL</Text>
                     {GENERAL_SETTINGS.map((row, index) => (
                         <React.Fragment key={row.key}>
@@ -390,9 +449,13 @@ export default function ProfileScreen() {
                                     <Ionicons name={row.icon} size={18} color={colors.accent} />
                                 </View>
                                 <View style={styles.settingsTextCol}>
-                                    <Text style={[styles.settingsLabel, { color: colors.textPrimary }]}>{row.label}</Text>
+                                    <Text style={[styles.settingsLabel, { color: colors.textPrimary }]}>
+                                        {row.label}
+                                    </Text>
                                     {row.subtitle && (
-                                        <Text style={[styles.settingsSubtitle, { color: colors.textTertiary }]}>{row.subtitle}</Text>
+                                        <Text style={[styles.settingsSubtitle, { color: colors.textTertiary }]}>
+                                            {row.subtitle}
+                                        </Text>
                                     )}
                                 </View>
                                 <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
@@ -405,7 +468,9 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Appearance */}
-                <View style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                <View
+                    style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}
+                >
                     <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>APPEARANCE</Text>
                     <View style={styles.themeRow}>
                         {themeOptions.map((option) => {
@@ -449,7 +514,9 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Support Settings */}
-                <View style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                <View
+                    style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}
+                >
                     <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>SUPPORT</Text>
                     {SUPPORT_SETTINGS.map((row, index) => (
                         <React.Fragment key={row.key}>
@@ -464,7 +531,9 @@ export default function ProfileScreen() {
                                     <Ionicons name={row.icon} size={18} color={colors.accent} />
                                 </View>
                                 <View style={styles.settingsTextCol}>
-                                    <Text style={[styles.settingsLabel, { color: colors.textPrimary }]}>{row.label}</Text>
+                                    <Text style={[styles.settingsLabel, { color: colors.textPrimary }]}>
+                                        {row.label}
+                                    </Text>
                                 </View>
                                 <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
                             </TouchableOpacity>
@@ -476,9 +545,17 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* App Info */}
-                <View style={[styles.card, styles.appInfoCard, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                <View
+                    style={[
+                        styles.card,
+                        styles.appInfoCard,
+                        { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
+                    ]}
+                >
                     <LyfeLogo size="sm" />
-                    <Text style={[styles.versionText, { color: colors.textTertiary }]}>v1.0.0</Text>
+                    <Text style={[styles.versionText, { color: colors.textTertiary }]}>
+                        v{Constants.expoConfig?.version ?? '1.0.0'}
+                    </Text>
                 </View>
 
                 {/* Sign Out */}
@@ -502,21 +579,28 @@ export default function ProfileScreen() {
                 onRequestClose={() => setShowEditModal(false)}
                 accessibilityViewIsModal
             >
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                    style={{ flex: 1 }}
-                >
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
                     <TouchableOpacity
                         style={styles.sheetOverlay}
                         activeOpacity={1}
                         onPress={() => setShowEditModal(false)}
                     >
-                        <Animated.View style={[styles.sheet, { backgroundColor: colors.cardBackground, transform: [{ translateY: editSheetY }] }]}>
+                        <Animated.View
+                            style={[
+                                styles.sheet,
+                                { backgroundColor: colors.cardBackground, transform: [{ translateY: editSheetY }] },
+                            ]}
+                        >
                             <View style={[styles.sheetHandle, { backgroundColor: colors.divider }]} />
                             <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>Edit Profile</Text>
 
                             <Text style={[styles.editLabel, { color: colors.textTertiary }]}>FULL NAME</Text>
-                            <View style={[styles.editInputWrap, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
+                            <View
+                                style={[
+                                    styles.editInputWrap,
+                                    { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                                ]}
+                            >
                                 <TextInput
                                     style={[styles.editInput, { color: colors.textPrimary }]}
                                     value={editName}
@@ -528,8 +612,15 @@ export default function ProfileScreen() {
                                 />
                             </View>
 
-                            <Text style={[styles.editLabel, { color: colors.textTertiary, marginTop: 16 }]}>EMAIL (OPTIONAL)</Text>
-                            <View style={[styles.editInputWrap, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
+                            <Text style={[styles.editLabel, { color: colors.textTertiary, marginTop: 16 }]}>
+                                EMAIL (OPTIONAL)
+                            </Text>
+                            <View
+                                style={[
+                                    styles.editInputWrap,
+                                    { backgroundColor: colors.inputBackground, borderColor: colors.border },
+                                ]}
+                            >
                                 <TextInput
                                     style={[styles.editInput, { color: colors.textPrimary }]}
                                     value={editEmail}
@@ -548,7 +639,10 @@ export default function ProfileScreen() {
                             )}
 
                             <TouchableOpacity
-                                style={[styles.editSaveBtn, { backgroundColor: colors.accent, opacity: editSaving ? 0.7 : 1 }]}
+                                style={[
+                                    styles.editSaveBtn,
+                                    { backgroundColor: colors.accent, opacity: editSaving ? 0.7 : 1 },
+                                ]}
                                 onPress={handleSaveProfile}
                                 disabled={editSaving}
                                 activeOpacity={0.8}
@@ -573,7 +667,12 @@ export default function ProfileScreen() {
                     activeOpacity={1}
                     onPress={() => setShowAvatarSheet(false)}
                 >
-                    <Animated.View style={[styles.sheet, { backgroundColor: colors.cardBackground, transform: [{ translateY: avatarSheetY }] }]}>
+                    <Animated.View
+                        style={[
+                            styles.sheet,
+                            { backgroundColor: colors.cardBackground, transform: [{ translateY: avatarSheetY }] },
+                        ]}
+                    >
                         <View style={[styles.sheetHandle, { backgroundColor: colors.divider }]} />
                         <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>Profile Photo</Text>
 
@@ -596,7 +695,9 @@ export default function ProfileScreen() {
                             <View style={[styles.sheetIconCircle, { backgroundColor: colors.accentLight }]}>
                                 <Ionicons name="image-outline" size={20} color={colors.accent} />
                             </View>
-                            <Text style={[styles.sheetRowText, { color: colors.textPrimary }]}>Choose from Library</Text>
+                            <Text style={[styles.sheetRowText, { color: colors.textPrimary }]}>
+                                Choose from Library
+                            </Text>
                         </TouchableOpacity>
 
                         {user?.avatar_url && (
