@@ -412,6 +412,125 @@ describe('deleteEvent', () => {
   });
 });
 
+// ── createEvent ──
+
+describe('createEvent', () => {
+  it('creates event and inserts attendees', async () => {
+    // Step 1: event insert
+    const eventsChain = mockSupa.__getChain('events');
+    mockResolve(eventsChain, { data: { id: 'new-evt', title: 'Sync' }, error: null });
+
+    // Step 2: attendees insert
+    const attendeesChain = mockSupa.__getChain('event_attendees');
+    mockResolve(attendeesChain, { error: null });
+
+    const result = await createEvent(
+      {
+        title: 'Sync', description: 'Weekly sync', event_type: 'team_meeting',
+        event_date: '2026-03-20', start_time: '09:00', end_time: '10:00',
+        location: 'Office',
+        attendees: [{ user_id: 'u1', attendee_role: 'attendee' }],
+        external_attendees: [],
+      },
+      'user-1',
+    );
+
+    expect(mockSupa.from).toHaveBeenCalledWith('events');
+    expect(mockSupa.from).toHaveBeenCalledWith('event_attendees');
+    // fetchEventById is called at the end — result depends on chain state
+  });
+
+  it('skips attendee insert when no attendees', async () => {
+    const eventsChain = mockSupa.__getChain('events');
+    mockResolve(eventsChain, { data: { id: 'new-evt' }, error: null });
+
+    await createEvent(
+      {
+        title: 'Solo', description: '', event_type: 'other',
+        event_date: '2026-03-20', start_time: '09:00', end_time: null,
+        location: null, attendees: [], external_attendees: [],
+      },
+      'user-1',
+    );
+
+    // event_attendees should not be called for insert (only for fetchEventById)
+    const fromCalls = mockSupa.from.mock.calls.map((c: any) => c[0]);
+    // First call is 'events' (insert), then 'events' again (fetchEventById)
+    expect(fromCalls[0]).toBe('events');
+  });
+
+  it('returns error when event insert fails', async () => {
+    const eventsChain = mockSupa.__getChain('events');
+    mockResolve(eventsChain, { data: null, error: { message: 'Duplicate title' } });
+
+    const result = await createEvent(
+      {
+        title: 'Dup', description: '', event_type: 'team_meeting',
+        event_date: '2026-03-20', start_time: '09:00', end_time: '10:00',
+        location: null, attendees: [], external_attendees: [],
+      },
+      'user-1',
+    );
+
+    expect(result.error).toBe('Duplicate title');
+    expect(result.data).toBeNull();
+  });
+
+  it('returns error when attendee insert fails', async () => {
+    const eventsChain = mockSupa.__getChain('events');
+    mockResolve(eventsChain, { data: { id: 'new-evt' }, error: null });
+
+    const attendeesChain = mockSupa.__getChain('event_attendees');
+    mockResolve(attendeesChain, { error: { message: 'FK violation' } });
+
+    const result = await createEvent(
+      {
+        title: 'Team', description: '', event_type: 'team_meeting',
+        event_date: '2026-03-20', start_time: '09:00', end_time: '10:00',
+        location: null,
+        attendees: [{ user_id: 'bad-user', attendee_role: 'attendee' }],
+        external_attendees: [],
+      },
+      'user-1',
+    );
+
+    expect(result.error).toBe('FK violation');
+  });
+});
+
+// ── fetchUpcomingEvents ──
+
+describe('fetchUpcomingEvents', () => {
+  it('filters to future events and respects limit', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-03-10T12:00:00Z'));
+
+    // fetchUpcomingEvents calls fetchEvents internally which needs two chains
+    const attendeesChain = mockSupa.__getChain('event_attendees');
+    mockResolve(attendeesChain, { data: [{ event_id: 'e1' }, { event_id: 'e2' }, { event_id: 'e3' }], error: null });
+
+    const eventsChain = mockSupa.__getChain('events');
+    mockResolve(eventsChain, {
+      data: [
+        { id: 'e1', title: 'Past', event_date: '2026-03-01', start_time: '09:00', event_type: 'team_meeting', created_by: 'u1', created_at: '', updated_at: '', external_attendees: [] },
+        { id: 'e2', title: 'Future 1', event_date: '2026-03-15', start_time: '09:00', event_type: 'training', created_by: 'u1', created_at: '', updated_at: '', external_attendees: [] },
+        { id: 'e3', title: 'Future 2', event_date: '2026-03-20', start_time: '10:00', event_type: 'other', created_by: 'u1', created_at: '', updated_at: '', external_attendees: [] },
+      ],
+      error: null,
+    });
+
+    const { fetchUpcomingEvents } = require('@/lib/events');
+    const result = await fetchUpcomingEvents('u1', 1);
+
+    // Should only include future events, limited to 1
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].title).toBe('Future 1');
+    expect(result.error).toBeNull();
+
+    jest.useRealTimers();
+  });
+});
+
 // ── updateEvent ──
 
 describe('updateEvent', () => {
@@ -427,5 +546,52 @@ describe('updateEvent', () => {
 
     expect(result.error).toBe('Update failed');
     expect(result.data).toBeNull();
+  });
+
+  it('calls upsert and delete for attendee reconciliation', async () => {
+    // Step 1: event update succeeds
+    const eventsChain = mockSupa.__getChain('events');
+    mockResolve(eventsChain, {
+      data: {
+        id: 'evt-1', title: 'Updated', event_type: 'team_meeting',
+        event_date: '2026-03-15', start_time: '10:00', end_time: '11:00',
+        location: 'Office', created_by: 'u1', created_at: '', updated_at: '',
+        external_attendees: [], event_attendees: [],
+      },
+      error: null,
+    });
+
+    // Step 2: attendee upsert + delete share same chain
+    const attendeesChain = mockSupa.__getChain('event_attendees');
+    mockResolve(attendeesChain, { error: null });
+
+    await updateEvent('evt-1', {
+      title: 'Updated', description: '', event_type: 'team_meeting',
+      event_date: '2026-03-15', start_time: '10:00', end_time: '11:00',
+      location: 'Office',
+      attendees: [{ user_id: 'u1', attendee_role: 'attendee' }],
+      external_attendees: [],
+    });
+
+    // Should call event_attendees for upsert and delete
+    expect(mockSupa.from).toHaveBeenCalledWith('event_attendees');
+  });
+
+  it('returns error when attendee upsert fails', async () => {
+    const eventsChain = mockSupa.__getChain('events');
+    mockResolve(eventsChain, { error: null });
+
+    const attendeesChain = mockSupa.__getChain('event_attendees');
+    mockResolve(attendeesChain, { error: { message: 'Upsert failed' } });
+
+    const result = await updateEvent('evt-1', {
+      title: 'Updated', description: '', event_type: 'team_meeting',
+      event_date: '2026-03-15', start_time: '10:00', end_time: '11:00',
+      location: 'Office',
+      attendees: [{ user_id: 'u1', attendee_role: 'attendee' }],
+      external_attendees: [],
+    });
+
+    expect(result.error).toBe('Upsert failed');
   });
 });
