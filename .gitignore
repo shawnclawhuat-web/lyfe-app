@@ -43,3 +43,4 @@ admin/.env.local
 /ios
 /android
 .mcp.json
+coverage/
