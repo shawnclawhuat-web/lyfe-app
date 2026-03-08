@@ -39,6 +39,16 @@ jest.mock('expo-router', () => ({
     Tabs: { Screen: 'Screen' },
 }));
 
+// Mock @sentry/react-native
+jest.mock('@sentry/react-native', () => ({
+    init: jest.fn(),
+    wrap: jest.fn((component) => component),
+    captureException: jest.fn(),
+    captureMessage: jest.fn(),
+    setUser: jest.fn(),
+    addBreadcrumb: jest.fn(),
+}));
+
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () => ({
     getItem: jest.fn(),

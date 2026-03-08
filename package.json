@@ -20,7 +20,7 @@
         "*.{ts,tsx}": [
             "eslint --fix",
             "prettier --write",
-            "jest --bail --findRelatedTests"
+            "jest --bail --passWithNoTests --findRelatedTests"
         ],
         "*.{js,json}": [
             "prettier --write"
@@ -29,6 +29,7 @@
     "dependencies": {
         "@react-native-async-storage/async-storage": "^2.1.0",
         "@react-navigation/native": "^7.1.6",
+        "@sentry/react-native": "~7.2.0",
         "@supabase/supabase-js": "^2.98.0",
         "expo": "~54.0.0",
         "expo-av": "~16.0.8",
