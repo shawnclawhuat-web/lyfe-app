@@ -8,34 +8,32 @@ import {
     ERROR_BG,
     ERROR_TEXT,
     getAvatarColor,
-    formatPickerTime,
-    hhmm24ToPickerState,
     PICKER_AMPM,
     PICKER_HOURS,
     PICKER_MINUTES,
-    pickerToHHMM24,
     TIME_PICKER_VISIBLE,
 } from '@/constants/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAttendeePicker } from '@/hooks/useAttendeePicker';
+import { useRoadshowConfig } from '@/hooks/useRoadshowConfig';
+import { useTimePicker } from '@/hooks/useTimePicker';
 import { dateDiffDays, dateRange, formatDateLabel, isValidDate, todayStr } from '@/lib/dateTime';
 import {
     createEvent,
     createRoadshowBulk,
-    fetchAllUsers,
     fetchEventById,
     fetchRoadshowConfig,
     saveRoadshowConfig,
     updateEvent,
     type RoadshowConfigInput,
-    type SimpleUser,
 } from '@/lib/events';
 import { supabase } from '@/lib/supabase';
-import type { AttendeeRole, CreateEventInput, EventType, ExternalAttendee } from '@/types/event';
+import type { AttendeeRole, CreateEventInput, EventType } from '@/types/event';
 import { EVENT_TYPE_COLORS, EVENT_TYPE_LABELS } from '@/types/event';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -54,14 +52,6 @@ import {
 
 const EVENT_TYPES: EventType[] = ['team_meeting', 'training', 'agency_event', 'roadshow', 'other'];
 
-interface SelectedAttendee {
-    user_id: string;
-    full_name: string;
-    role: string;
-    attendee_role: AttendeeRole;
-    avatar_url?: string | null;
-}
-
 export default function CreateEventScreen() {
     const { colors } = useTheme();
     const { user } = useAuth();
@@ -73,61 +63,87 @@ export default function CreateEventScreen() {
     const [title, setTitle] = useState('');
     const [eventType, setEventType] = useState<EventType>('team_meeting');
     const [eventDate, setEventDate] = useState(todayStr());
-    // Start time picker (default 9:00 AM)
-    const [startHour, setStartHour] = useState(8); // index 8 → '9'
-    const [startMinIdx, setStartMinIdx] = useState(0);
-    const [startAmPm, setStartAmPm] = useState(0); // 0 = AM
-    // End time picker (default 5:00 PM, optional)
-    const [hasEndTime, setHasEndTime] = useState(false);
-    const [endHour, setEndHour] = useState(4); // index 4 → '5'
-    const [endMinIdx, setEndMinIdx] = useState(0);
-    const [endAmPm, setEndAmPm] = useState(1); // 1 = PM
-    const [showTimePicker, setShowTimePicker] = useState<'start' | 'end' | null>(null);
     const [showDatePicker, setShowDatePicker] = useState<'single' | 'range' | null>(null);
     const [location, setLocation] = useState('');
     const [description, setDescription] = useState('');
-    const [selectedAttendees, setSelectedAttendees] = useState<SelectedAttendee[]>([]);
-    const [showAttendeePicker, setShowAttendeePicker] = useState(false);
-    const [pickerTab, setPickerTab] = useState<'team' | 'external'>('team');
-    const [allUsers, setAllUsers] = useState<SimpleUser[]>([]);
-    const [userSearch, setUserSearch] = useState('');
-    const [loadingUsers, setLoadingUsers] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [loadingEvent, setLoadingEvent] = useState(isEditing);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const [usersError, setUsersError] = useState<string | null>(null);
 
-    // Roadshow-specific state
-    const [rsStartDate, setRsStartDate] = useState(todayStr());
-    const [rsEndDate, setRsEndDate] = useState(todayStr());
-    const [rsWeeklyCost, setRsWeeklyCost] = useState('');
-    const [rsSlots, setRsSlots] = useState(3);
-    const [rsGrace, setRsGrace] = useState(15);
-    const [rsSitdowns, setRsSitdowns] = useState(5);
-    const [rsPitches, setRsPitches] = useState(3);
-    const [rsClosed, setRsClosed] = useState(1);
-    const [rsConfigLocked, setRsConfigLocked] = useState(false);
+    // Extracted hooks
+    const timePicker = useTimePicker();
+    const attendeePicker = useAttendeePicker();
+    const roadshowCfg = useRoadshowConfig();
 
-    // External (non-user) attendees
-    const [externalAttendees, setExternalAttendees] = useState<(ExternalAttendee & { _key: string })[]>([]);
-    const [externalName, setExternalName] = useState('');
-    const [externalRole, setExternalRole] = useState<AttendeeRole>('attendee');
-
-    const loadUsers = useCallback(async () => {
-        setLoadingUsers(true);
-        setUsersError(null);
-        const { data, error } = await fetchAllUsers();
-        if (error) setUsersError('Failed to load users. Tap to retry.');
-        setAllUsers(data);
-        setLoadingUsers(false);
-    }, []);
-
-    useEffect(() => {
-        loadUsers();
-    }, [loadUsers]);
-
-    // Supabase returns time as "HH:MM:SS" — strip seconds for the form
-    const toHHMM = (t: string | null | undefined) => (t ?? '').slice(0, 5);
+    // Destructure frequently used hook values
+    const {
+        startHour,
+        startMinIdx,
+        startAmPm,
+        endHour,
+        endMinIdx,
+        endAmPm,
+        hasEndTime,
+        showTimePicker,
+        setStartHour,
+        setStartMinIdx,
+        setStartAmPm,
+        setEndHour,
+        setEndMinIdx,
+        setEndAmPm,
+        setHasEndTime,
+        setShowTimePicker,
+        toStartTimeStr,
+        toEndTimeStr,
+        formatStart,
+        formatEnd,
+        populateFromEdit,
+    } = timePicker;
+    const {
+        selectedAttendees,
+        setSelectedAttendees,
+        showAttendeePicker,
+        setShowAttendeePicker,
+        pickerTab,
+        setPickerTab,
+        userSearch,
+        setUserSearch,
+        loadingUsers,
+        usersError,
+        filteredUsers,
+        externalAttendees,
+        setExternalAttendees,
+        externalName,
+        setExternalName,
+        externalRole,
+        setExternalRole,
+        loadUsers,
+        toggleAttendee,
+        updateAttendeeRole,
+        addExternal,
+        removeExternal,
+    } = attendeePicker;
+    const {
+        rsStartDate,
+        setRsStartDate,
+        rsEndDate,
+        setRsEndDate,
+        rsWeeklyCost,
+        setRsWeeklyCost,
+        rsSlots,
+        setRsSlots,
+        rsGrace,
+        setRsGrace,
+        rsSitdowns,
+        setRsSitdowns,
+        rsPitches,
+        setRsPitches,
+        rsClosed,
+        setRsClosed,
+        rsConfigLocked,
+        setRsConfigLocked,
+        populateFromExisting,
+    } = roadshowCfg;
 
     // Pre-populate form when editing
     useEffect(() => {
@@ -138,17 +154,7 @@ export default function CreateEventScreen() {
                 setTitle(data.title);
                 setEventType(data.event_type);
                 setEventDate(data.event_date);
-                const sp = hhmm24ToPickerState(toHHMM(data.start_time) || '09:00');
-                setStartHour(sp.hour);
-                setStartMinIdx(sp.minIdx);
-                setStartAmPm(sp.ampm);
-                if (data.end_time) {
-                    const ep = hhmm24ToPickerState(toHHMM(data.end_time));
-                    setEndHour(ep.hour);
-                    setEndMinIdx(ep.minIdx);
-                    setEndAmPm(ep.ampm);
-                    setHasEndTime(true);
-                }
+                populateFromEdit(data.start_time, data.end_time);
                 setLocation(data.location || '');
                 setDescription(data.description || '');
                 setSelectedAttendees(
@@ -172,14 +178,7 @@ export default function CreateEventScreen() {
                     setIsEditingRoadshow(true);
                     const { data: cfg } = await fetchRoadshowConfig(eventId);
                     if (cfg) {
-                        setRsWeeklyCost(String(cfg.weekly_cost));
-                        setRsSlots(cfg.slots_per_day);
-                        setRsGrace(cfg.late_grace_minutes);
-                        setRsSitdowns(cfg.suggested_sitdowns);
-                        setRsPitches(cfg.suggested_pitches);
-                        setRsClosed(cfg.suggested_closed);
-                        setRsStartDate(data.event_date);
-                        setRsEndDate(data.event_date);
+                        populateFromExisting(cfg, data.event_date);
                     }
                     // Lock config if any attendance exists
                     const { data: att } = await supabase
@@ -193,28 +192,6 @@ export default function CreateEventScreen() {
             setLoadingEvent(false);
         });
     }, [isEditing, eventId]);
-
-    const toggleAttendee = (u: SimpleUser) => {
-        setSelectedAttendees((prev) => {
-            if (prev.find((a) => a.user_id === u.id)) {
-                return prev.filter((a) => a.user_id !== u.id);
-            }
-            return [
-                ...prev,
-                {
-                    user_id: u.id,
-                    full_name: u.full_name,
-                    role: u.role,
-                    attendee_role: 'attendee',
-                    avatar_url: u.avatar_url,
-                },
-            ];
-        });
-    };
-
-    const updateAttendeeRole = (userId: string, role: AttendeeRole) => {
-        setSelectedAttendees((prev) => prev.map((a) => (a.user_id === userId ? { ...a, attendee_role: role } : a)));
-    };
 
     const validate = (): boolean => {
         const e: Record<string, string> = {};
@@ -232,15 +209,39 @@ export default function CreateEventScreen() {
         } else {
             if (!isValidDate(eventDate)) e.eventDate = 'Enter a valid date (YYYY-MM-DD)';
         }
+        if (hasEndTime && toStartTimeStr() >= toEndTimeStr()!) {
+            e.endTime = 'End time must be after start time';
+        }
         setErrors(e);
         return Object.keys(e).length === 0;
     };
 
+    // Live end-time validation — clear or show error as user picks
+    useEffect(() => {
+        if (!hasEndTime) {
+            setErrors((prev) => {
+                if (!prev.endTime) return prev;
+                const { endTime: _, ...rest } = prev;
+                return rest;
+            });
+            return;
+        }
+        const invalid = toStartTimeStr() >= toEndTimeStr()!;
+        setErrors((prev) => {
+            if (invalid && !prev.endTime) return { ...prev, endTime: 'End time must be after start time' };
+            if (!invalid && prev.endTime) {
+                const { endTime: _, ...rest } = prev;
+                return rest;
+            }
+            return prev;
+        });
+    }, [hasEndTime, startHour, startMinIdx, startAmPm, endHour, endMinIdx, endAmPm]);
+
     const handleSubmit = async () => {
         if (!validate()) return;
 
-        const startTime = pickerToHHMM24(startHour, startMinIdx, startAmPm);
-        const endTime = hasEndTime ? pickerToHHMM24(endHour, endMinIdx, endAmPm) : null;
+        const startTime = toStartTimeStr();
+        const endTime = toEndTimeStr();
 
         setSubmitting(true);
 
@@ -346,12 +347,6 @@ export default function CreateEventScreen() {
 
         router.back();
     };
-
-    const filteredUsers = allUsers.filter(
-        (u) =>
-            u.full_name.toLowerCase().includes(userSearch.toLowerCase()) ||
-            u.role.toLowerCase().includes(userSearch.toLowerCase()),
-    );
 
     const inputStyle = [
         styles.input,
@@ -701,7 +696,7 @@ export default function CreateEventScreen() {
                             >
                                 <Text style={[styles.timeCellLabel, { color: colors.textTertiary }]}>Start</Text>
                                 <Text style={[styles.timeCellValue, { color: colors.textPrimary }]}>
-                                    {formatPickerTime(startHour, startMinIdx, startAmPm)}
+                                    {formatStart()}
                                 </Text>
                             </TouchableOpacity>
 
@@ -720,7 +715,7 @@ export default function CreateEventScreen() {
                                     <>
                                         <Text style={[styles.timeCellLabel, { color: colors.textTertiary }]}>End</Text>
                                         <Text style={[styles.timeCellValue, { color: colors.textPrimary }]}>
-                                            {formatPickerTime(endHour, endMinIdx, endAmPm)}
+                                            {formatEnd()}
                                         </Text>
                                     </>
                                 ) : (
@@ -731,6 +726,9 @@ export default function CreateEventScreen() {
                                 )}
                             </TouchableOpacity>
                         </View>
+                        {errors.endTime ? (
+                            <Text style={[styles.errorText, { color: colors.danger }]}>{errors.endTime}</Text>
+                        ) : null}
                     </View>
 
                     {/* Location */}

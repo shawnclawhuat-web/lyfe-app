@@ -1,5 +1,5 @@
 import { useTheme } from '@/contexts/ThemeContext';
-import { timeAgo } from '@/lib/utils';
+import { timeAgo } from '@/lib/dateTime';
 import { ACTIVITY_ICONS, type LeadActivity } from '@/types/lead';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
@@ -60,7 +60,8 @@ function LeadActivityItem({ activity, isLast }: LeadActivityItemProps) {
                     {getActivityDescription(activity)}
                 </Text>
                 <Text style={[styles.time, { color: colors.textTertiary }]}>
-                    {activity.actor_name ? `${activity.actor_name} · ` : ''}{timeAgo(activity.created_at)}
+                    {activity.actor_name ? `${activity.actor_name} · ` : ''}
+                    {timeAgo(activity.created_at)}
                 </Text>
             </View>
         </View>

@@ -85,22 +85,19 @@ export async function submitExamAttempt(
         is_correct: (answers[q.id] || null) === q.correct_answer,
     }));
 
-    const { error: answersError } = await supabase
-        .from('exam_answers')
-        .insert(answerRows);
+    const { error: answersError } = await supabase.from('exam_answers').insert(answerRows);
 
     if (answersError) {
-        if (__DEV__) console.error('Failed to insert exam answers:', answersError.message);
+        // Answers failed — clean up the orphaned attempt and surface the error
+        await supabase.from('exam_attempts').delete().eq('id', attempt.id);
+        return { data: null, error: 'Failed to save your answers. Please try again.' };
     }
 
     // Now update attempt to final status
-    const { error: updateError } = await supabase
-        .from('exam_attempts')
-        .update({ status })
-        .eq('id', attempt.id);
+    const { error: updateError } = await supabase.from('exam_attempts').update({ status }).eq('id', attempt.id);
 
     if (updateError) {
-        if (__DEV__) console.error('Failed to update attempt status:', updateError.message);
+        return { data: null, error: 'Exam submitted but status update failed. Please contact support.' };
     }
 
     return {
@@ -138,11 +135,7 @@ export async function fetchExamResult(
     if (attemptError) return { data: null, error: attemptError.message };
 
     // Fetch the paper code
-    const { data: paper } = await supabase
-        .from('exam_papers')
-        .select('code')
-        .eq('id', attempt.paper_id)
-        .single();
+    const { data: paper } = await supabase.from('exam_papers').select('code').eq('id', attempt.paper_id).single();
 
     // Fetch answers with questions joined
     const { data: examAnswers, error: answersError } = await supabase
@@ -156,10 +149,16 @@ export async function fetchExamResult(
     const questions: ExamQuestion[] = [];
     const answerDetails: ExamResultData['answers'] = [];
 
-    (examAnswers || []).forEach((row: any) => {
+    (
+        (examAnswers || []) as {
+            selected_answer: string | null;
+            is_correct: boolean;
+            exam_questions: ExamQuestion | null;
+        }[]
+    ).forEach((row) => {
         const q = row.exam_questions;
         if (q) {
-            questions.push(q as ExamQuestion);
+            questions.push(q);
             answerDetails.push({
                 questionId: q.id,
                 selected: row.selected_answer,

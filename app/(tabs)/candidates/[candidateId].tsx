@@ -1,25 +1,18 @@
+import InterviewCard from '@/components/InterviewCard';
 import LoadingState from '@/components/LoadingState';
 import ScreenHeader from '@/components/ScreenHeader';
+import StatusStepper from '@/components/StatusStepper';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import {
-    addCandidateActivity,
-    deleteCandidateDocument,
-    deleteInterview,
-    fetchCandidate,
-    fetchCandidateDocuments,
-    scheduleInterview,
-    updateInterview,
-    uploadCandidateDocument,
-} from '@/lib/recruitment';
-import { timeAgo } from '@/lib/utils';
+import { useContactOutcome } from '@/hooks/useContactOutcome';
+import { useDocumentManager } from '@/hooks/useDocumentManager';
+import { useInterviewScheduler } from '@/hooks/useInterviewScheduler';
+import { addCandidateActivity, fetchCandidate } from '@/lib/recruitment';
+import { timeAgo } from '@/lib/dateTime';
 import {
     CANDIDATE_STATUS_CONFIG,
     DOCUMENT_LABELS,
     type CandidateActivity,
-    type CandidateDocument,
-    type CandidateOutcome,
-    type CandidateStatus,
     type Interview,
     type RecruitmentCandidate,
 } from '@/types/recruitment';
@@ -28,9 +21,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Alert,
-    AppState,
     KeyboardAvoidingView,
-    Linking,
     Modal,
     Platform,
     Pressable,
@@ -43,176 +34,14 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { ERROR_BG, ERROR_TEXT, INTERVIEW_STATUS_COLORS } from '@/constants/ui';
-import { formatCreatedAt, formatDateTime } from '@/lib/dateTime';
+import { ERROR_BG, ERROR_TEXT } from '@/constants/ui';
+import { formatCreatedAt } from '@/lib/dateTime';
 import { WebView } from 'react-native-webview';
 let Clipboard: typeof import('expo-clipboard') | null = null;
 try {
     Clipboard = require('expo-clipboard');
 } catch (e) {
     console.warn('expo-clipboard not available:', e);
-}
-
-// expo-document-picker requires a native build — lazy-load so the app doesn't
-// crash on older dev clients that were built before the package was installed.
-let DocumentPicker: typeof import('expo-document-picker') | null = null;
-try {
-    DocumentPicker = require('expo-document-picker');
-} catch {
-    // Native module not yet compiled into this build — upload will be disabled.
-}
-
-// ── Helpers ──
-
-function getTimeAgo(dateStr: string): string {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const days = Math.floor(diff / 86400000);
-    if (days === 0) return 'Today';
-    if (days === 1) return '1 day ago';
-    return `${days} days ago`;
-}
-
-// ── Status Stepper ──
-
-function StatusStepper({ currentStatus, colors }: { currentStatus: CandidateStatus; colors: any }) {
-    const steps: CandidateStatus[] = [
-        'applied',
-        'interview_scheduled',
-        'interviewed',
-        'approved',
-        'exam_prep',
-        'licensed',
-        'active_agent',
-    ];
-    const currentIdx = steps.indexOf(currentStatus);
-
-    return (
-        <View style={stepperStyles.container}>
-            {steps.map((step, idx) => {
-                const cfg = CANDIDATE_STATUS_CONFIG[step];
-                const isComplete = idx < currentIdx;
-                const isCurrent = idx === currentIdx;
-                const dotColor = isComplete || isCurrent ? cfg.color : colors.border;
-
-                return (
-                    <View key={step} style={stepperStyles.stepRow}>
-                        <View style={stepperStyles.dotCol}>
-                            <View style={[stepperStyles.dot, { backgroundColor: dotColor, borderColor: dotColor }]}>
-                                {isComplete && <Ionicons name="checkmark" size={10} color="#FFF" />}
-                                {isCurrent && <View style={stepperStyles.activeDotInner} />}
-                            </View>
-                            {idx < steps.length - 1 && (
-                                <View
-                                    style={[
-                                        stepperStyles.line,
-                                        { backgroundColor: isComplete ? cfg.color : colors.border },
-                                    ]}
-                                />
-                            )}
-                        </View>
-                        <Text
-                            style={[
-                                stepperStyles.label,
-                                {
-                                    color: isCurrent
-                                        ? cfg.color
-                                        : isComplete
-                                          ? colors.textPrimary
-                                          : colors.textTertiary,
-                                },
-                                isCurrent && { fontWeight: '700' },
-                            ]}
-                        >
-                            {cfg.label}
-                        </Text>
-                    </View>
-                );
-            })}
-        </View>
-    );
-}
-
-// ── Interview Card ──
-
-function InterviewCard({
-    interview,
-    colors,
-    onEdit,
-    onDelete,
-}: {
-    interview: Interview;
-    colors: any;
-    onEdit: () => void;
-    onDelete: () => void;
-}) {
-    const isUpcoming = new Date(interview.datetime) > new Date();
-    const statusColor = INTERVIEW_STATUS_COLORS[interview.status] ?? INTERVIEW_STATUS_COLORS.scheduled;
-
-    return (
-        <View
-            style={[
-                interviewStyles.card,
-                { backgroundColor: colors.surfacePrimary || colors.background, borderColor: colors.border },
-            ]}
-        >
-            <View style={interviewStyles.headerRow}>
-                <View style={interviewStyles.roundBadge}>
-                    <Text style={interviewStyles.roundText}>R{interview.round_number}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                    <Text style={[interviewStyles.dateText, { color: colors.textPrimary }]}>
-                        {formatDateTime(interview.datetime)}
-                    </Text>
-                    <Text style={[interviewStyles.typeText, { color: colors.textTertiary }]}>
-                        {interview.type === 'zoom' ? 'Zoom' : 'In-Person'}
-                    </Text>
-                </View>
-                <View style={[interviewStyles.statusPill, { backgroundColor: statusColor + '18' }]}>
-                    <Text style={[interviewStyles.statusText, { color: statusColor }]}>
-                        {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
-                    </Text>
-                </View>
-                <TouchableOpacity
-                    onPress={onEdit}
-                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 8 }}
-                    style={{ marginLeft: 8, padding: 4 }}
-                >
-                    <Ionicons name="pencil-outline" size={16} color={colors.textTertiary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={onDelete}
-                    hitSlop={{ top: 12, bottom: 12, left: 8, right: 12 }}
-                    style={{ marginLeft: 4, padding: 4 }}
-                >
-                    <Ionicons name="trash-outline" size={16} color={colors.textTertiary} />
-                </TouchableOpacity>
-            </View>
-
-            {interview.location && (
-                <View style={interviewStyles.detailRow}>
-                    <Ionicons name="location-outline" size={14} color={colors.textTertiary} />
-                    <Text style={[interviewStyles.detailText, { color: colors.textSecondary }]}>
-                        {interview.location}
-                    </Text>
-                </View>
-            )}
-            {interview.zoom_link && isUpcoming && (
-                <TouchableOpacity
-                    style={interviewStyles.detailRow}
-                    onPress={() => Linking.openURL(interview.zoom_link!)}
-                >
-                    <Ionicons name="videocam-outline" size={14} color={colors.accent} />
-                    <Text style={[interviewStyles.detailText, { color: colors.accent }]}>Join Zoom Meeting</Text>
-                </TouchableOpacity>
-            )}
-            {interview.notes && (
-                <View style={interviewStyles.detailRow}>
-                    <Ionicons name="chatbubble-outline" size={14} color={colors.textTertiary} />
-                    <Text style={[interviewStyles.detailText, { color: colors.textSecondary }]}>{interview.notes}</Text>
-                </View>
-            )}
-        </View>
-    );
 }
 
 // ── Wheel Picker ──
@@ -319,62 +148,131 @@ export default function CandidateDetailScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Documents
-    const [documents, setDocuments] = useState<CandidateDocument[]>([]);
-    const [showPdf, setShowPdf] = useState(false);
-    const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-    const [pdfTitle, setPdfTitle] = useState('');
-    const [showAddDoc, setShowAddDoc] = useState(false);
-    const [addDocLabel, setAddDocLabel] = useState('');
-    const [addDocCustomLabel, setAddDocCustomLabel] = useState('');
-    const [addDocStep, setAddDocStep] = useState<'label' | 'uploading'>('label');
-    const [addDocError, setAddDocError] = useState<string | null>(null);
-
-    // Contact confirmation flow
+    // Contact history
     const [callLog, setCallLog] = useState<CandidateActivity[]>([]);
-    const [pendingType, setPendingType] = useState<'call' | 'whatsapp' | null>(null);
-    const [showConfirmSheet, setShowConfirmSheet] = useState(false);
-    const [confirmStep, setConfirmStep] = useState<'outcome' | 'note'>('outcome');
-    const [selectedOutcome, setSelectedOutcome] = useState<CandidateOutcome | null>(null);
-    const [noteText, setNoteText] = useState('');
-    const hasPendingContact = useRef(false);
-    const wentToBackground = useRef(false);
 
     // Note sheet
     const [showNoteSheet, setShowNoteSheet] = useState(false);
     const [noteSheetText, setNoteSheetText] = useState('');
 
-    // Schedule sheet
-    const [showScheduleSheet, setShowScheduleSheet] = useState(false);
-    const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
-    const [scheduleStatus, setScheduleStatus] = useState<Interview['status']>('scheduled');
-    const [scheduleDate, setScheduleDate] = useState(() => {
-        const d = new Date();
-        d.setSeconds(0, 0);
-        return d;
+    // ── Document Manager Hook ──
+    const docManager = useDocumentManager({ candidateId: candidateId || '' });
+    const {
+        documents,
+        showPdf,
+        pdfUrl,
+        pdfTitle,
+        showAddDoc,
+        addDocLabel,
+        addDocCustomLabel,
+        addDocStep,
+        addDocError,
+        hasDocumentPicker,
+        setShowPdf,
+        setShowAddDoc,
+        setAddDocLabel,
+        setAddDocCustomLabel,
+        handleViewDocument,
+        handleDeleteDocument,
+        handleSelectLabel,
+        pickAndUploadDocument,
+        openAddDocSheet,
+    } = docManager;
+
+    // ── Contact Outcome Hook ──
+    const contactOutcome = useContactOutcome({
+        candidateId: candidateId || '',
+        candidateName: candidate?.name || '',
+        candidatePhone: candidate?.phone || '',
+        userId: user?.id,
+        userName: user?.full_name,
+        onActivityLogged: useCallback((activity: CandidateActivity) => {
+            setCallLog((prev) => [activity, ...prev]);
+        }, []),
     });
-    const [scheduleHour, setScheduleHour] = useState(10); // 1–12
-    const [scheduleMinute, setScheduleMinute] = useState(0); // 0, 5, 10, …, 55
-    const [scheduleAmPm, setScheduleAmPm] = useState<'AM' | 'PM'>('AM');
-    const [scheduleType, setScheduleType] = useState<'zoom' | 'in_person'>('zoom');
-    const [scheduleLink, setScheduleLink] = useState('');
-    const [scheduleLocation, setScheduleLocation] = useState('');
-    const [scheduleNotes, setScheduleNotes] = useState('');
-    const [isScheduling, setIsScheduling] = useState(false);
-    const [scheduleError, setScheduleError] = useState<string | null>(null);
+    const {
+        pendingType,
+        showConfirmSheet,
+        confirmStep,
+        selectedOutcome,
+        noteText,
+        setNoteText,
+        handleCall,
+        handleWhatsApp,
+        handleOutcomeSelect,
+        handleSaveActivity,
+        handleDismissSheet,
+    } = contactOutcome;
+
+    // ── Interview Scheduler Hook ──
+    const scheduler = useInterviewScheduler({
+        candidateId: candidateId || '',
+        candidateManagerId: candidate?.assigned_manager_id || '',
+        candidateInterviewCount: candidate?.interviews.length ?? 0,
+        userId: user?.id,
+        onInterviewChanged: useCallback((action: 'created' | 'updated' | 'deleted', interview: Interview) => {
+            if (action === 'created') {
+                setCandidate((prev) => (prev ? { ...prev, interviews: [interview, ...prev.interviews] } : prev));
+            } else if (action === 'updated') {
+                setCandidate((prev) =>
+                    prev
+                        ? {
+                              ...prev,
+                              interviews: prev.interviews.map((iv) => (iv.id === interview.id ? interview : iv)),
+                          }
+                        : prev,
+                );
+            } else if (action === 'deleted') {
+                setCandidate((prev) =>
+                    prev
+                        ? {
+                              ...prev,
+                              interviews: prev.interviews.filter((iv) => iv.id !== interview.id),
+                          }
+                        : prev,
+                );
+            }
+        }, []),
+    });
+    const {
+        showScheduleSheet,
+        editingInterview,
+        scheduleStatus,
+        scheduleDate,
+        scheduleHour,
+        scheduleMinute,
+        scheduleAmPm,
+        scheduleType,
+        scheduleLink,
+        scheduleLocation,
+        scheduleNotes,
+        isScheduling,
+        scheduleError,
+        setScheduleDate,
+        setScheduleHour,
+        setScheduleMinute,
+        setScheduleAmPm,
+        setScheduleType,
+        setScheduleLink,
+        setScheduleLocation,
+        setScheduleNotes,
+        setScheduleStatus,
+        openNewInterview,
+        openEditInterview,
+        closeScheduleSheet,
+        dismissScheduleSheet,
+        handleDeleteInterview,
+        handleSubmitSchedule,
+    } = scheduler;
 
     const loadCandidate = useCallback(async () => {
         if (!candidateId) return;
         setError(null);
-        const [{ data, error: fetchError }, { data: docs }] = await Promise.all([
-            fetchCandidate(candidateId),
-            fetchCandidateDocuments(candidateId),
-        ]);
+        const { data, error: fetchError } = await fetchCandidate(candidateId);
         if (fetchError) {
             setError(fetchError);
         } else {
             setCandidate(data);
-            setDocuments(docs);
         }
         setIsLoading(false);
     }, [candidateId]);
@@ -383,18 +281,13 @@ export default function CandidateDetailScreen() {
         loadCandidate();
     }, [loadCandidate]);
 
+    // Load documents separately via hook
     useEffect(() => {
-        const subscription = AppState.addEventListener('change', (nextState) => {
-            if (nextState === 'background') {
-                wentToBackground.current = true;
-            } else if (nextState === 'active' && wentToBackground.current && hasPendingContact.current) {
-                wentToBackground.current = false;
-                setConfirmStep('outcome');
-                setShowConfirmSheet(true);
-            }
-        });
-        return () => subscription.remove();
-    }, []);
+        if (candidateId) {
+            docManager.loadDocuments();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [candidateId]);
 
     if (isLoading) {
         return (
@@ -427,96 +320,6 @@ export default function CandidateDetailScreen() {
         (a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime(),
     );
 
-    // ── Document handlers ──
-
-    const handleViewDocument = (doc: CandidateDocument) => {
-        setPdfUrl(doc.file_url);
-        setPdfTitle(doc.label);
-        setShowPdf(true);
-    };
-
-    const handleDeleteDocument = async (doc: CandidateDocument) => {
-        setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
-        deleteCandidateDocument(doc.id);
-    };
-
-    const handleSelectLabel = async (label: string) => {
-        if (label === 'Other') {
-            setAddDocLabel('Other');
-            return; // stay on sheet, show text input
-        }
-        await pickAndUploadDocument(label);
-    };
-
-    const pickAndUploadDocument = async (label: string) => {
-        if (!DocumentPicker) return;
-        setAddDocError(null);
-        const result = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
-        if (result.canceled || !result.assets[0]) return;
-
-        const asset = result.assets[0];
-        setAddDocStep('uploading');
-
-        const { data: newDoc, error } = await uploadCandidateDocument(candidate.id, label, asset.uri, asset.name);
-        setAddDocStep('label');
-        if (newDoc) {
-            setDocuments((prev) => [newDoc, ...prev]);
-            setShowAddDoc(false);
-            setAddDocLabel('');
-            setAddDocCustomLabel('');
-        } else {
-            setAddDocError(error ?? 'Upload failed');
-        }
-    };
-
-    // ── Contact handlers ──
-
-    const handleCall = () => {
-        hasPendingContact.current = true;
-        setPendingType('call');
-        Linking.openURL(`tel:${candidate.phone.replace(/\s/g, '')}`);
-    };
-
-    const handleWhatsApp = () => {
-        hasPendingContact.current = true;
-        setPendingType('whatsapp');
-        Linking.openURL(`https://wa.me/${candidate.phone.replace(/[\s+]/g, '')}`);
-    };
-
-    const handleOutcomeSelect = (outcome: CandidateOutcome) => {
-        setSelectedOutcome(outcome);
-        setConfirmStep('note');
-    };
-
-    const handleSaveActivity = (skipNote = false) => {
-        if (!pendingType || !selectedOutcome) return;
-        const note = skipNote ? null : noteText.trim() || null;
-        const activity: CandidateActivity = {
-            id: `ca_${Date.now()}`,
-            candidate_id: candidate.id,
-            user_id: user?.id || 'me',
-            type: pendingType,
-            outcome: selectedOutcome,
-            note,
-            created_at: new Date().toISOString(),
-            actor_name: user?.full_name || undefined,
-        };
-        setCallLog((prev) => [activity, ...prev]);
-        if (user?.id) {
-            addCandidateActivity(candidate.id, user.id, pendingType, selectedOutcome, note);
-        }
-        handleDismissSheet();
-    };
-
-    const handleDismissSheet = () => {
-        hasPendingContact.current = false;
-        setPendingType(null);
-        setSelectedOutcome(null);
-        setNoteText('');
-        setShowConfirmSheet(false);
-        setConfirmStep('outcome');
-    };
-
     // ── Note sheet ──
 
     const handleSaveNote = () => {
@@ -540,7 +343,7 @@ export default function CandidateDetailScreen() {
         setShowNoteSheet(false);
     };
 
-    // ── Schedule sheet ──
+    // ── Schedule sheet helpers (used in JSX) ──
 
     const addDays = (date: Date, days: number) => {
         const d = new Date(date);
@@ -552,170 +355,6 @@ export default function CandidateDetailScreen() {
     const isToday = (date: Date) => {
         const now = new Date();
         return date.toDateString() === now.toDateString();
-    };
-
-    const openEditInterview = (interview: Interview) => {
-        const dt = new Date(interview.datetime);
-        const h24 = dt.getHours();
-        const mins = dt.getMinutes();
-        const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-        const ampm = h24 >= 12 ? 'PM' : 'AM';
-        const nearestMin = Math.min(55, Math.round(mins / 5) * 5);
-        setEditingInterview(interview);
-        setScheduleDate(dt);
-        setScheduleHour(h12);
-        setScheduleMinute(nearestMin);
-        setScheduleAmPm(ampm);
-        setScheduleType(interview.type);
-        setScheduleLink(interview.zoom_link || '');
-        setScheduleLocation(interview.location || '');
-        setScheduleNotes(interview.notes || '');
-        setScheduleStatus(interview.status);
-        setScheduleError(null);
-        setShowScheduleSheet(true);
-    };
-
-    const closeScheduleSheet = () => {
-        setShowScheduleSheet(false);
-        resetScheduleForm();
-    };
-
-    const dismissScheduleSheet = () => {
-        if (editingInterview) {
-            Alert.alert('Discard changes?', 'Your edits will not be saved.', [
-                { text: 'Keep editing', style: 'cancel' },
-                { text: 'Discard', style: 'destructive', onPress: closeScheduleSheet },
-            ]);
-        } else {
-            closeScheduleSheet();
-        }
-    };
-
-    const handleDeleteInterview = (interview: Interview) => {
-        Alert.alert('Delete Interview', `Delete Round ${interview.round_number} interview? This cannot be undone.`, [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Delete',
-                style: 'destructive',
-                onPress: () => {
-                    setCandidate((prev) =>
-                        prev
-                            ? {
-                                  ...prev,
-                                  interviews: prev.interviews.filter((iv) => iv.id !== interview.id),
-                              }
-                            : prev,
-                    );
-                    deleteInterview(interview.id);
-                },
-            },
-        ]);
-    };
-
-    const handleSubmitSchedule = async () => {
-        setScheduleError(null);
-
-        // Validate zoom link
-        if (scheduleType === 'zoom' && scheduleLink.trim() && !scheduleLink.trim().startsWith('http')) {
-            setScheduleError('Zoom link must start with http:// or https://');
-            return;
-        }
-
-        // Warn if datetime is in the past
-        const dt = new Date(scheduleDate);
-        const h24 =
-            scheduleAmPm === 'AM'
-                ? scheduleHour === 12
-                    ? 0
-                    : scheduleHour
-                : scheduleHour === 12
-                  ? 12
-                  : scheduleHour + 12;
-        dt.setHours(h24, scheduleMinute, 0, 0);
-
-        if (dt < new Date()) {
-            Alert.alert('Date in the past', 'The selected date and time is in the past. Continue anyway?', [
-                { text: 'Go back', style: 'cancel' },
-                { text: 'Continue', onPress: () => submitSchedule(dt) },
-            ]);
-            return;
-        }
-
-        await submitSchedule(dt);
-    };
-
-    const submitSchedule = async (dt: Date) => {
-        const isoDatetime = dt.toISOString();
-        const loc = scheduleType === 'in_person' ? scheduleLocation.trim() || null : null;
-        const link = scheduleType === 'zoom' ? scheduleLink.trim() || null : null;
-        const notes = scheduleNotes.trim() || null;
-
-        if (!user?.id) {
-            setScheduleError('Not authenticated');
-            return;
-        }
-        setIsScheduling(true);
-
-        if (editingInterview) {
-            const { data: updated, error: updErr } = await updateInterview(editingInterview.id, {
-                type: scheduleType,
-                datetime: isoDatetime,
-                location: loc,
-                zoomLink: link,
-                notes,
-                status: scheduleStatus,
-            });
-            setIsScheduling(false);
-            if (updErr || !updated) {
-                setScheduleError(updErr ?? 'Failed to update interview');
-                return;
-            }
-            setCandidate((prev) =>
-                prev
-                    ? {
-                          ...prev,
-                          interviews: prev.interviews.map((iv) => (iv.id === updated.id ? updated : iv)),
-                      }
-                    : prev,
-            );
-            closeScheduleSheet();
-            Alert.alert('Saved', 'Interview updated.');
-        } else {
-            const { data: newInterview, error: schedErr } = await scheduleInterview({
-                candidateId: candidate.id,
-                managerId: candidate.assigned_manager_id,
-                scheduledById: user.id,
-                roundNumber: candidate.interviews.length + 1,
-                type: scheduleType,
-                datetime: isoDatetime,
-                location: loc,
-                zoomLink: link,
-                notes,
-            });
-            setIsScheduling(false);
-            if (schedErr || !newInterview) {
-                setScheduleError(schedErr ?? 'Failed to schedule interview');
-                return;
-            }
-            setCandidate((prev) => (prev ? { ...prev, interviews: [newInterview, ...prev.interviews] } : prev));
-            closeScheduleSheet();
-        }
-    };
-
-    const resetScheduleForm = () => {
-        const d = new Date();
-        d.setSeconds(0, 0);
-        setScheduleDate(d);
-        setScheduleHour(10);
-        setScheduleMinute(0);
-        setScheduleAmPm('AM');
-        setScheduleType('zoom');
-        setScheduleLink('');
-        setScheduleLocation('');
-        setScheduleNotes('');
-        setScheduleError(null);
-        setScheduleStatus('scheduled');
-        setEditingInterview(null);
     };
 
     return (
@@ -769,7 +408,7 @@ export default function CandidateDetailScreen() {
                             <Ionicons name="calendar-outline" size={16} color={colors.textTertiary} />
                             <Text style={[styles.contactText, { color: colors.textSecondary }]}>
                                 Applied {formatCreatedAt(candidate.created_at)} · Updated{' '}
-                                {getTimeAgo(candidate.updated_at)}
+                                {timeAgo(candidate.updated_at)}
                             </Text>
                         </View>
                     </View>
@@ -817,7 +456,7 @@ export default function CandidateDetailScreen() {
                         label="Schedule"
                         color="#FF9500"
                         bgColor="#FFF3E0"
-                        onPress={() => setShowScheduleSheet(true)}
+                        onPress={openNewInterview}
                     />
                     <QuickAction
                         icon="create-outline"
@@ -876,16 +515,13 @@ export default function CandidateDetailScreen() {
                     )}
 
                     <TouchableOpacity
-                        style={[docStyles.addBtn, { borderColor: colors.accent, opacity: !DocumentPicker ? 0.4 : 1 }]}
-                        onPress={() => {
-                            setAddDocLabel('');
-                            setAddDocCustomLabel('');
-                            setAddDocError(null);
-                            setAddDocStep('label');
-                            setShowAddDoc(true);
-                        }}
+                        style={[
+                            docStyles.addBtn,
+                            { borderColor: colors.accent, opacity: !hasDocumentPicker ? 0.4 : 1 },
+                        ]}
+                        onPress={openAddDocSheet}
                         activeOpacity={0.7}
-                        disabled={!DocumentPicker}
+                        disabled={!hasDocumentPicker}
                     >
                         <Ionicons name="add-circle-outline" size={16} color={colors.accent} />
                         <Text style={[docStyles.addBtnText, { color: colors.accent }]}>Add Document</Text>
@@ -2054,69 +1690,6 @@ const sheetStyles = StyleSheet.create({
         marginBottom: 16,
         lineHeight: 22,
     },
-});
-
-const stepperStyles = StyleSheet.create({
-    container: { gap: 0 },
-    stepRow: { flexDirection: 'row', alignItems: 'flex-start' },
-    dotCol: { width: 24, alignItems: 'center' },
-    dot: {
-        width: 18,
-        height: 18,
-        borderRadius: 9,
-        borderWidth: 2,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    activeDotInner: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: '#FFF',
-    },
-    line: {
-        width: 2,
-        height: 18,
-    },
-    label: { fontSize: 13, marginLeft: 10, marginTop: 1 },
-});
-
-const interviewStyles = StyleSheet.create({
-    card: {
-        borderRadius: 10,
-        borderWidth: 0.5,
-        padding: 12,
-        marginBottom: 8,
-    },
-    headerRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-    },
-    roundBadge: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: '#007AFF18',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    roundText: { fontSize: 11, fontWeight: '700', color: '#007AFF' },
-    dateText: { fontSize: 14, fontWeight: '600' },
-    typeText: { fontSize: 12, marginTop: 1 },
-    statusPill: {
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 8,
-    },
-    statusText: { fontSize: 11, fontWeight: '600' },
-    detailRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginTop: 8,
-    },
-    detailText: { fontSize: 13 },
 });
 
 const schedStyles = StyleSheet.create({

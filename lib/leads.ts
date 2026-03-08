@@ -20,14 +20,8 @@ export interface CreateLeadInput {
  * `get_team_member_ids()` Postgres function (handled by RLS).
  * In agent mode, fetches only leads assigned to the current user.
  */
-export async function fetchLeads(
-    userId: string,
-    isManager: boolean,
-): Promise<{ data: Lead[]; error: string | null }> {
-    let query = supabase
-        .from('leads')
-        .select('*')
-        .order('updated_at', { ascending: false });
+export async function fetchLeads(userId: string, isManager: boolean): Promise<{ data: Lead[]; error: string | null }> {
+    let query = supabase.from('leads').select('*').order('updated_at', { ascending: false });
 
     if (!isManager) {
         query = query.eq('assigned_to', userId);
@@ -43,14 +37,8 @@ export async function fetchLeads(
 /**
  * Fetch a single lead by ID.
  */
-export async function fetchLead(
-    leadId: string,
-): Promise<{ data: Lead | null; error: string | null }> {
-    const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('id', leadId)
-        .single();
+export async function fetchLead(leadId: string): Promise<{ data: Lead | null; error: string | null }> {
+    const { data, error } = await supabase.from('leads').select('*').eq('id', leadId).single();
 
     if (error) return { data: null, error: error.message };
     return { data: data as Lead, error: null };
@@ -126,9 +114,7 @@ export async function updateLeadStatus(
 /**
  * Fetch activities for a single lead.
  */
-export async function fetchLeadActivities(
-    leadId: string,
-): Promise<{ data: LeadActivity[]; error: string | null }> {
+export async function fetchLeadActivities(leadId: string): Promise<{ data: LeadActivity[]; error: string | null }> {
     const { data, error } = await supabase
         .from('lead_activities')
         .select('*, actor:users!lead_activities_user_id_fkey(full_name)')
@@ -137,7 +123,18 @@ export async function fetchLeadActivities(
 
     if (error) return { data: [], error: error.message };
 
-    const activities = (data || []).map((item: any) => ({
+    const typedData = (data || []) as {
+        id: string;
+        lead_id: string;
+        user_id: string;
+        type: string;
+        description: string | null;
+        metadata: Record<string, any> | null;
+        created_at: string;
+        actor: { full_name: string } | null;
+    }[];
+
+    const activities: LeadActivity[] = typedData.map((item) => ({
         id: item.id,
         lead_id: item.lead_id,
         user_id: item.user_id,
@@ -160,10 +157,7 @@ export async function addLeadNote(
     userId: string,
 ): Promise<{ data: LeadActivity | null; error: string | null }> {
     // Update lead's updated_at timestamp
-    await supabase
-        .from('leads')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', leadId);
+    await supabase.from('leads').update({ updated_at: new Date().toISOString() }).eq('id', leadId);
 
     const { data, error } = await supabase
         .from('lead_activities')
@@ -192,10 +186,7 @@ export async function addLeadActivity(
     description: string | null,
     metadata: Record<string, any> = {},
 ): Promise<{ data: LeadActivity | null; error: string | null }> {
-    await supabase
-        .from('leads')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', leadId);
+    await supabase.from('leads').update({ updated_at: new Date().toISOString() }).eq('id', leadId);
 
     const { data, error } = await supabase
         .from('lead_activities')
@@ -230,7 +221,12 @@ export async function reassignLead(
         user_id: actingUserId,
         type: 'reassignment' as LeadActivityType,
         description: null,
-        metadata: { from_agent_id: fromAgentId, to_agent_id: toAgentId, from_agent_name: fromAgentName, to_agent_name: toAgentName },
+        metadata: {
+            from_agent_id: fromAgentId,
+            to_agent_id: toAgentId,
+            from_agent_name: fromAgentName,
+            to_agent_name: toAgentName,
+        },
     });
 
     return { error: null };
@@ -270,9 +266,7 @@ export async function fetchLeadStats(
     userId: string,
     isManager: boolean,
 ): Promise<{ data: LeadPipelineStats; error: string | null }> {
-    let query = supabase
-        .from('leads')
-        .select('id, status, created_at');
+    let query = supabase.from('leads').select('id, status, created_at');
 
     if (!isManager) {
         query = query.eq('assigned_to', userId);
@@ -288,22 +282,22 @@ export async function fetchLeadStats(
 
     const allLeads = leads || [];
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-    const newThisWeek = allLeads.filter(l => l.created_at >= weekAgo && l.status === 'new').length;
-    const wonCount = allLeads.filter(l => l.status === 'won').length;
-    const closedCount = allLeads.filter(l => l.status === 'won' || l.status === 'lost').length;
+    const newThisWeek = allLeads.filter((l) => l.created_at >= weekAgo && l.status === 'new').length;
+    const wonCount = allLeads.filter((l) => l.status === 'won').length;
+    const closedCount = allLeads.filter((l) => l.status === 'won' || l.status === 'lost').length;
     const conversionRate = closedCount > 0 ? Math.round((wonCount / closedCount) * 100) : 0;
-    const activeFollowUps = allLeads.filter(l =>
-        l.status === 'contacted' || l.status === 'qualified' || l.status === 'proposed'
+    const activeFollowUps = allLeads.filter(
+        (l) => l.status === 'contacted' || l.status === 'qualified' || l.status === 'proposed',
     ).length;
 
     // Build pipeline counts
     const statusCounts: Record<string, number> = {};
-    allLeads.forEach(l => {
+    allLeads.forEach((l) => {
         statusCounts[l.status] = (statusCounts[l.status] || 0) + 1;
     });
 
     const STATUSES: LeadStatus[] = ['new', 'contacted', 'qualified', 'proposed', 'won', 'lost'];
-    const pipeline = STATUSES.map(s => ({ status: s, count: statusCounts[s] || 0 }));
+    const pipeline = STATUSES.map((s) => ({ status: s, count: statusCounts[s] || 0 }));
 
     return {
         data: {
@@ -336,7 +330,19 @@ export async function fetchRecentActivities(
     if (error) return { data: [], error: error.message };
 
     // Flatten the lead name into the activity
-    const activities = (data || []).map((item: any) => ({
+    type RecentActivityRow = {
+        id: string;
+        lead_id: string;
+        user_id: string;
+        type: string;
+        description: string | null;
+        metadata: Record<string, any> | null;
+        created_at: string;
+        leads: { full_name: string; assigned_to: string } | null;
+    };
+    const typedRecentData = (data || []) as RecentActivityRow[];
+
+    const activities = typedRecentData.map((item) => ({
         id: item.id,
         lead_id: item.lead_id,
         user_id: item.user_id,
@@ -349,8 +355,8 @@ export async function fetchRecentActivities(
 
     // If not manager, filter to own leads
     if (!isManager) {
-        const filtered = activities.filter((a: any) =>
-            data?.find((d: any) => d.lead_id === a.lead_id && d.leads?.assigned_to === userId)
+        const filtered = activities.filter((a) =>
+            typedRecentData.find((d) => d.lead_id === a.lead_id && d.leads?.assigned_to === userId),
         );
         return { data: filtered, error: null };
     }

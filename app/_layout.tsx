@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
+import AppErrorBoundary from '@/components/AppErrorBoundary';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { ViewModeProvider } from '@/contexts/ViewModeContext';
@@ -81,13 +82,15 @@ function RootLayout() {
     if (!fontsLoaded) return null;
 
     return (
-        <ThemeProvider>
-            <AuthProvider>
-                <ViewModeProvider>
-                    <RootLayoutContent />
-                </ViewModeProvider>
-            </AuthProvider>
-        </ThemeProvider>
+        <AppErrorBoundary>
+            <ThemeProvider>
+                <AuthProvider>
+                    <ViewModeProvider>
+                        <RootLayoutContent />
+                    </ViewModeProvider>
+                </AuthProvider>
+            </ThemeProvider>
+        </AppErrorBoundary>
     );
 }
 

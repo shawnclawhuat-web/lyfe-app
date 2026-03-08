@@ -1,4 +1,5 @@
 import ErrorBanner from '@/components/ErrorBanner';
+import FormField from '@/components/FormField';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { createCandidate, uploadCandidateDocument, type CreateCandidateInput } from '@/lib/recruitment';
@@ -47,6 +48,8 @@ export default function AddCandidateScreen() {
     const [inviteLink, setInviteLink] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+
+    const candidateFieldStyle = { paddingHorizontal: 16, paddingVertical: 12, marginBottom: 0 } as const;
 
     const validate = (): boolean => {
         const newErrors: Record<string, string> = {};
@@ -120,6 +123,7 @@ export default function AddCandidateScreen() {
                             error={errors.name}
                             colors={colors}
                             required
+                            containerStyle={candidateFieldStyle}
                         />
                         <View style={[styles.fieldDivider, { backgroundColor: colors.border }]} />
                         <FormField
@@ -131,6 +135,7 @@ export default function AddCandidateScreen() {
                             error={errors.phone}
                             colors={colors}
                             required
+                            containerStyle={candidateFieldStyle}
                         />
                         <View style={[styles.fieldDivider, { backgroundColor: colors.border }]} />
                         <FormField
@@ -140,6 +145,7 @@ export default function AddCandidateScreen() {
                             placeholder="email@example.com"
                             keyboardType="email-address"
                             colors={colors}
+                            containerStyle={candidateFieldStyle}
                         />
                         <View style={[styles.fieldDivider, { backgroundColor: colors.border }]} />
                         <View style={styles.fieldContainer}>
@@ -269,44 +275,6 @@ export default function AddCandidateScreen() {
     );
 }
 
-function FormField({
-    label,
-    value,
-    onChangeText,
-    placeholder,
-    keyboardType,
-    error,
-    colors,
-    required,
-}: {
-    label: string;
-    value: string;
-    onChangeText: (v: string) => void;
-    placeholder: string;
-    keyboardType?: any;
-    error?: string;
-    colors: any;
-    required?: boolean;
-}) {
-    return (
-        <View style={styles.fieldContainer}>
-            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
-                {label}
-                {required && <Text style={{ color: colors.danger }}> *</Text>}
-            </Text>
-            <TextInput
-                style={[styles.fieldInput, { color: colors.textPrimary }]}
-                value={value}
-                onChangeText={onChangeText}
-                placeholder={placeholder}
-                placeholderTextColor={colors.textTertiary}
-                keyboardType={keyboardType}
-            />
-            {error && <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>}
-        </View>
-    );
-}
-
 const styles = StyleSheet.create({
     container: { flex: 1 },
     navHeader: {
@@ -339,9 +307,6 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         marginBottom: 6,
     },
-    fieldInput: {
-        fontSize: 16,
-    },
     textArea: {
         fontSize: 16,
         minHeight: 60,
@@ -350,10 +315,6 @@ const styles = StyleSheet.create({
     fieldDivider: {
         height: StyleSheet.hairlineWidth,
         marginLeft: 16,
-    },
-    errorText: {
-        fontSize: 12,
-        marginTop: 4,
     },
     infoText: {
         fontSize: 13,

@@ -1,5 +1,5 @@
 import { useTheme } from '@/contexts/ThemeContext';
-import { timeAgo } from '@/lib/utils';
+import { timeAgo } from '@/lib/dateTime';
 import { CANDIDATE_STATUS_CONFIG, type RecruitmentCandidate } from '@/types/recruitment';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
@@ -36,15 +36,11 @@ function CandidateCard({ candidate, onPress }: CandidateCardProps) {
                     <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
                         {candidate.name}
                     </Text>
-                    <Text style={[styles.phone, { color: colors.textTertiary }]}>
-                        {candidate.phone}
-                    </Text>
+                    <Text style={[styles.phone, { color: colors.textTertiary }]}>{candidate.phone}</Text>
                 </View>
 
                 <View style={[styles.statusBadge, { backgroundColor: statusConfig.color + '14' }]}>
-                    <Text style={[styles.statusText, { color: statusConfig.color }]}>
-                        {statusConfig.label}
-                    </Text>
+                    <Text style={[styles.statusText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
                 </View>
             </View>
 
@@ -70,7 +66,6 @@ function CandidateCard({ candidate, onPress }: CandidateCardProps) {
         </TouchableOpacity>
     );
 }
-
 
 export default React.memo(CandidateCard);
 

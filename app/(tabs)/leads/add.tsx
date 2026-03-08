@@ -1,4 +1,5 @@
 import ErrorBanner from '@/components/ErrorBanner';
+import FormField from '@/components/FormField';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { createLead, type CreateLeadInput } from '@/lib/leads';
@@ -111,12 +112,21 @@ export default function AddLeadScreen() {
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 keyboardVerticalOffset={100}
             >
-                <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                >
                     {/* Save Error */}
                     {saveError && <ErrorBanner message={saveError} />}
 
                     {/* Contact Info */}
-                    <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+                    <View
+                        style={[
+                            styles.card,
+                            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                        ]}
+                    >
                         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Contact Information</Text>
 
                         <FormField
@@ -152,7 +162,12 @@ export default function AddLeadScreen() {
                     </View>
 
                     {/* Source */}
-                    <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+                    <View
+                        style={[
+                            styles.card,
+                            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                        ]}
+                    >
                         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Source</Text>
                         <View style={styles.chipGroup}>
                             {SOURCES.map((s) => (
@@ -182,7 +197,12 @@ export default function AddLeadScreen() {
                     </View>
 
                     {/* Product Interest */}
-                    <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+                    <View
+                        style={[
+                            styles.card,
+                            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                        ]}
+                    >
                         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Product Interest</Text>
                         <View style={styles.chipGroup}>
                             {PRODUCTS.map((p) => (
@@ -212,10 +232,22 @@ export default function AddLeadScreen() {
                     </View>
 
                     {/* Notes */}
-                    <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+                    <View
+                        style={[
+                            styles.card,
+                            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                        ]}
+                    >
                         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Notes</Text>
                         <TextInput
-                            style={[styles.notesInput, { color: colors.textPrimary, borderColor: colors.borderLight, backgroundColor: colors.surfacePrimary }]}
+                            style={[
+                                styles.notesInput,
+                                {
+                                    color: colors.textPrimary,
+                                    borderColor: colors.borderLight,
+                                    backgroundColor: colors.surfacePrimary,
+                                },
+                            ]}
                             placeholder="Any initial notes about this lead..."
                             placeholderTextColor={colors.textTertiary}
                             value={notes}
@@ -229,12 +261,7 @@ export default function AddLeadScreen() {
             </KeyboardAvoidingView>
 
             {/* Success Modal */}
-            <Modal
-                visible={showSuccessModal}
-                transparent
-                animationType="fade"
-                onRequestClose={handleSuccessDismiss}
-            >
+            <Modal visible={showSuccessModal} transparent animationType="fade" onRequestClose={handleSuccessDismiss}>
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
                         <Ionicons name="checkmark-circle" size={48} color="#22C55E" />
@@ -252,56 +279,6 @@ export default function AddLeadScreen() {
                 </View>
             </Modal>
         </SafeAreaView>
-    );
-}
-
-// ── Reusable Form Field ──
-function FormField({
-    label,
-    value,
-    onChangeText,
-    placeholder,
-    error,
-    colors,
-    icon,
-    keyboardType,
-    autoCapitalize,
-}: {
-    label: string;
-    value: string;
-    onChangeText: (v: string) => void;
-    placeholder: string;
-    error?: string;
-    colors: any;
-    icon: string;
-    keyboardType?: 'default' | 'phone-pad' | 'email-address';
-    autoCapitalize?: 'none' | 'sentences' | 'words';
-}) {
-    return (
-        <View style={styles.fieldContainer}>
-            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>{label}</Text>
-            <View
-                style={[
-                    styles.fieldInputRow,
-                    {
-                        backgroundColor: colors.surfacePrimary,
-                        borderColor: error ? '#EF4444' : colors.borderLight,
-                    },
-                ]}
-            >
-                <Ionicons name={icon as any} size={18} color={error ? '#EF4444' : colors.textTertiary} />
-                <TextInput
-                    style={[styles.fieldInput, { color: colors.textPrimary }]}
-                    value={value}
-                    onChangeText={onChangeText}
-                    placeholder={placeholder}
-                    placeholderTextColor={colors.textTertiary}
-                    keyboardType={keyboardType}
-                    autoCapitalize={autoCapitalize}
-                />
-            </View>
-            {error && <Text style={styles.fieldError}>{error}</Text>}
-        </View>
     );
 }
 
@@ -335,19 +312,6 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     sectionTitle: { fontSize: 15, fontWeight: '700', marginBottom: 12 },
-    fieldContainer: { marginBottom: 14 },
-    fieldLabel: { fontSize: 13, fontWeight: '600', marginBottom: 6 },
-    fieldInputRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        borderRadius: 10,
-        borderWidth: 0.5,
-        paddingHorizontal: 14,
-        minHeight: 48,
-    },
-    fieldInput: { flex: 1, fontSize: 15, padding: 0 },
-    fieldError: { color: '#EF4444', fontSize: 11, marginTop: 4, fontWeight: '500' },
     chipGroup: {
         flexDirection: 'row',
         flexWrap: 'wrap',

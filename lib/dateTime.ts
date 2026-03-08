@@ -145,9 +145,13 @@ export function isEventLive(eventDate: string, startTime: string | null, endTime
 
 /** Format ISO timestamp as relative time (e.g. "now", "5m ago", "2h ago", "3d ago") */
 export function timeAgo(dateStr: string): string {
-    const diffMin = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
-    if (diffMin < 1) return 'now';
-    if (diffMin < 60) return `${diffMin}m ago`;
-    if (diffMin < 1440) return `${Math.floor(diffMin / 60)}h ago`;
-    return `${Math.floor(diffMin / 1440)}d ago`;
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return new Date(dateStr).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
 }

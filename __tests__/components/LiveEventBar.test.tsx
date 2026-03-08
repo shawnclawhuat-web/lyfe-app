@@ -23,6 +23,16 @@ jest.mock('@/hooks/useTypedRouter', () => ({
     useTypedRouter: jest.fn(),
 }));
 
+const mockUsePathname = jest.fn().mockReturnValue('/home');
+jest.mock('expo-router', () => ({
+    useRouter: jest.fn(() => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() })),
+    useLocalSearchParams: jest.fn(() => ({})),
+    useFocusEffect: jest.fn((cb: () => void) => cb()),
+    usePathname: () => mockUsePathname(),
+    Link: 'Link',
+    Tabs: { Screen: 'Screen' },
+}));
+
 const COLORS = {
     cardBackground: '#FFFFFF',
     textPrimary: '#000000',
@@ -61,6 +71,7 @@ function makeLiveEvent(overrides: Partial<AgencyEvent> = {}): AgencyEvent {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockUsePathname.mockReturnValue('/home');
     (useAuth as jest.Mock).mockReturnValue({ user: { id: 'user-1', role: 'agent' } });
     (useTheme as jest.Mock).mockReturnValue({ colors: COLORS });
     (useTypedRouter as jest.Mock).mockReturnValue({ push: mockPush, replace: jest.fn(), back: jest.fn() });
@@ -148,6 +159,17 @@ describe('LiveEventBar', () => {
 
         fireEvent.press(getByLabelText(/Live Roadshow/));
         expect(mockPush).toHaveBeenCalledWith('/(tabs)/pa/event/evt-42');
+    });
+
+    it('hides on events tab (animated off-screen, pointer events disabled)', async () => {
+        mockUsePathname.mockReturnValue('/events');
+        const liveEvent = makeLiveEvent();
+        (fetchEvents as jest.Mock).mockResolvedValue({ data: [liveEvent], error: null });
+
+        const { getByTestId } = render(<LiveEventBar />);
+        await waitFor(() => expect(fetchEvents).toHaveBeenCalled());
+        // Bar stays mounted for exit animation but is non-interactive
+        expect(getByTestId('live-event-bar').props.pointerEvents).toBe('none');
     });
 
     it('renders dot indicators for multiple live events', async () => {

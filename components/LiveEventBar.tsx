@@ -5,8 +5,9 @@ import { fetchEvents } from '@/lib/events';
 import type { AgencyEvent } from '@/types/event';
 import { useTypedRouter } from '@/hooks/useTypedRouter';
 import { Ionicons } from '@expo/vector-icons';
+import { usePathname } from 'expo-router';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AccessibilityInfo, Animated, PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const BAR_H = 64;
 const BAR_MARGIN_H = 16;
@@ -22,7 +23,9 @@ export default memo(function LiveEventBar() {
     const { colors } = useTheme();
     const { user } = useAuth();
     const router = useTypedRouter();
+    const pathname = usePathname();
     const isPa = user?.role === 'pa';
+    const onEventsTab = pathname.startsWith('/events');
 
     const [allEvents, setAllEvents] = useState<AgencyEvent[]>([]);
     const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
@@ -33,6 +36,7 @@ export default memo(function LiveEventBar() {
     const fadeAnim = useRef(new Animated.Value(1)).current;
     const entranceAnim = useRef(new Animated.Value(0)).current;
     const pulseAnim = useRef(new Animated.Value(1)).current;
+    const swipeAnim = useRef(new Animated.Value(0)).current;
 
     // Track screen reader state
     useEffect(() => {
@@ -70,7 +74,7 @@ export default memo(function LiveEventBar() {
         [allEvents, dismissedIds],
     );
 
-    const isVisible = liveEvents.length > 0;
+    const isVisible = liveEvents.length > 0 && !onEventsTab;
 
     // Clamp index when events change
     useEffect(() => {
@@ -135,6 +139,37 @@ export default memo(function LiveEventBar() {
         setDismissedIds((prev) => new Set([...prev, ...visibleIds]));
     }, [liveEvents]);
 
+    const dismissRef = useRef(handleDismiss);
+    dismissRef.current = handleDismiss;
+
+    const panResponder = useMemo(
+        () =>
+            PanResponder.create({
+                onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 10 && Math.abs(g.dx) > Math.abs(g.dy),
+                onPanResponderMove: (_, g) => {
+                    if (g.dx < 0) swipeAnim.setValue(g.dx);
+                },
+                onPanResponderRelease: (_, g) => {
+                    if (g.dx < -80) {
+                        Animated.timing(swipeAnim, {
+                            toValue: -400,
+                            duration: 200,
+                            useNativeDriver: true,
+                        }).start(() => {
+                            dismissRef.current();
+                            swipeAnim.setValue(0);
+                        });
+                    } else {
+                        Animated.spring(swipeAnim, {
+                            toValue: 0,
+                            useNativeDriver: true,
+                        }).start();
+                    }
+                },
+            }),
+        [swipeAnim],
+    );
+
     const handlePress = useCallback(
         (event: AgencyEvent) => {
             if (isPa) {
@@ -146,9 +181,8 @@ export default memo(function LiveEventBar() {
         [isPa, router],
     );
 
-    if (!isVisible && !entranceAnim) return null;
-
     const currentEvent = liveEvents[currentIndex];
+    if (!currentEvent && liveEvents.length === 0) return null;
 
     // Content slide: fades out sliding up, fades in sliding up from below
     const contentTranslateY = fadeAnim.interpolate({
@@ -156,21 +190,23 @@ export default memo(function LiveEventBar() {
         outputRange: [10, 0],
     });
 
-    const translateY = entranceAnim.interpolate({
+    const translateX = entranceAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [LIVE_BAR_TOTAL_H + 20, 0],
+        outputRange: [400, 0],
     });
 
     return (
         <Animated.View
+            {...panResponder.panHandlers}
             style={[
                 styles.wrapper,
                 {
-                    transform: [{ translateY }],
+                    transform: [{ translateX: Animated.add(translateX, swipeAnim) }],
                     opacity: entranceAnim,
                 },
             ]}
             pointerEvents={isVisible ? 'auto' : 'none'}
+            testID="live-event-bar"
             accessibilityRole="alert"
             accessibilityLabel={`${liveEvents.length} live event${liveEvents.length !== 1 ? 's' : ''} happening now`}
         >

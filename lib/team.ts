@@ -51,15 +51,12 @@ export async function fetchTeamMembers(
     }
 
     // Fetch lead stats for all members in a single query
-    const userIds = users.map((u: any) => u.id);
-    const { data: leads } = await supabase
-        .from('leads')
-        .select('assigned_to, status')
-        .in('assigned_to', userIds);
+    const userIds = (users as { id: string }[]).map((u) => u.id);
+    const { data: leads } = await supabase.from('leads').select('assigned_to, status').in('assigned_to', userIds);
 
     // Aggregate stats per user
     const statsMap: Record<string, { total: number; won: number }> = {};
-    (leads || []).forEach((lead: any) => {
+    ((leads || []) as { assigned_to: string; status: string }[]).forEach((lead) => {
         if (!statsMap[lead.assigned_to]) {
             statsMap[lead.assigned_to] = { total: 0, won: 0 };
         }
@@ -69,7 +66,18 @@ export async function fetchTeamMembers(
         }
     });
 
-    const members: TeamMember[] = users.map((u: any) => {
+    const members: TeamMember[] = (
+        users as {
+            id: string;
+            full_name: string;
+            role: string;
+            phone: string | null;
+            email: string | null;
+            avatar_url: string | null;
+            is_active: boolean;
+            created_at: string;
+        }[]
+    ).map((u) => {
         const stats = statsMap[u.id] || { total: 0, won: 0 };
         return {
             id: u.id,

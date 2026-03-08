@@ -1,12 +1,7 @@
 /**
  * Recruitment service — Supabase CRUD for candidates & interviews
  */
-import type {
-    CandidateDocument,
-    CandidateStatus,
-    Interview,
-    RecruitmentCandidate,
-} from '@/types/recruitment';
+import type { CandidateDocument, CandidateStatus, Interview, RecruitmentCandidate } from '@/types/recruitment';
 import type { User } from '@/types/database';
 import { supabase } from './supabase';
 
@@ -29,10 +24,7 @@ export async function fetchCandidates(
     isManager: boolean,
 ): Promise<{ data: RecruitmentCandidate[]; error: string | null }> {
     // Fetch candidates
-    let query = supabase
-        .from('candidates')
-        .select('*')
-        .order('updated_at', { ascending: false });
+    let query = supabase.from('candidates').select('*').order('updated_at', { ascending: false });
 
     if (!isManager) {
         query = query.eq('assigned_manager_id', userId);
@@ -41,21 +33,35 @@ export async function fetchCandidates(
     const { data: rows, error } = await query;
     if (error) return { data: [], error: error.message };
 
+    const typedRows = (rows || []) as {
+        id: string;
+        name: string;
+        phone: string;
+        email: string | null;
+        status: string;
+        assigned_manager_id: string;
+        created_by_id: string;
+        invite_token: string | null;
+        notes: string | null;
+        resume_url: string | null;
+        created_at: string;
+        updated_at: string;
+    }[];
+
     // Fetch manager names for display
-    const managerIds = [...new Set((rows || []).map((r: any) => r.assigned_manager_id))];
+    const managerIds = [...new Set(typedRows.map((r) => r.assigned_manager_id))];
     let managerMap: Record<string, string> = {};
     if (managerIds.length > 0) {
-        const { data: managers } = await supabase
-            .from('users')
-            .select('id, full_name')
-            .in('id', managerIds);
+        const { data: managers } = await supabase.from('users').select('id, full_name').in('id', managerIds);
         if (managers) {
-            managers.forEach((m: any) => { managerMap[m.id] = m.full_name; });
+            (managers as { id: string; full_name: string }[]).forEach((m) => {
+                managerMap[m.id] = m.full_name;
+            });
         }
     }
 
     // Fetch interviews for all candidates in one query
-    const candidateIds = (rows || []).map((r: any) => r.id);
+    const candidateIds = typedRows.map((r) => r.id);
     let interviewMap: Record<string, Interview[]> = {};
     if (candidateIds.length > 0) {
         const { data: interviews } = await supabase
@@ -64,15 +70,15 @@ export async function fetchCandidates(
             .in('candidate_id', candidateIds)
             .order('datetime', { ascending: false });
         if (interviews) {
-            interviews.forEach((iv: any) => {
+            (interviews as Interview[]).forEach((iv) => {
                 if (!interviewMap[iv.candidate_id]) interviewMap[iv.candidate_id] = [];
-                interviewMap[iv.candidate_id].push(iv as Interview);
+                interviewMap[iv.candidate_id].push(iv);
             });
         }
     }
 
     // Map to RecruitmentCandidate shape
-    const candidates: RecruitmentCandidate[] = (rows || []).map((r: any) => ({
+    const candidates: RecruitmentCandidate[] = typedRows.map((r) => ({
         id: r.id,
         name: r.name,
         phone: r.phone,
@@ -98,11 +104,7 @@ export async function fetchCandidates(
 export async function fetchCandidate(
     candidateId: string,
 ): Promise<{ data: RecruitmentCandidate | null; error: string | null }> {
-    const { data: row, error } = await supabase
-        .from('candidates')
-        .select('*')
-        .eq('id', candidateId)
-        .single();
+    const { data: row, error } = await supabase.from('candidates').select('*').eq('id', candidateId).single();
 
     if (error) return { data: null, error: error.message };
 
@@ -153,7 +155,7 @@ export async function createCandidate(
 ): Promise<{ data: RecruitmentCandidate | null; inviteToken: string | null; error: string | null }> {
     // Generate a random invite token
     const token = `inv_${Array.from({ length: 20 }, () =>
-        'abcdefghijklmnopqrstuvwxyz0123456789'.charAt(Math.floor(Math.random() * 36))
+        'abcdefghijklmnopqrstuvwxyz0123456789'.charAt(Math.floor(Math.random() * 36)),
     ).join('')}`;
 
     const { data: row, error } = await supabase
@@ -174,11 +176,7 @@ export async function createCandidate(
     if (error) return { data: null, inviteToken: null, error: error.message };
 
     // Fetch manager name for the response
-    const { data: mgr } = await supabase
-        .from('users')
-        .select('full_name')
-        .eq('id', userId)
-        .single();
+    const { data: mgr } = await supabase.from('users').select('full_name').eq('id', userId).single();
 
     const candidate: RecruitmentCandidate = {
         id: row.id,
@@ -207,10 +205,7 @@ export async function updateCandidateStatus(
     candidateId: string,
     newStatus: CandidateStatus,
 ): Promise<{ error: string | null }> {
-    const { error } = await supabase
-        .from('candidates')
-        .update({ status: newStatus })
-        .eq('id', candidateId);
+    const { error } = await supabase.from('candidates').update({ status: newStatus }).eq('id', candidateId);
 
     if (error) return { error: error.message };
     return { error: null };
@@ -240,9 +235,9 @@ export async function uploadCandidateResume(
 
         if (uploadError) return { url: null, error: uploadError.message };
 
-        const { data: { publicUrl } } = supabase.storage
-            .from('candidate-resumes')
-            .getPublicUrl(filePath);
+        const {
+            data: { publicUrl },
+        } = supabase.storage.from('candidate-resumes').getPublicUrl(filePath);
 
         const { data: updated, error: updateError } = await supabase
             .from('candidates')
@@ -251,7 +246,8 @@ export async function uploadCandidateResume(
             .select('id');
 
         if (updateError) return { url: null, error: updateError.message };
-        if (!updated || updated.length === 0) return { url: null, error: 'Permission denied: could not save resume URL' };
+        if (!updated || updated.length === 0)
+            return { url: null, error: 'Permission denied: could not save resume URL' };
 
         return { url: publicUrl, error: null };
     } catch (err: any) {
@@ -369,7 +365,9 @@ export async function syncAgentToMKTR(candidate: {
     }
 
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+            data: { session },
+        } = await supabase.auth.getSession();
         if (!session?.access_token) {
             if (__DEV__) console.warn('Cannot sync agent to MKTR: no active session');
             return { success: false, error: 'No active session' };
@@ -380,7 +378,7 @@ export async function syncAgentToMKTR(candidate: {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.access_token}`,
+                Authorization: `Bearer ${session.access_token}`,
             },
             body: JSON.stringify({
                 email: candidate.email,
@@ -438,9 +436,9 @@ export async function uploadCandidateDocument(
 
         if (uploadError) return { data: null, error: uploadError.message };
 
-        const { data: { publicUrl } } = supabase.storage
-            .from('candidate-resumes')
-            .getPublicUrl(filePath);
+        const {
+            data: { publicUrl },
+        } = supabase.storage.from('candidate-resumes').getPublicUrl(filePath);
 
         const { data: row, error: insertError } = await supabase
             .from('candidate_documents')
@@ -456,13 +454,8 @@ export async function uploadCandidateDocument(
     }
 }
 
-export async function deleteCandidateDocument(
-    documentId: string,
-): Promise<{ error: string | null }> {
-    const { error } = await supabase
-        .from('candidate_documents')
-        .delete()
-        .eq('id', documentId);
+export async function deleteCandidateDocument(documentId: string): Promise<{ error: string | null }> {
+    const { error } = await supabase.from('candidate_documents').delete().eq('id', documentId);
 
     if (error) return { error: error.message };
     return { error: null };
@@ -472,11 +465,8 @@ export async function deleteCandidateDocument(
 
 /** Fetch manager IDs assigned to a PA */
 export async function fetchPAManagerIds(paId: string): Promise<string[]> {
-    const { data } = await supabase
-        .from('pa_manager_assignments')
-        .select('manager_id')
-        .eq('pa_id', paId);
-    return (data || []).map((a: any) => a.manager_id);
+    const { data } = await supabase.from('pa_manager_assignments').select('manager_id').eq('pa_id', paId);
+    return (data || []).map((a: { manager_id: string }) => a.manager_id);
 }
 
 /** Fetch managers (with profile info) assigned to a PA */
@@ -485,7 +475,7 @@ export async function fetchPAManagers(paId: string): Promise<User[]> {
         .from('pa_manager_assignments')
         .select('manager:users!pa_manager_assignments_manager_id_fkey(id, full_name, role)')
         .eq('pa_id', paId);
-    return (data as any[] || []).map(r => r.manager).filter(Boolean);
+    return ((data || []) as { manager: User | null }[]).map((r) => r.manager).filter(Boolean) as User[];
 }
 
 /** Count candidates across a set of manager IDs */
