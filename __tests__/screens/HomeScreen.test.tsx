@@ -18,6 +18,14 @@ jest.mock('@/lib/supabase');
 jest.mock('@/contexts/AuthContext');
 jest.mock('@/contexts/ThemeContext');
 jest.mock('@/contexts/ViewModeContext');
+jest.mock('@/contexts/NotificationContext', () => ({
+    useNotifications: () => ({
+        unreadCount: 0,
+        refreshUnreadCount: jest.fn(),
+        markAsRead: jest.fn(),
+        markAllAsRead: jest.fn(),
+    }),
+}));
 jest.mock('@/hooks/useTypedRouter');
 jest.mock('@/lib/leads');
 jest.mock('@/lib/events');

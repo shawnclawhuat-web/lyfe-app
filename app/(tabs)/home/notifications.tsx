@@ -1,0 +1,233 @@
+import ErrorBanner from '@/components/ErrorBanner';
+import ScreenHeader from '@/components/ScreenHeader';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { timeAgo } from '@/lib/dateTime';
+import { fetchNotifications } from '@/lib/notifications';
+import { NOTIFICATION_TYPE_CONFIG, type AppNotification, type NotificationType } from '@/types/notification';
+import { useTypedRouter } from '@/hooks/useTypedRouter';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    FlatList,
+    RefreshControl,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+
+export default function NotificationsScreen() {
+    const { colors } = useTheme();
+    const { user } = useAuth();
+    const router = useTypedRouter();
+    const { unreadCount, markAsRead, markAllAsRead } = useNotifications();
+
+    const [notifications, setNotifications] = useState<AppNotification[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [page, setPage] = useState(0);
+    const [hasMore, setHasMore] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+
+    const loadNotifications = useCallback(
+        async (pageNum = 0, append = false) => {
+            if (!user?.id) return;
+            const { data, error: err, hasMore: more } = await fetchNotifications(user.id, pageNum);
+            if (err) {
+                setError(err);
+            } else {
+                setNotifications((prev) => (append ? [...prev, ...data] : data));
+                setHasMore(more);
+                setError(null);
+            }
+        },
+        [user?.id],
+    );
+
+    useEffect(() => {
+        setLoading(true);
+        loadNotifications(0).finally(() => setLoading(false));
+    }, [loadNotifications]);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        setPage(0);
+        await loadNotifications(0);
+        setRefreshing(false);
+    }, [loadNotifications]);
+
+    const onEndReached = useCallback(async () => {
+        if (!hasMore || loadingMore) return;
+        setLoadingMore(true);
+        const nextPage = page + 1;
+        setPage(nextPage);
+        await loadNotifications(nextPage, true);
+        setLoadingMore(false);
+    }, [hasMore, loadingMore, page, loadNotifications]);
+
+    const handleTap = useCallback(
+        async (notification: AppNotification) => {
+            if (!notification.is_read) {
+                await markAsRead(notification.id);
+                setNotifications((prev) => prev.map((n) => (n.id === notification.id ? { ...n, is_read: true } : n)));
+            }
+            const data = notification.data as Record<string, string> | null;
+            if (data?.route) {
+                router.push(data.route);
+            }
+        },
+        [markAsRead, router],
+    );
+
+    const handleMarkAllRead = useCallback(async () => {
+        await markAllAsRead();
+        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    }, [markAllAsRead]);
+
+    const renderItem = useCallback(
+        ({ item }: { item: AppNotification }) => {
+            const typeConfig = NOTIFICATION_TYPE_CONFIG[item.type as NotificationType] || {
+                icon: 'notifications-outline',
+                label: 'Notification',
+            };
+            return (
+                <TouchableOpacity
+                    style={[
+                        styles.row,
+                        {
+                            backgroundColor: item.is_read ? colors.cardBackground : colors.accentLight,
+                        },
+                    ]}
+                    onPress={() => handleTap(item)}
+                    activeOpacity={0.7}
+                >
+                    <View
+                        style={[
+                            styles.iconCircle,
+                            { backgroundColor: item.is_read ? colors.border : colors.accentLight },
+                        ]}
+                    >
+                        <Ionicons name={typeConfig.icon as any} size={18} color={colors.accent} />
+                    </View>
+                    <View style={styles.rowContent}>
+                        <Text style={[styles.rowTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                            {item.title}
+                        </Text>
+                        {item.body ? (
+                            <Text style={[styles.rowBody, { color: colors.textSecondary }]} numberOfLines={2}>
+                                {item.body}
+                            </Text>
+                        ) : null}
+                        <Text style={[styles.rowTime, { color: colors.textTertiary }]}>{timeAgo(item.created_at)}</Text>
+                    </View>
+                    {!item.is_read && <View style={[styles.unreadDot, { backgroundColor: colors.accent }]} />}
+                </TouchableOpacity>
+            );
+        },
+        [colors, handleTap],
+    );
+
+    const keyExtractor = useCallback((item: AppNotification) => item.id, []);
+
+    return (
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <ScreenHeader
+                title="Notifications"
+                showBack
+                backLabel="Home"
+                rightAction={
+                    unreadCount > 0 ? (
+                        <TouchableOpacity
+                            onPress={handleMarkAllRead}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                            <Text style={[styles.markAllBtn, { color: colors.accent }]}>Mark All Read</Text>
+                        </TouchableOpacity>
+                    ) : undefined
+                }
+            />
+
+            {error && <ErrorBanner message={error} onRetry={onRefresh} onDismiss={() => setError(null)} />}
+
+            {loading ? (
+                <View style={styles.centered}>
+                    <ActivityIndicator size="large" color={colors.accent} />
+                </View>
+            ) : (
+                <FlatList
+                    data={notifications}
+                    renderItem={renderItem}
+                    keyExtractor={keyExtractor}
+                    contentContainerStyle={notifications.length === 0 ? styles.emptyContainer : styles.listContent}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
+                    }
+                    onEndReached={onEndReached}
+                    onEndReachedThreshold={0.3}
+                    ListEmptyComponent={
+                        <View style={styles.emptyState}>
+                            <Ionicons name="notifications-off-outline" size={48} color={colors.textTertiary} />
+                            <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>No Notifications</Text>
+                            <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
+                                You're all caught up! Notifications will appear here when there's something new.
+                            </Text>
+                        </View>
+                    }
+                    ListFooterComponent={
+                        loadingMore ? (
+                            <View style={styles.footer}>
+                                <ActivityIndicator size="small" color={colors.accent} />
+                            </View>
+                        ) : null
+                    }
+                />
+            )}
+        </SafeAreaView>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: { flex: 1 },
+    listContent: { paddingBottom: 40 },
+    centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    emptyContainer: { flex: 1 },
+    emptyState: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 40,
+        gap: 8,
+    },
+    emptyTitle: { fontSize: 17, fontWeight: '600', marginTop: 8 },
+    emptySubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
+    markAllBtn: { fontSize: 14, fontWeight: '600' },
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        gap: 12,
+    },
+    iconCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    rowContent: { flex: 1 },
+    rowTitle: { fontSize: 15, fontWeight: '600' },
+    rowBody: { fontSize: 13, marginTop: 2, lineHeight: 18 },
+    rowTime: { fontSize: 12, marginTop: 4 },
+    unreadDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+    },
+    footer: { paddingVertical: 16, alignItems: 'center' },
+});

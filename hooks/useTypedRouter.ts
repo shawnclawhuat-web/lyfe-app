@@ -4,6 +4,7 @@ type TabRoute =
     | '/(tabs)/home'
     | '/(tabs)/home/analytics'
     | '/(tabs)/home/pipeline'
+    | '/(tabs)/home/notifications'
     | '/(tabs)/exams'
     | `/(tabs)/exams/take/${string}`
     | `/(tabs)/exams/results/${string}`

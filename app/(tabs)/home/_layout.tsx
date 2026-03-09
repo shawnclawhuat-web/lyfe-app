@@ -15,6 +15,7 @@ export default function HomeLayout() {
             <Stack.Screen name="index" />
             <Stack.Screen name="analytics" />
             <Stack.Screen name="pipeline" />
+            <Stack.Screen name="notifications" />
         </Stack>
     );
 }

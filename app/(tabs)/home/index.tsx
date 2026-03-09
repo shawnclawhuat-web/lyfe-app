@@ -4,6 +4,7 @@ import LyfeLogo from '@/components/LyfeLogo';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { useViewMode } from '@/contexts/ViewModeContext';
 import {
     getBiometryType,
@@ -96,6 +97,7 @@ export default function HomeScreen() {
     const { colors } = useTheme();
     const { user, enableBiometrics } = useAuth();
     const { viewMode, canToggle } = useViewMode();
+    const { unreadCount } = useNotifications();
     const router = useTypedRouter();
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -225,21 +227,37 @@ export default function HomeScreen() {
                 title="Lyfe"
                 titleElement={<LyfeLogo size="sm" />}
                 rightAction={
-                    <TouchableOpacity
-                        style={styles.avatarBtn}
-                        onPress={() => router.push('/(tabs)/profile')}
-                        activeOpacity={0.7}
-                        accessibilityRole="button"
-                        accessibilityLabel="Go to profile"
-                    >
-                        <Avatar
-                            name={user?.full_name || '?'}
-                            avatarUrl={user?.avatar_url}
-                            size={44}
-                            backgroundColor={colors.accentLight}
-                            textColor={colors.accent}
-                        />
-                    </TouchableOpacity>
+                    <View style={styles.headerRight}>
+                        <TouchableOpacity
+                            onPress={() => router.push('/(tabs)/home/notifications')}
+                            activeOpacity={0.7}
+                            accessibilityRole="button"
+                            accessibilityLabel="Notifications"
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                            <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
+                            {unreadCount > 0 && (
+                                <View style={[styles.badge, { backgroundColor: colors.error }]}>
+                                    <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.avatarBtn}
+                            onPress={() => router.push('/(tabs)/profile')}
+                            activeOpacity={0.7}
+                            accessibilityRole="button"
+                            accessibilityLabel="Go to profile"
+                        >
+                            <Avatar
+                                name={user?.full_name || '?'}
+                                avatarUrl={user?.avatar_url}
+                                size={44}
+                                backgroundColor={colors.accentLight}
+                                textColor={colors.accent}
+                            />
+                        </TouchableOpacity>
+                    </View>
                 }
             />
             <ScrollView
@@ -806,9 +824,31 @@ const styles = StyleSheet.create({
     greetingText: { fontSize: 15, fontWeight: '400', paddingHorizontal: 20, marginBottom: 4 },
 
     // Header
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+    },
     avatarBtn: {
         borderRadius: 22,
         overflow: 'hidden',
+    },
+    badge: {
+        position: 'absolute',
+        top: -4,
+        right: -6,
+        minWidth: 16,
+        height: 16,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 3,
+    },
+    badgeText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: '700',
+        lineHeight: 12,
     },
 
     // Shared Section Styles

@@ -8,6 +8,7 @@ import 'react-native-reanimated';
 import AppErrorBoundary from '@/components/AppErrorBoundary';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ViewModeProvider } from '@/contexts/ViewModeContext';
 import { initSentry, Sentry } from '@/lib/sentry';
 
@@ -95,7 +96,9 @@ function RootLayout() {
             <ThemeProvider>
                 <AuthProvider>
                     <ViewModeProvider>
-                        <RootLayoutContent />
+                        <NotificationProvider>
+                            <RootLayoutContent />
+                        </NotificationProvider>
                     </ViewModeProvider>
                 </AuthProvider>
             </ThemeProvider>

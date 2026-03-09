@@ -15,6 +15,7 @@ export type User = Tables<'users'> & {
 };
 export type PaManagerAssignment = Tables<'pa_manager_assignments'>;
 export type InviteToken = Tables<'invite_tokens'>;
+export type Notification = Tables<'notifications'>;
 
 // ── Re-export useful enum types ──
 
