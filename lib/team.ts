@@ -140,3 +140,153 @@ export async function fetchTeamMember(
 
     return { member, leads: leadsList, error: null };
 }
+
+// ── Team Workflow Functions ───────────────────────────────────
+
+export interface AgentPerformance {
+    agentId: string;
+    agentName: string;
+    leadsClosed: number;
+    leadsWon: number;
+    leadsLost: number;
+    activitiesLogged: number;
+}
+
+export interface TeamPerformanceResult {
+    agents: AgentPerformance[];
+    totalClosed: number;
+    totalActivities: number;
+}
+
+/**
+ * Get all active agents reporting to a manager.
+ */
+export async function getTeamMembers(
+    managerId: string,
+): Promise<{ data: { id: string; full_name: string; role: string; email: string | null; phone: string | null }[]; error: string | null }> {
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .select('id, full_name, role, email, phone')
+            .eq('reports_to', managerId)
+            .eq('is_active', true)
+            .order('full_name', { ascending: true });
+
+        if (error) return { data: [], error: error.message };
+        return {
+            data: (data || []) as { id: string; full_name: string; role: string; email: string | null; phone: string | null }[],
+            error: null,
+        };
+    } catch (err) {
+        return { data: [], error: err instanceof Error ? err.message : 'Unknown error fetching team members' };
+    }
+}
+
+/**
+ * Get performance metrics for all agents under a manager within a date range.
+ * Returns leads closed (won + lost) and activities logged per agent.
+ */
+export async function getTeamPerformance(
+    managerId: string,
+    dateRange: { start: string; end: string },
+): Promise<{ data: TeamPerformanceResult; error: string | null }> {
+    const emptyResult: TeamPerformanceResult = { agents: [], totalClosed: 0, totalActivities: 0 };
+
+    try {
+        // Get team agents
+        const { data: agents, error: agentsError } = await supabase
+            .from('users')
+            .select('id, full_name')
+            .eq('reports_to', managerId)
+            .eq('is_active', true);
+
+        if (agentsError) return { data: emptyResult, error: agentsError.message };
+
+        const agentList = (agents || []) as { id: string; full_name: string }[];
+        if (agentList.length === 0) return { data: emptyResult, error: null };
+
+        const agentIds = agentList.map((a) => a.id);
+
+        // Fetch leads closed in the date range
+        const { data: leads, error: leadsError } = await supabase
+            .from('leads')
+            .select('assigned_to, status')
+            .in('assigned_to', agentIds)
+            .in('status', ['won', 'lost'])
+            .gte('updated_at', dateRange.start)
+            .lte('updated_at', dateRange.end);
+
+        if (leadsError) return { data: emptyResult, error: leadsError.message };
+
+        // Fetch activities in the date range
+        const { data: activities, error: activitiesError } = await supabase
+            .from('lead_activities')
+            .select('user_id')
+            .in('user_id', agentIds)
+            .gte('created_at', dateRange.start)
+            .lte('created_at', dateRange.end);
+
+        if (activitiesError) return { data: emptyResult, error: activitiesError.message };
+
+        const leadsList = (leads || []) as { assigned_to: string; status: string }[];
+        const activityList = (activities || []) as { user_id: string }[];
+
+        // Aggregate per agent
+        const agentPerf: AgentPerformance[] = agentList.map((agent) => {
+            const agentLeads = leadsList.filter((l) => l.assigned_to === agent.id);
+            const agentActivities = activityList.filter((a) => a.user_id === agent.id);
+
+            return {
+                agentId: agent.id,
+                agentName: agent.full_name,
+                leadsClosed: agentLeads.length,
+                leadsWon: agentLeads.filter((l) => l.status === 'won').length,
+                leadsLost: agentLeads.filter((l) => l.status === 'lost').length,
+                activitiesLogged: agentActivities.length,
+            };
+        });
+
+        return {
+            data: {
+                agents: agentPerf,
+                totalClosed: leadsList.length,
+                totalActivities: activityList.length,
+            },
+            error: null,
+        };
+    } catch (err) {
+        return { data: emptyResult, error: err instanceof Error ? err.message : 'Unknown error fetching performance' };
+    }
+}
+
+/**
+ * Send an invite to an agent to join a manager's team.
+ * Creates an invite_tokens record that the agent can use to register.
+ */
+export async function inviteAgent(
+    email: string,
+    managerId: string,
+): Promise<{ data: { token: string } | null; error: string | null }> {
+    try {
+        // Generate a simple token
+        const token = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+
+        const { data, error } = await supabase
+            .from('invite_tokens')
+            .insert({
+                token,
+                email,
+                invited_by: managerId,
+                role: 'agent',
+                expires_at: expiresAt,
+            })
+            .select('token')
+            .single();
+
+        if (error) return { data: null, error: error.message };
+        return { data: { token: (data as { token: string }).token }, error: null };
+    } catch (err) {
+        return { data: null, error: err instanceof Error ? err.message : 'Unknown error sending invite' };
+    }
+}

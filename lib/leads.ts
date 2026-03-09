@@ -404,6 +404,200 @@ export interface ManagerDashboardStats {
     agentsManaged: number;
 }
 
+// ── Agent / Manager Workflow Functions ────────────────────────
+
+/**
+ * Assign a lead to a specific agent. Used by managers to distribute leads.
+ * Logs a reassignment activity when the lead was previously assigned to someone else.
+ */
+export async function assignLead(
+    leadId: string,
+    agentId: string,
+    actingUserId: string,
+): Promise<{ error: string | null }> {
+    try {
+        const { data: existing, error: fetchError } = await supabase
+            .from('leads')
+            .select('assigned_to')
+            .eq('id', leadId)
+            .single();
+
+        if (fetchError) return { error: fetchError.message };
+
+        const { error: updateError } = await supabase
+            .from('leads')
+            .update({ assigned_to: agentId, updated_at: new Date().toISOString() })
+            .eq('id', leadId);
+
+        if (updateError) return { error: updateError.message };
+
+        const previousAgent = (existing as { assigned_to: string | null })?.assigned_to;
+        await supabase.from('lead_activities').insert({
+            lead_id: leadId,
+            user_id: actingUserId,
+            type: 'reassignment' as LeadActivityType,
+            description: previousAgent ? 'Lead reassigned by manager' : 'Lead assigned by manager',
+            metadata: {
+                from_agent_id: previousAgent || null,
+                to_agent_id: agentId,
+            },
+        });
+
+        return { error: null };
+    } catch (err) {
+        return { error: err instanceof Error ? err.message : 'Unknown error assigning lead' };
+    }
+}
+
+/**
+ * Get all leads assigned to a specific agent, ordered by most recently updated.
+ */
+export async function getLeadsByAgent(
+    agentId: string,
+): Promise<{ data: Lead[]; error: string | null }> {
+    try {
+        const { data, error } = await supabase
+            .from('leads')
+            .select('*')
+            .eq('assigned_to', agentId)
+            .order('updated_at', { ascending: false });
+
+        if (error) return { data: [], error: error.message };
+        return { data: (data || []) as Lead[], error: null };
+    } catch (err) {
+        return { data: [], error: err instanceof Error ? err.message : 'Unknown error fetching leads' };
+    }
+}
+
+/**
+ * Update a lead's status to progress it through the pipeline.
+ * Logs a status_change activity with from/to metadata.
+ */
+export async function updateLeadStage(
+    leadId: string,
+    newStage: LeadStatus,
+    userId: string,
+): Promise<{ error: string | null }> {
+    try {
+        // Fetch current status for the activity log
+        const { data: existing, error: fetchError } = await supabase
+            .from('leads')
+            .select('status')
+            .eq('id', leadId)
+            .single();
+
+        if (fetchError) return { error: fetchError.message };
+
+        const oldStage = (existing as { status: LeadStatus }).status;
+
+        const { error: updateError } = await supabase
+            .from('leads')
+            .update({ status: newStage, updated_at: new Date().toISOString() })
+            .eq('id', leadId);
+
+        if (updateError) return { error: updateError.message };
+
+        await supabase.from('lead_activities').insert({
+            lead_id: leadId,
+            user_id: userId,
+            type: 'status_change' as LeadActivityType,
+            description: `Stage updated from ${oldStage} to ${newStage}`,
+            metadata: { from_status: oldStage, to_status: newStage },
+        });
+
+        return { error: null };
+    } catch (err) {
+        return { error: err instanceof Error ? err.message : 'Unknown error updating lead stage' };
+    }
+}
+
+/**
+ * Manager dashboard view: count of leads by stage plus recent activity for the team.
+ */
+export async function getTeamLeadSummary(
+    managerId: string,
+): Promise<{
+    data: {
+        byStage: { stage: LeadStatus; count: number }[];
+        recentActivity: { lead_id: string; lead_name: string; type: string; created_at: string }[];
+        totalLeads: number;
+    };
+    error: string | null;
+}> {
+    const emptyResult = {
+        data: { byStage: [], recentActivity: [], totalLeads: 0 },
+        error: null as string | null,
+    };
+
+    try {
+        // Get team agent IDs
+        const { data: agents, error: agentsError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('reports_to', managerId)
+            .eq('role', 'agent')
+            .eq('is_active', true);
+
+        if (agentsError) return { ...emptyResult, error: agentsError.message };
+
+        const agentIds = ((agents || []) as { id: string }[]).map((a) => a.id);
+        if (agentIds.length === 0) return emptyResult;
+
+        // Fetch all team leads
+        const { data: leads, error: leadsError } = await supabase
+            .from('leads')
+            .select('id, status, full_name')
+            .in('assigned_to', agentIds);
+
+        if (leadsError) return { ...emptyResult, error: leadsError.message };
+
+        const allLeads = (leads || []) as { id: string; status: LeadStatus; full_name: string }[];
+
+        // Count by stage
+        const stageCounts: Record<string, number> = {};
+        allLeads.forEach((l) => {
+            stageCounts[l.status] = (stageCounts[l.status] || 0) + 1;
+        });
+
+        const STATUSES: LeadStatus[] = ['new', 'contacted', 'qualified', 'proposed', 'won', 'lost'];
+        const byStage = STATUSES.map((s) => ({ stage: s, count: stageCounts[s] || 0 }));
+
+        // Fetch recent activities for team leads
+        const leadIds = allLeads.map((l) => l.id);
+        const leadNameMap: Record<string, string> = {};
+        allLeads.forEach((l) => {
+            leadNameMap[l.id] = l.full_name;
+        });
+
+        let recentActivity: { lead_id: string; lead_name: string; type: string; created_at: string }[] = [];
+
+        if (leadIds.length > 0) {
+            const { data: activities } = await supabase
+                .from('lead_activities')
+                .select('lead_id, type, created_at')
+                .in('lead_id', leadIds)
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            recentActivity = ((activities || []) as { lead_id: string; type: string; created_at: string }[]).map(
+                (a) => ({
+                    lead_id: a.lead_id,
+                    lead_name: leadNameMap[a.lead_id] || 'Unknown',
+                    type: a.type,
+                    created_at: a.created_at,
+                }),
+            );
+        }
+
+        return {
+            data: { byStage, recentActivity, totalLeads: allLeads.length },
+            error: null,
+        };
+    } catch (err) {
+        return { ...emptyResult, error: err instanceof Error ? err.message : 'Unknown error fetching team summary' };
+    }
+}
+
 /**
  * Fetch extra stats for the manager dashboard (candidate count, agent count).
  */

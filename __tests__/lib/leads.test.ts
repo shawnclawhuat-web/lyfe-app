@@ -16,6 +16,10 @@ import {
     fetchLeadStats,
     fetchRecentActivities,
     fetchManagerDashboardStats,
+    assignLead,
+    getLeadsByAgent,
+    updateLeadStage,
+    getTeamLeadSummary,
 } from '@/lib/leads';
 
 jest.mock('@/lib/supabase');
@@ -475,5 +479,160 @@ describe('fetchManagerDashboardStats', () => {
         const result = await fetchManagerDashboardStats('dir-1', 'director');
         expect(result.data.activeCandidates).toBe(0);
         expect(result.data.agentsManaged).toBe(0);
+    });
+});
+
+// ── assignLead ──
+
+describe('assignLead', () => {
+    it('assigns lead to agent and logs activity', async () => {
+        const leadsChain = mockSupa.__getChain('leads');
+        mockResolve(leadsChain, { data: { assigned_to: 'agent-1' }, error: null });
+
+        const activitiesChain = mockSupa.__getChain('lead_activities');
+        mockResolve(activitiesChain, { error: null });
+
+        const result = await assignLead('lead-1', 'agent-2', 'mgr-1');
+        expect(result.error).toBeNull();
+        expect(mockSupa.from).toHaveBeenCalledWith('lead_activities');
+    });
+
+    it('returns error when fetch fails', async () => {
+        const chain = mockSupa.__getChain('leads');
+        mockResolve(chain, { data: null, error: { message: 'Not found' } });
+
+        const result = await assignLead('bad-id', 'agent-1', 'mgr-1');
+        expect(result.error).toBe('Not found');
+    });
+
+    it('returns error when update fails', async () => {
+        const chain = mockSupa.__getChain('leads');
+        // First call returns existing data, second call returns update error
+        // Since proxy mock resolves the same for all calls on same chain,
+        // we simulate the update error case
+        mockResolve(chain, { error: { message: 'Update failed' } });
+
+        const result = await assignLead('lead-1', 'agent-2', 'mgr-1');
+        expect(result.error).toBe('Update failed');
+    });
+});
+
+// ── getLeadsByAgent ──
+
+describe('getLeadsByAgent', () => {
+    it('returns leads for a specific agent', async () => {
+        const chain = mockSupa.__getChain('leads');
+        mockResolve(chain, { data: [LEAD, { ...LEAD, id: 'lead-2' }], error: null });
+
+        const result = await getLeadsByAgent('agent-1');
+        expect(result.error).toBeNull();
+        expect(result.data).toHaveLength(2);
+    });
+
+    it('returns empty array when agent has no leads', async () => {
+        const chain = mockSupa.__getChain('leads');
+        mockResolve(chain, { data: [], error: null });
+
+        const result = await getLeadsByAgent('agent-1');
+        expect(result.error).toBeNull();
+        expect(result.data).toEqual([]);
+    });
+
+    it('returns error on failure', async () => {
+        const chain = mockSupa.__getChain('leads');
+        mockResolve(chain, { data: null, error: { message: 'DB error' } });
+
+        const result = await getLeadsByAgent('agent-1');
+        expect(result.error).toBe('DB error');
+        expect(result.data).toEqual([]);
+    });
+});
+
+// ── updateLeadStage ──
+
+describe('updateLeadStage', () => {
+    it('updates stage and logs status_change activity', async () => {
+        const leadsChain = mockSupa.__getChain('leads');
+        mockResolve(leadsChain, { data: { status: 'new' }, error: null });
+
+        const activitiesChain = mockSupa.__getChain('lead_activities');
+        mockResolve(activitiesChain, { error: null });
+
+        const result = await updateLeadStage('lead-1', 'contacted', 'agent-1');
+        expect(result.error).toBeNull();
+        expect(mockSupa.from).toHaveBeenCalledWith('lead_activities');
+    });
+
+    it('returns error when fetch fails', async () => {
+        const chain = mockSupa.__getChain('leads');
+        mockResolve(chain, { data: null, error: { message: 'Not found' } });
+
+        const result = await updateLeadStage('bad-id', 'contacted', 'agent-1');
+        expect(result.error).toBe('Not found');
+    });
+
+    it('returns error when update fails', async () => {
+        const chain = mockSupa.__getChain('leads');
+        mockResolve(chain, { error: { message: 'Update error' } });
+
+        const result = await updateLeadStage('lead-1', 'contacted', 'agent-1');
+        expect(result.error).toBe('Update error');
+    });
+});
+
+// ── getTeamLeadSummary ──
+
+describe('getTeamLeadSummary', () => {
+    it('returns lead counts by stage and recent activities', async () => {
+        const usersChain = mockSupa.__getChain('users');
+        mockResolve(usersChain, {
+            data: [{ id: 'agent-1' }, { id: 'agent-2' }],
+            error: null,
+        });
+
+        const leadsChain = mockSupa.__getChain('leads');
+        mockResolve(leadsChain, {
+            data: [
+                { id: 'l1', status: 'new', full_name: 'Lead One' },
+                { id: 'l2', status: 'contacted', full_name: 'Lead Two' },
+                { id: 'l3', status: 'new', full_name: 'Lead Three' },
+            ],
+            error: null,
+        });
+
+        const activitiesChain = mockSupa.__getChain('lead_activities');
+        mockResolve(activitiesChain, {
+            data: [
+                { lead_id: 'l1', type: 'call', created_at: '2026-03-08T10:00:00Z' },
+                { lead_id: 'l2', type: 'note', created_at: '2026-03-07T10:00:00Z' },
+            ],
+            error: null,
+        });
+
+        const result = await getTeamLeadSummary('mgr-1');
+        expect(result.error).toBeNull();
+        expect(result.data.totalLeads).toBe(3);
+        expect(result.data.byStage.find((s) => s.stage === 'new')?.count).toBe(2);
+        expect(result.data.byStage.find((s) => s.stage === 'contacted')?.count).toBe(1);
+        expect(result.data.recentActivity).toHaveLength(2);
+        expect(result.data.recentActivity[0].lead_name).toBe('Lead One');
+    });
+
+    it('returns empty result when no agents found', async () => {
+        const chain = mockSupa.__getChain('users');
+        mockResolve(chain, { data: [], error: null });
+
+        const result = await getTeamLeadSummary('mgr-1');
+        expect(result.error).toBeNull();
+        expect(result.data.totalLeads).toBe(0);
+        expect(result.data.byStage).toEqual([]);
+    });
+
+    it('returns error when agents query fails', async () => {
+        const chain = mockSupa.__getChain('users');
+        mockResolve(chain, { data: null, error: { message: 'Permission denied' } });
+
+        const result = await getTeamLeadSummary('mgr-1');
+        expect(result.error).toBe('Permission denied');
     });
 });

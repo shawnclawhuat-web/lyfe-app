@@ -5,7 +5,7 @@ jest.mock('@/lib/supabase');
 
 import { supabase } from '@/lib/supabase';
 
-import { fetchTeamMembers, fetchTeamMember } from '@/lib/team';
+import { fetchTeamMembers, fetchTeamMember, getTeamMembers, getTeamPerformance, inviteAgent } from '@/lib/team';
 
 const mockSupa = supabase as any;
 
@@ -176,4 +176,141 @@ describe('fetchTeamMember', () => {
     expect(result.member?.conversionRate).toBe(0);
     expect(result.leads).toEqual([]);
   });
+});
+
+// ── getTeamMembers ──
+
+describe('getTeamMembers', () => {
+    it('returns agents under a manager', async () => {
+        const chain = mockSupa.__getChain('users');
+        mockResolve(chain, {
+            data: [
+                { id: 'a1', full_name: 'Agent A', role: 'agent', email: 'a@test.com', phone: '+65111' },
+                { id: 'a2', full_name: 'Agent B', role: 'agent', email: null, phone: null },
+            ],
+            error: null,
+        });
+
+        const result = await getTeamMembers('mgr-1');
+        expect(result.error).toBeNull();
+        expect(result.data).toHaveLength(2);
+        expect(result.data[0].full_name).toBe('Agent A');
+    });
+
+    it('returns empty array when no team members', async () => {
+        const chain = mockSupa.__getChain('users');
+        mockResolve(chain, { data: [], error: null });
+
+        const result = await getTeamMembers('mgr-1');
+        expect(result.error).toBeNull();
+        expect(result.data).toEqual([]);
+    });
+
+    it('returns error on failure', async () => {
+        const chain = mockSupa.__getChain('users');
+        mockResolve(chain, { data: null, error: { message: 'DB error' } });
+
+        const result = await getTeamMembers('mgr-1');
+        expect(result.error).toBe('DB error');
+        expect(result.data).toEqual([]);
+    });
+});
+
+// ── getTeamPerformance ──
+
+describe('getTeamPerformance', () => {
+    it('returns performance metrics per agent', async () => {
+        const usersChain = mockSupa.__getChain('users');
+        mockResolve(usersChain, {
+            data: [
+                { id: 'agent-1', full_name: 'Agent Alice' },
+                { id: 'agent-2', full_name: 'Agent Bob' },
+            ],
+            error: null,
+        });
+
+        const leadsChain = mockSupa.__getChain('leads');
+        mockResolve(leadsChain, {
+            data: [
+                { assigned_to: 'agent-1', status: 'won' },
+                { assigned_to: 'agent-1', status: 'lost' },
+                { assigned_to: 'agent-2', status: 'won' },
+            ],
+            error: null,
+        });
+
+        const activitiesChain = mockSupa.__getChain('lead_activities');
+        mockResolve(activitiesChain, {
+            data: [
+                { user_id: 'agent-1' },
+                { user_id: 'agent-1' },
+                { user_id: 'agent-1' },
+                { user_id: 'agent-2' },
+            ],
+            error: null,
+        });
+
+        const dateRange = { start: '2026-03-01', end: '2026-03-08' };
+        const result = await getTeamPerformance('mgr-1', dateRange);
+
+        expect(result.error).toBeNull();
+        expect(result.data.totalClosed).toBe(3);
+        expect(result.data.totalActivities).toBe(4);
+
+        const alice = result.data.agents.find((a) => a.agentId === 'agent-1')!;
+        expect(alice.leadsClosed).toBe(2);
+        expect(alice.leadsWon).toBe(1);
+        expect(alice.leadsLost).toBe(1);
+        expect(alice.activitiesLogged).toBe(3);
+
+        const bob = result.data.agents.find((a) => a.agentId === 'agent-2')!;
+        expect(bob.leadsClosed).toBe(1);
+        expect(bob.leadsWon).toBe(1);
+        expect(bob.activitiesLogged).toBe(1);
+    });
+
+    it('returns empty result when no agents', async () => {
+        const chain = mockSupa.__getChain('users');
+        mockResolve(chain, { data: [], error: null });
+
+        const dateRange = { start: '2026-03-01', end: '2026-03-08' };
+        const result = await getTeamPerformance('mgr-1', dateRange);
+
+        expect(result.error).toBeNull();
+        expect(result.data.agents).toEqual([]);
+        expect(result.data.totalClosed).toBe(0);
+    });
+
+    it('returns error when agents query fails', async () => {
+        const chain = mockSupa.__getChain('users');
+        mockResolve(chain, { data: null, error: { message: 'Permission denied' } });
+
+        const dateRange = { start: '2026-03-01', end: '2026-03-08' };
+        const result = await getTeamPerformance('mgr-1', dateRange);
+
+        expect(result.error).toBe('Permission denied');
+    });
+});
+
+// ── inviteAgent ──
+
+describe('inviteAgent', () => {
+    it('creates invite token for agent', async () => {
+        const chain = mockSupa.__getChain('invite_tokens');
+        mockResolve(chain, { data: { token: 'inv_123_abc' }, error: null });
+
+        const result = await inviteAgent('agent@example.com', 'mgr-1');
+        expect(result.error).toBeNull();
+        expect(result.data?.token).toBe('inv_123_abc');
+        expect(mockSupa.from).toHaveBeenCalledWith('invite_tokens');
+    });
+
+    it('returns error when insert fails', async () => {
+        const chain = mockSupa.__getChain('invite_tokens');
+        mockResolve(chain, { data: null, error: { message: 'Duplicate email' } });
+
+        const result = await inviteAgent('agent@example.com', 'mgr-1');
+        expect(result.error).toBe('Duplicate email');
+        expect(result.data).toBeNull();
+    });
 });
