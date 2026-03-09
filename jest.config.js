@@ -4,6 +4,8 @@ module.exports = {
     transformIgnorePatterns: [
         'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@supabase/.*|expo-router)',
     ],
+    testPathIgnorePatterns: ['/node_modules/', '/.claude/'],
+    modulePathIgnorePatterns: ['<rootDir>/.claude/'],
     moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/$1',
         '^@expo/vector-icons$': '<rootDir>/__tests__/mocks/vectorIcons.js',
