@@ -1,3 +1,4 @@
+import ErrorBanner from '@/components/ErrorBanner';
 import LyfeLogo from '@/components/LyfeLogo';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
@@ -58,14 +59,19 @@ export default function ProfileScreen() {
     const { viewMode, canToggle, setViewMode } = useViewMode();
     const router = useRouter();
     const [showSignOutModal, setShowSignOutModal] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const handleSignOut = () => {
         setShowSignOutModal(true);
     };
 
-    const confirmSignOut = () => {
+    const confirmSignOut = async () => {
         setShowSignOutModal(false);
-        signOut();
+        try {
+            await signOut();
+        } catch {
+            setError('Failed to sign out. Please try again.');
+        }
     };
 
     const handleViewModeChange = (newMode: ViewMode) => {
@@ -94,6 +100,7 @@ export default function ProfileScreen() {
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             <ScreenHeader title="Profile" />
+            {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
                 {/* Hero User Card */}

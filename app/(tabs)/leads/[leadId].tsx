@@ -1,3 +1,4 @@
+import ErrorBanner from '@/components/ErrorBanner';
 import LeadActivityItem from '@/components/LeadActivityItem';
 import LoadingState from '@/components/LoadingState';
 import ScreenHeader from '@/components/ScreenHeader';
@@ -48,6 +49,7 @@ export default function LeadDetailScreen() {
     const [showStatusPicker, setShowStatusPicker] = useState(false);
     const [isSavingNote, setIsSavingNote] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const loadData = useCallback(async () => {
         if (!leadId) return;
@@ -65,17 +67,25 @@ export default function LeadDetailScreen() {
         }
 
         // Real mode
-        const [leadResult, activitiesResult] = await Promise.all([
-            fetchLead(leadId),
-            fetchLeadActivities(leadId),
-        ]);
+        try {
+            setError(null);
+            const [leadResult, activitiesResult] = await Promise.all([
+                fetchLead(leadId),
+                fetchLeadActivities(leadId),
+            ]);
 
-        if (leadResult.data) {
-            setLead(leadResult.data);
-            setCurrentStatus(leadResult.data.status);
-        }
-        if (activitiesResult.data) {
-            setActivities(activitiesResult.data);
+            if (leadResult.data) {
+                setLead(leadResult.data);
+                setCurrentStatus(leadResult.data.status);
+            }
+            if (leadResult.error) {
+                setError('Failed to load lead details');
+            }
+            if (activitiesResult.data) {
+                setActivities(activitiesResult.data);
+            }
+        } catch {
+            setError('Failed to load lead details');
         }
         setIsLoading(false);
     }, [leadId]);
@@ -150,7 +160,7 @@ export default function LeadDetailScreen() {
             setNoteText('');
             setShowNoteInput(false);
         } else if (error) {
-            console.error('Failed to add note:', error);
+            setError('Failed to add note');
         }
     };
 
@@ -186,7 +196,7 @@ export default function LeadDetailScreen() {
             setCurrentStatus(newStatus);
             setShowStatusPicker(false);
         } else {
-            console.error('Failed to update status:', error);
+            setError('Failed to update status');
         }
     };
 
@@ -202,6 +212,10 @@ export default function LeadDetailScreen() {
                     icon: 'shield-outline',
                 } : undefined}
             />
+
+            {error && (
+                <ErrorBanner message={error} onRetry={loadData} onDismiss={() => setError(null)} />
+            )}
 
             <KeyboardAvoidingView
                 style={{ flex: 1 }}

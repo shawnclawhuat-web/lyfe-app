@@ -1,3 +1,4 @@
+import ErrorBanner from '@/components/ErrorBanner';
 import MathRenderer from '@/components/MathRenderer';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { ExamQuestion } from '@/types/exam';
@@ -39,19 +40,24 @@ export default function ExamResultsScreen() {
 
     const [result, setResult] = useState<ExamResult | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
 
-    useEffect(() => {
-        const loadResult = async () => {
-            try {
-                const stored = await AsyncStorage.getItem(`exam_result_${attemptId}`);
-                if (stored) {
-                    setResult(JSON.parse(stored));
-                }
-            } catch { } finally {
-                setIsLoading(false);
+    const loadResult = async () => {
+        try {
+            setError(null);
+            const stored = await AsyncStorage.getItem(`exam_result_${attemptId}`);
+            if (stored) {
+                setResult(JSON.parse(stored));
             }
-        };
+        } catch {
+            setError('Failed to load exam results');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
         loadResult();
     }, [attemptId]);
 
@@ -102,6 +108,10 @@ export default function ExamResultsScreen() {
                     </Text>
                     <View style={{ width: 32 }} />
                 </View>
+
+                {error && (
+                    <ErrorBanner message={error} onRetry={loadResult} onDismiss={() => setError(null)} />
+                )}
 
                 {/* Score Card */}
                 <View

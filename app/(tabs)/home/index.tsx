@@ -1,3 +1,4 @@
+import ErrorBanner from '@/components/ErrorBanner';
 import LyfeLogo from '@/components/LyfeLogo';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
@@ -73,6 +74,7 @@ export default function HomeScreen() {
     const { viewMode, canToggle } = useViewMode();
     const router = useRouter();
     const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const isManagerView = canToggle && viewMode === 'manager';
 
     // Real data state
@@ -84,12 +86,18 @@ export default function HomeScreen() {
 
     const loadDashboardData = useCallback(async () => {
         if (MOCK_OTP || !user?.id) return;
-        const [statsResult, activitiesResult] = await Promise.all([
-            fetchLeadStats(user.id, isManagerView),
-            fetchRecentActivities(user.id, isManagerView, 5),
-        ]);
-        if (statsResult.data) setStats(statsResult.data);
-        if (activitiesResult.data) setRecentActivities(activitiesResult.data);
+        try {
+            setError(null);
+            const [statsResult, activitiesResult] = await Promise.all([
+                fetchLeadStats(user.id, isManagerView),
+                fetchRecentActivities(user.id, isManagerView, 5),
+            ]);
+            if (statsResult.data) setStats(statsResult.data);
+            if (activitiesResult.data) setRecentActivities(activitiesResult.data);
+            if (statsResult.error) setError('Failed to load dashboard data');
+        } catch {
+            setError('Failed to load dashboard data');
+        }
     }, [user?.id, isManagerView]);
 
     useEffect(() => {
@@ -138,6 +146,14 @@ export default function HomeScreen() {
             >
                 {/* Greeting */}
                 <Text style={[styles.greetingText, { color: colors.textSecondary }]}>{greeting}, {firstName}</Text>
+
+                {error && (
+                    <ErrorBanner
+                        message={error}
+                        onRetry={loadDashboardData}
+                        onDismiss={() => setError(null)}
+                    />
+                )}
 
                 {/* Hero Stats */}
                 <View style={styles.heroStatsContainer}>
