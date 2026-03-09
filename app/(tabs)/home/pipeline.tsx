@@ -4,7 +4,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { CANDIDATE_STATUS_CONFIG, type CandidateStatus } from '@/types/recruitment';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
     FadeInDown,
     useAnimatedStyle,

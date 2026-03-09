@@ -66,11 +66,3 @@ export async function markAllAsRead(userId: string): Promise<{ error: string | n
         .eq('is_read', false);
     return { error: error ? error.message : null };
 }
-
-/**
- * Delete a single notification.
- */
-export async function deleteNotification(notificationId: string): Promise<{ error: string | null }> {
-    const { error } = await supabase.from('notifications').delete().eq('id', notificationId);
-    return { error: error ? error.message : null };
-}

@@ -11,7 +11,6 @@ import {
     KeyboardAvoidingView,
     Modal,
     Platform,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -19,7 +18,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import type { EdgeInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, type EdgeInsets } from 'react-native-safe-area-context';
 
 interface MyCounts {
     sitdowns: number;

@@ -7,15 +7,8 @@ import { LEAD_STATUSES, STATUS_CONFIG, type Lead, type LeadStatus } from '@/type
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-    Linking,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMonthYear } from '@/lib/dateTime';
 
 const AVATAR_COLOR_KEYS = ['statusProposed', 'accent', 'danger', 'warning', 'statusProposed', 'info'] as const;
@@ -45,8 +38,12 @@ export default function AgentDetailScreen() {
 
     const pipelineCounts = useMemo(() => {
         const counts: Record<string, number> = {};
-        LEAD_STATUSES.forEach((s) => { counts[s] = 0; });
-        agentLeads.forEach((l) => { counts[l.status] = (counts[l.status] || 0) + 1; });
+        LEAD_STATUSES.forEach((s) => {
+            counts[s] = 0;
+        });
+        agentLeads.forEach((l) => {
+            counts[l.status] = (counts[l.status] || 0) + 1;
+        });
         return counts;
     }, [agentLeads]);
 
@@ -74,7 +71,10 @@ export default function AgentDetailScreen() {
     }
 
     const avatarColor = colors[AVATAR_COLOR_KEYS[agent.name.charCodeAt(0) % AVATAR_COLOR_KEYS.length]];
-    const initials = agent.name.split(' ').map((n) => n[0]).join('');
+    const initials = agent.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('');
     const isManager = agent.role === 'manager';
     const lostCount = pipelineCounts['lost'] || 0;
 
@@ -93,12 +93,14 @@ export default function AgentDetailScreen() {
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             <ScreenHeader title="Team Member" showBack backLabel="Team" />
 
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-            >
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {/* ── Profile Card ── */}
-                <View style={[styles.profileCard, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                <View
+                    style={[
+                        styles.profileCard,
+                        { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
+                    ]}
+                >
                     <View style={styles.profileTop}>
                         <View style={[styles.avatarLarge, { backgroundColor: avatarColor + '18' }]}>
                             <Text style={[styles.avatarLargeText, { color: avatarColor }]}>{initials}</Text>
@@ -106,24 +108,53 @@ export default function AgentDetailScreen() {
                         <View style={styles.profileInfo}>
                             <Text style={[styles.profileName, { color: colors.textPrimary }]}>{agent.name}</Text>
                             <View style={styles.profileMeta}>
-                                <View style={[styles.roleBadge, { backgroundColor: isManager ? colors.statusProposed + '18' : colors.accentLight }]}>
-                                    <View style={[styles.roleDot, { backgroundColor: isManager ? colors.statusProposed : colors.accent }]} />
-                                    <Text style={[styles.roleText, { color: isManager ? colors.statusProposed : colors.accent }]}>
+                                <View
+                                    style={[
+                                        styles.roleBadge,
+                                        {
+                                            backgroundColor: isManager
+                                                ? colors.statusProposed + '18'
+                                                : colors.accentLight,
+                                        },
+                                    ]}
+                                >
+                                    <View
+                                        style={[
+                                            styles.roleDot,
+                                            { backgroundColor: isManager ? colors.statusProposed : colors.accent },
+                                        ]}
+                                    />
+                                    <Text
+                                        style={[
+                                            styles.roleText,
+                                            { color: isManager ? colors.statusProposed : colors.accent },
+                                        ]}
+                                    >
                                         {isManager ? 'Manager' : 'Agent'}
                                     </Text>
                                 </View>
-                                <View style={[
-                                    styles.statusPill,
-                                    { backgroundColor: agent.isActive ? colors.successLight : colors.surfaceSecondary }
-                                ]}>
-                                    <View style={[
-                                        styles.statusDot,
-                                        { backgroundColor: agent.isActive ? colors.success : colors.textTertiary }
-                                    ]} />
-                                    <Text style={[
-                                        styles.statusText,
-                                        { color: agent.isActive ? colors.success : colors.textTertiary }
-                                    ]}>
+                                <View
+                                    style={[
+                                        styles.statusPill,
+                                        {
+                                            backgroundColor: agent.isActive
+                                                ? colors.successLight
+                                                : colors.surfaceSecondary,
+                                        },
+                                    ]}
+                                >
+                                    <View
+                                        style={[
+                                            styles.statusDot,
+                                            { backgroundColor: agent.isActive ? colors.success : colors.textTertiary },
+                                        ]}
+                                    />
+                                    <Text
+                                        style={[
+                                            styles.statusText,
+                                            { color: agent.isActive ? colors.success : colors.textTertiary },
+                                        ]}
+                                    >
                                         {agent.isActive ? 'Active' : 'Inactive'}
                                     </Text>
                                 </View>
@@ -147,7 +178,14 @@ export default function AgentDetailScreen() {
                         </TouchableOpacity>
                         {agent.email && (
                             <TouchableOpacity
-                                style={[styles.actionBtn, { backgroundColor: colors.cardBackground, borderWidth: 1, borderColor: colors.border }]}
+                                style={[
+                                    styles.actionBtn,
+                                    {
+                                        backgroundColor: colors.cardBackground,
+                                        borderWidth: 1,
+                                        borderColor: colors.border,
+                                    },
+                                ]}
                                 onPress={handleEmail}
                                 activeOpacity={0.8}
                             >
@@ -163,19 +201,41 @@ export default function AgentDetailScreen() {
                 <View style={styles.statsGrid}>
                     <View style={[styles.statCard, { backgroundColor: colors.accent }]}>
                         <Text style={[styles.statValueWhite, { color: colors.textInverse }]}>{agent.leadsCount}</Text>
-                        <Text style={[styles.statLabelWhite, { color: colors.textInverse, opacity: 0.8 }]}>Total Leads</Text>
+                        <Text style={[styles.statLabelWhite, { color: colors.textInverse, opacity: 0.8 }]}>
+                            Total Leads
+                        </Text>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                    <View
+                        style={[
+                            styles.statCard,
+                            { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
+                        ]}
+                    >
                         <Text style={[styles.statValue, { color: colors.success }]}>{agent.wonCount}</Text>
                         <Text style={[styles.statLabel, { color: colors.textTertiary }]}>Won</Text>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
-                        <Text style={[styles.statValue, { color: agent.conversionRate >= 30 ? colors.success : colors.textPrimary }]}>
+                    <View
+                        style={[
+                            styles.statCard,
+                            { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.statValue,
+                                { color: agent.conversionRate >= 30 ? colors.success : colors.textPrimary },
+                            ]}
+                        >
                             {agent.conversionRate}%
                         </Text>
                         <Text style={[styles.statLabel, { color: colors.textTertiary }]}>Conv. Rate</Text>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                    <View
+                        style={[
+                            styles.statCard,
+                            { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
+                        ]}
+                    >
                         <Text style={[styles.statValue, { color: colors.textPrimary }]}>
                             {agent.leadsCount - agent.wonCount - lostCount}
                         </Text>
@@ -185,7 +245,12 @@ export default function AgentDetailScreen() {
 
                 {/* ── Pipeline Breakdown ── */}
                 <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Pipeline Breakdown</Text>
-                <View style={[styles.pipelineCard, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                <View
+                    style={[
+                        styles.pipelineCard,
+                        { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
+                    ]}
+                >
                     {/* Stacked Bar */}
                     {totalPipelineLeads > 0 && (
                         <View style={styles.pipelineBar}>
@@ -217,7 +282,9 @@ export default function AgentDetailScreen() {
                             return (
                                 <View key={status} style={styles.legendItem}>
                                     <View style={[styles.legendDot, { backgroundColor: config.color }]} />
-                                    <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>{config.label}</Text>
+                                    <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>
+                                        {config.label}
+                                    </Text>
                                     <Text style={[styles.legendCount, { color: colors.textPrimary }]}>{count}</Text>
                                 </View>
                             );
@@ -226,9 +293,7 @@ export default function AgentDetailScreen() {
                 </View>
 
                 {/* ── Leads List ── */}
-                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-                    Leads ({agentLeads.length})
-                </Text>
+                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Leads ({agentLeads.length})</Text>
                 {agentLeads.length > 0 ? (
                     agentLeads.map((lead) => (
                         <LeadCard

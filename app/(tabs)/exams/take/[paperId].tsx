@@ -13,7 +13,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     AppState,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -21,6 +20,7 @@ import {
     View,
     type AppStateStatus,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 const PAPER_DURATIONS: Record<string, number> = { m5: 60, m9: 60, m9a: 45, hi: 45 };
 const PAPER_CODES: Record<string, string> = { m5: 'M5', m9: 'M9', m9a: 'M9A', hi: 'HI' };
 
@@ -56,7 +56,7 @@ export default function TakeExamScreen() {
     const showDialog = (title: string, message: string, buttons: ConfirmDialogButton[]) => {
         setDialogConfig({ visible: true, title, message, buttons });
     };
-    const hideDialog = () => setDialogConfig(prev => ({ ...prev, visible: false }));
+    const hideDialog = () => setDialogConfig((prev) => ({ ...prev, visible: false }));
 
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const appStateRef = useRef<AppStateStatus>(AppState.currentState);
@@ -109,18 +109,24 @@ export default function TakeExamScreen() {
                             setTimeLeft(Math.max(0, duration * 60 - elapsed));
                         }
                         setIsLoading(false);
-                        setTimeout(() => { hasRestoredRef.current = true; }, 0);
+                        setTimeout(() => {
+                            hasRestoredRef.current = true;
+                        }, 0);
                         return;
                     }
                 }
-            } catch (e) { if (__DEV__) console.error('[ExamTake] Failed to restore saved state:', e); }
+            } catch (e) {
+                if (__DEV__) console.error('[ExamTake] Failed to restore saved state:', e);
+            }
 
             // No saved state — start fresh
             startedAtRef.current = Date.now();
             setTimeLeft(duration * 60);
             setIsLoading(false);
             // Mark restoration complete after a tick so state settles
-            setTimeout(() => { hasRestoredRef.current = true; }, 0);
+            setTimeout(() => {
+                hasRestoredRef.current = true;
+            }, 0);
         };
 
         loadQuestions();
@@ -177,7 +183,9 @@ export default function TakeExamScreen() {
             totalQuestions: questions.length,
             timeLeft,
         };
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch((e) => { if (__DEV__) console.error('[ExamTake] Failed to auto-save state:', e); });
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch((e) => {
+            if (__DEV__) console.error('[ExamTake] Failed to auto-save state:', e);
+        });
     }, [answers, currentIndex, timeLeft]);
 
     const handleSelectAnswer = (questionId: string, answer: string) => {
@@ -186,11 +194,15 @@ export default function TakeExamScreen() {
 
     const handleAutoSubmit = useCallback(() => {
         if (timerRef.current) clearInterval(timerRef.current);
-        showDialog(
-            "Time's Up!",
-            'Your exam has been automatically submitted.',
-            [{ text: 'View Results', onPress: () => { hideDialog(); submitExam('auto_submitted'); } }],
-        );
+        showDialog("Time's Up!", 'Your exam has been automatically submitted.', [
+            {
+                text: 'View Results',
+                onPress: () => {
+                    hideDialog();
+                    submitExam('auto_submitted');
+                },
+            },
+        ]);
     }, [answers, questions]);
 
     const handleSubmit = () => {
@@ -202,7 +214,14 @@ export default function TakeExamScreen() {
                 `You have ${unanswered} unanswered question${unanswered > 1 ? 's' : ''}. Unanswered questions will be marked incorrect. Submit anyway?`,
                 [
                     { text: 'Review', style: 'cancel', onPress: hideDialog },
-                    { text: 'Submit', style: 'destructive', onPress: () => { hideDialog(); submitExam('submitted'); } },
+                    {
+                        text: 'Submit',
+                        style: 'destructive',
+                        onPress: () => {
+                            hideDialog();
+                            submitExam('submitted');
+                        },
+                    },
                 ],
             );
         } else {
@@ -211,7 +230,13 @@ export default function TakeExamScreen() {
                 'Are you sure you want to submit? You cannot change your answers after submission.',
                 [
                     { text: 'Cancel', style: 'cancel', onPress: hideDialog },
-                    { text: 'Submit', onPress: () => { hideDialog(); submitExam('submitted'); } },
+                    {
+                        text: 'Submit',
+                        onPress: () => {
+                            hideDialog();
+                            submitExam('submitted');
+                        },
+                    },
                 ],
             );
         }
@@ -279,22 +304,18 @@ export default function TakeExamScreen() {
     };
 
     const handleBack = () => {
-        showDialog(
-            'Leave Exam?',
-            'Your progress is saved. You can resume later.',
-            [
-                { text: 'Stay', style: 'cancel', onPress: hideDialog },
-                {
-                    text: 'Leave',
-                    style: 'destructive',
-                    onPress: () => {
-                        hideDialog();
-                        if (timerRef.current) clearInterval(timerRef.current);
-                        router.back();
-                    },
+        showDialog('Leave Exam?', 'Your progress is saved. You can resume later.', [
+            { text: 'Stay', style: 'cancel', onPress: hideDialog },
+            {
+                text: 'Leave',
+                style: 'destructive',
+                onPress: () => {
+                    hideDialog();
+                    if (timerRef.current) clearInterval(timerRef.current);
+                    router.back();
                 },
-            ]
-        );
+            },
+        ]);
     };
 
     if (isLoading) {
@@ -333,17 +354,8 @@ export default function TakeExamScreen() {
                         { backgroundColor: isTimeLow ? colors.dangerLight : colors.surfacePrimary },
                     ]}
                 >
-                    <Ionicons
-                        name="time-outline"
-                        size={16}
-                        color={isTimeLow ? colors.danger : colors.textSecondary}
-                    />
-                    <Text
-                        style={[
-                            styles.timerText,
-                            { color: isTimeLow ? colors.danger : colors.textPrimary },
-                        ]}
-                    >
+                    <Ionicons name="time-outline" size={16} color={isTimeLow ? colors.danger : colors.textSecondary} />
+                    <Text style={[styles.timerText, { color: isTimeLow ? colors.danger : colors.textPrimary }]}>
                         {formatTime(timeLeft)}
                     </Text>
                 </View>
@@ -377,7 +389,12 @@ export default function TakeExamScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Question Text */}
-                <View style={[styles.questionCard, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+                <View
+                    style={[
+                        styles.questionCard,
+                        { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                    ]}
+                >
                     <Text style={[styles.questionLabel, { color: colors.textTertiary }]}>
                         Question {currentQuestion.question_number}
                     </Text>
@@ -436,9 +453,7 @@ export default function TakeExamScreen() {
                                 {hasLatexContent ? (
                                     <MathRenderer content={optionText} fontSize={15} />
                                 ) : (
-                                    <Text style={[styles.optionText, { color: colors.textPrimary }]}>
-                                        {optionText}
-                                    </Text>
+                                    <Text style={[styles.optionText, { color: colors.textPrimary }]}>{optionText}</Text>
                                 )}
                             </View>
                         </TouchableOpacity>
@@ -447,7 +462,12 @@ export default function TakeExamScreen() {
             </ScrollView>
 
             {/* Bottom Navigation */}
-            <View style={[styles.bottomBar, { backgroundColor: colors.cardBackground, borderTopColor: colors.borderLight }]}>
+            <View
+                style={[
+                    styles.bottomBar,
+                    { backgroundColor: colors.cardBackground, borderTopColor: colors.borderLight },
+                ]}
+            >
                 <TouchableOpacity
                     style={[styles.navButton, { opacity: currentIndex === 0 ? 0.3 : 1 }]}
                     onPress={() => setCurrentIndex((i) => Math.max(0, i - 1))}
@@ -470,7 +490,10 @@ export default function TakeExamScreen() {
 
                 {currentIndex === questions.length - 1 ? (
                     <TouchableOpacity
-                        style={[styles.submitButton, { backgroundColor: colors.accent, opacity: isSubmitting ? 0.6 : 1 }]}
+                        style={[
+                            styles.submitButton,
+                            { backgroundColor: colors.accent, opacity: isSubmitting ? 0.6 : 1 },
+                        ]}
                         onPress={handleSubmit}
                         disabled={isSubmitting}
                     >
@@ -497,7 +520,12 @@ export default function TakeExamScreen() {
             {/* Question Grid Overlay */}
             {showGrid && (
                 <View style={[styles.gridOverlay, { backgroundColor: colors.background + 'F2' }]}>
-                    <View style={[styles.gridContainer, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+                    <View
+                        style={[
+                            styles.gridContainer,
+                            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                        ]}
+                    >
                         <View style={styles.gridHeader}>
                             <Text style={[styles.gridTitle, { color: colors.textPrimary }]}>Question Navigator</Text>
                             <TouchableOpacity onPress={() => setShowGrid(false)}>
@@ -517,13 +545,13 @@ export default function TakeExamScreen() {
                                                 backgroundColor: isCurrent
                                                     ? colors.accent
                                                     : isAnswered
-                                                        ? colors.accentLight
-                                                        : colors.surfacePrimary,
+                                                      ? colors.accentLight
+                                                      : colors.surfacePrimary,
                                                 borderColor: isCurrent
                                                     ? colors.accent
                                                     : isAnswered
-                                                        ? colors.accent
-                                                        : colors.border,
+                                                      ? colors.accent
+                                                      : colors.border,
                                             },
                                         ]}
                                         onPress={() => {
@@ -538,8 +566,8 @@ export default function TakeExamScreen() {
                                                     color: isCurrent
                                                         ? colors.textInverse
                                                         : isAnswered
-                                                            ? colors.accent
-                                                            : colors.textTertiary,
+                                                          ? colors.accent
+                                                          : colors.textTertiary,
                                                 },
                                             ]}
                                         >

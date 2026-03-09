@@ -12,7 +12,6 @@ import {
     KeyboardAvoidingView,
     Modal,
     Platform,
-    SafeAreaView,
     ScrollView,
     Share,
     StyleSheet,
@@ -21,6 +20,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 let Clipboard: typeof import('expo-clipboard') | null = null;
 try {
     Clipboard = require('expo-clipboard');

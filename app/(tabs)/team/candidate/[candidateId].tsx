@@ -13,7 +13,6 @@ import {
     Linking,
     Modal,
     Platform,
-    SafeAreaView,
     ScrollView,
     Share,
     StyleSheet,
@@ -22,6 +21,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 export default function CandidateDetailScreen() {
     const { colors } = useTheme();
     const { user } = useAuth();

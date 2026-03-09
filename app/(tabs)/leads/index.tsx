@@ -12,16 +12,8 @@ import { useFilteredList } from '@/hooks/useFilteredList';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import {
-    FlatList,
-    RefreshControl,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 const LEAD_SEARCH_FIELDS: (keyof Lead)[] = ['full_name', 'phone'];
 
 const FILTER_TABS: { key: LeadStatus | 'all'; label: string }[] = [

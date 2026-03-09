@@ -17,12 +17,12 @@ import {
     FlatList,
     PanResponder,
     RefreshControl,
-    SafeAreaView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // ── Calendar layout constants ──────────────────────────────────
 const SCREEN_W = Dimensions.get('window').width;

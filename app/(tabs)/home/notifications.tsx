@@ -9,16 +9,8 @@ import { NOTIFICATION_TYPE_CONFIG, type AppNotification, type NotificationType }
 import { useTypedRouter } from '@/hooks/useTypedRouter';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-    ActivityIndicator,
-    FlatList,
-    RefreshControl,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function NotificationsScreen() {
     const { colors } = useTheme();
@@ -77,7 +69,7 @@ export default function NotificationsScreen() {
                 setNotifications((prev) => prev.map((n) => (n.id === notification.id ? { ...n, is_read: true } : n)));
             }
             const data = notification.data as Record<string, string> | null;
-            if (data?.route) {
+            if (typeof data?.route === 'string' && data.route.startsWith('/(tabs)/')) {
                 router.push(data.route);
             }
         },

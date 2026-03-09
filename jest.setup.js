@@ -49,6 +49,16 @@ jest.mock('@sentry/react-native', () => ({
     addBreadcrumb: jest.fn(),
 }));
 
+// Mock react-native-safe-area-context
+jest.mock('react-native-safe-area-context', () => {
+    const { View } = require('react-native');
+    return {
+        SafeAreaView: View,
+        SafeAreaProvider: View,
+        useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+    };
+});
+
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () => ({
     getItem: jest.fn(),

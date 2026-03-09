@@ -3,13 +3,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import {
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // ── Study Resources Data ──
 
@@ -26,28 +21,44 @@ interface StudyTopic {
 
 const STUDY_TOPICS: StudyTopic[] = [
     {
-        id: 's1', paperCode: 'M5',
+        id: 's1',
+        paperCode: 'M5',
         title: 'Rules & Regulations of Life Insurance',
         description: 'MAS guidelines, policy types, compliance requirements, and regulatory frameworks.',
-        chapters: 12, estimatedMinutes: 180, icon: 'shield-checkmark', colorKey: 'info',
+        chapters: 12,
+        estimatedMinutes: 180,
+        icon: 'shield-checkmark',
+        colorKey: 'info',
     },
     {
-        id: 's2', paperCode: 'M9',
+        id: 's2',
+        paperCode: 'M9',
         title: 'Investment-Linked Policies',
         description: 'ILP fund structures, risk assessment, suitability analysis, and unit pricing.',
-        chapters: 10, estimatedMinutes: 150, icon: 'trending-up', colorKey: 'statusProposed',
+        chapters: 10,
+        estimatedMinutes: 150,
+        icon: 'trending-up',
+        colorKey: 'statusProposed',
     },
     {
-        id: 's3', paperCode: 'M9A',
+        id: 's3',
+        paperCode: 'M9A',
         title: 'ILP Supplementary Module',
         description: 'Additional ILP regulations, switching rules, and advanced product features.',
-        chapters: 6, estimatedMinutes: 90, icon: 'documents', colorKey: 'warning',
+        chapters: 6,
+        estimatedMinutes: 90,
+        icon: 'documents',
+        colorKey: 'warning',
     },
     {
-        id: 's4', paperCode: 'HI',
+        id: 's4',
+        paperCode: 'HI',
         title: 'Health Insurance Fundamentals',
         description: 'MediShield Life, Integrated Shield Plans, riders, and claims processes.',
-        chapters: 8, estimatedMinutes: 120, icon: 'heart', colorKey: 'danger',
+        chapters: 8,
+        estimatedMinutes: 120,
+        icon: 'heart',
+        colorKey: 'danger',
     },
 ];
 
@@ -73,14 +84,11 @@ export default function StudyScreen() {
                 subtitle={`${totalChapters} chapters · ~${Math.round(totalMinutes / 60)}h total`}
             />
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
                 {/* Overview Card */}
                 <View style={[styles.overviewCard, { backgroundColor: colors.accent }]}>
                     <Ionicons name="book" size={60} color="rgba(255,255,255,0.15)" style={styles.overviewIcon} />
                     <Text style={[styles.overviewTitle, { color: colors.textInverse }]}>Your Study Plan</Text>
-                    <Text style={styles.overviewSub}>
-                        Complete all 4 modules to prepare for your licensing exams
-                    </Text>
+                    <Text style={styles.overviewSub}>Complete all 4 modules to prepare for your licensing exams</Text>
                     <View style={styles.overviewStats}>
                         <View style={styles.overviewStat}>
                             <Text style={[styles.overviewStatValue, { color: colors.textInverse }]}>4</Text>
@@ -88,19 +96,28 @@ export default function StudyScreen() {
                         </View>
                         <View style={[styles.overviewDivider]} />
                         <View style={styles.overviewStat}>
-                            <Text style={[styles.overviewStatValue, { color: colors.textInverse }]}>{totalChapters}</Text>
+                            <Text style={[styles.overviewStatValue, { color: colors.textInverse }]}>
+                                {totalChapters}
+                            </Text>
                             <Text style={styles.overviewStatLabel}>Chapters</Text>
                         </View>
                         <View style={[styles.overviewDivider]} />
                         <View style={styles.overviewStat}>
-                            <Text style={[styles.overviewStatValue, { color: colors.textInverse }]}>~{Math.round(totalMinutes / 60)}h</Text>
+                            <Text style={[styles.overviewStatValue, { color: colors.textInverse }]}>
+                                ~{Math.round(totalMinutes / 60)}h
+                            </Text>
                             <Text style={styles.overviewStatLabel}>Est. Time</Text>
                         </View>
                     </View>
                 </View>
 
                 {/* Study Tips */}
-                <View style={[styles.tipsCard, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+                <View
+                    style={[
+                        styles.tipsCard,
+                        { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                    ]}
+                >
                     <View style={styles.tipsHeader}>
                         <Ionicons name="bulb" size={18} color={colors.warning} />
                         <Text style={[styles.tipsTitle, { color: colors.textPrimary }]}>Study Tips</Text>
@@ -118,7 +135,10 @@ export default function StudyScreen() {
                 {STUDY_TOPICS.map((topic) => (
                     <View
                         key={topic.id}
-                        style={[styles.topicCard, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}
+                        style={[
+                            styles.topicCard,
+                            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                        ]}
                     >
                         <View style={styles.topicRow}>
                             <View style={[styles.topicIconWrap, { backgroundColor: colors[topic.colorKey] + '14' }]}>
@@ -126,12 +146,18 @@ export default function StudyScreen() {
                             </View>
                             <View style={styles.topicInfo}>
                                 <View style={styles.topicHeaderRow}>
-                                    <View style={[styles.paperBadge, { backgroundColor: colors[topic.colorKey] + '18' }]}>
-                                        <Text style={[styles.paperBadgeText, { color: colors[topic.colorKey] }]}>{topic.paperCode}</Text>
+                                    <View
+                                        style={[styles.paperBadge, { backgroundColor: colors[topic.colorKey] + '18' }]}
+                                    >
+                                        <Text style={[styles.paperBadgeText, { color: colors[topic.colorKey] }]}>
+                                            {topic.paperCode}
+                                        </Text>
                                     </View>
                                     <View style={styles.comingSoonBadge}>
                                         <Ionicons name="lock-closed-outline" size={11} color={colors.textTertiary} />
-                                        <Text style={[styles.comingSoonText, { color: colors.textTertiary }]}>Coming Soon</Text>
+                                        <Text style={[styles.comingSoonText, { color: colors.textTertiary }]}>
+                                            Coming Soon
+                                        </Text>
                                     </View>
                                 </View>
                                 <Text style={[styles.topicTitle, { color: colors.textPrimary }]} numberOfLines={2}>

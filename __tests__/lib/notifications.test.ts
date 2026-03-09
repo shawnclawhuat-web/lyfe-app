@@ -3,13 +3,7 @@
  */
 import { supabase } from '@/lib/supabase';
 
-import {
-    fetchNotifications,
-    fetchUnreadCount,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
-} from '@/lib/notifications';
+import { fetchNotifications, fetchUnreadCount, markAsRead, markAllAsRead } from '@/lib/notifications';
 
 jest.mock('@/lib/supabase');
 
@@ -149,26 +143,5 @@ describe('markAllAsRead', () => {
         const result = await markAllAsRead('user-1');
 
         expect(result.error).toBe('Bulk update failed');
-    });
-});
-
-describe('deleteNotification', () => {
-    it('deletes a single notification', async () => {
-        const chain = mockSupa.__getChain('notifications');
-        mockResolve(chain, { error: null });
-
-        const result = await deleteNotification('notif-1');
-
-        expect(mockSupa.from).toHaveBeenCalledWith('notifications');
-        expect(result.error).toBeNull();
-    });
-
-    it('returns error on failure', async () => {
-        const chain = mockSupa.__getChain('notifications');
-        mockResolve(chain, { error: { message: 'Delete failed' } });
-
-        const result = await deleteNotification('notif-1');
-
-        expect(result.error).toBe('Delete failed');
     });
 });

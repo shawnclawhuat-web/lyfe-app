@@ -25,7 +25,6 @@ import {
     Modal,
     Platform,
     Pressable,
-    SafeAreaView,
     ScrollView,
     Share,
     StyleSheet,
@@ -34,6 +33,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ERROR_BG, ERROR_TEXT } from '@/constants/ui';
 import { formatCreatedAt } from '@/lib/dateTime';
 import { WebView } from 'react-native-webview';

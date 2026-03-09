@@ -6,7 +6,8 @@ import { getAgentActivitySummary, type ActivitySummary } from '@/lib/activities'
 import { getTeamPerformance, type TeamPerformanceResult } from '@/lib/team';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
     FadeInDown,
     useAnimatedStyle,
@@ -142,15 +143,7 @@ const skeletonStyles = StyleSheet.create({
 
 // ── Animated Counter ─────────────────────────────────────────
 
-function AnimatedCounter({
-    value,
-    suffix = '',
-    style,
-}: {
-    value: number;
-    suffix?: string;
-    style?: object;
-}) {
+function AnimatedCounter({ value, suffix = '', style }: { value: number; suffix?: string; style?: object }) {
     const animValue = useSharedValue(0);
     const [displayValue, setDisplayValue] = useState(0);
 
@@ -398,9 +391,7 @@ export default function AnalyticsScreen() {
                                     suffix={stat.suffix || ''}
                                     style={[styles.heroStatValue, { color: colors.textPrimary }]}
                                 />
-                                <Text style={[styles.heroStatLabel, { color: colors.textTertiary }]}>
-                                    {stat.label}
-                                </Text>
+                                <Text style={[styles.heroStatLabel, { color: colors.textTertiary }]}>{stat.label}</Text>
                             </Animated.View>
                         ))}
                     </View>
@@ -417,14 +408,10 @@ export default function AnalyticsScreen() {
                                 },
                             ]}
                         >
-                            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-                                Agent Leaderboard
-                            </Text>
+                            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Agent Leaderboard</Text>
                             {sortedAgents.map((agent, index) => {
                                 const rate =
-                                    agent.leadsClosed > 0
-                                        ? Math.round((agent.leadsWon / agent.leadsClosed) * 100)
-                                        : 0;
+                                    agent.leadsClosed > 0 ? Math.round((agent.leadsWon / agent.leadsClosed) * 100) : 0;
                                 return (
                                     <Animated.View
                                         key={agent.agentId}
@@ -500,9 +487,7 @@ export default function AnalyticsScreen() {
                                 },
                             ]}
                         >
-                            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-                                Activity Breakdown
-                            </Text>
+                            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Activity Breakdown</Text>
                             {teamActivities.map((activity, index) => {
                                 const config = ACTIVITY_TYPES[activity.type];
                                 const barWidth = (activity.count / maxActivityCount) * 100;
@@ -529,10 +514,7 @@ export default function AnalyticsScreen() {
                                                 color={barColor}
                                             />
                                             <Text
-                                                style={[
-                                                    styles.activityBarLabelText,
-                                                    { color: colors.textSecondary },
-                                                ]}
+                                                style={[styles.activityBarLabelText, { color: colors.textSecondary }]}
                                             >
                                                 {config?.label || activity.type}
                                             </Text>
@@ -554,12 +536,7 @@ export default function AnalyticsScreen() {
                                                     ]}
                                                 />
                                             </View>
-                                            <Text
-                                                style={[
-                                                    styles.activityBarCount,
-                                                    { color: colors.textPrimary },
-                                                ]}
-                                            >
+                                            <Text style={[styles.activityBarCount, { color: colors.textPrimary }]}>
                                                 {activity.count}
                                             </Text>
                                         </View>

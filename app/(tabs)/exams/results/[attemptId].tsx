@@ -7,15 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import {
-    ActivityIndicator,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 interface ExamResult {
     id: string;
     score: number;
@@ -96,7 +89,10 @@ export default function ExamResultsScreen() {
                 <View style={styles.loadingContainer}>
                     <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
                     <Text style={[styles.errorText, { color: colors.textSecondary }]}>Result not found</Text>
-                    <TouchableOpacity onPress={handleDone} style={[styles.doneButton, { backgroundColor: colors.accent }]}>
+                    <TouchableOpacity
+                        onPress={handleDone}
+                        style={[styles.doneButton, { backgroundColor: colors.accent }]}
+                    >
                         <Text style={[styles.doneButtonText, { color: colors.textInverse }]}>Back to Exams</Text>
                     </TouchableOpacity>
                 </View>
@@ -112,15 +108,11 @@ export default function ExamResultsScreen() {
                     <TouchableOpacity onPress={handleDone} style={styles.backBtn}>
                         <Ionicons name="close" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
-                    <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-                        {result.paperCode} Results
-                    </Text>
+                    <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{result.paperCode} Results</Text>
                     <View style={{ width: 32 }} />
                 </View>
 
-                {error && (
-                    <ErrorBanner message={error} onRetry={loadResult} onDismiss={() => setError(null)} />
-                )}
+                {error && <ErrorBanner message={error} onRetry={loadResult} onDismiss={() => setError(null)} />}
 
                 {/* Score Card */}
                 <View
@@ -133,7 +125,9 @@ export default function ExamResultsScreen() {
                     ]}
                 >
                     <View style={styles.scoreCircle}>
-                        <Text style={[styles.scorePercentage, { color: result.passed ? colors.success : colors.danger }]}>
+                        <Text
+                            style={[styles.scorePercentage, { color: result.passed ? colors.success : colors.danger }]}
+                        >
                             {result.percentage}%
                         </Text>
                         <Text style={[styles.scoreLabel, { color: result.passed ? colors.success : colors.danger }]}>
@@ -164,15 +158,32 @@ export default function ExamResultsScreen() {
 
                 {/* Stats Row */}
                 <View style={styles.statsRow}>
-                    <View style={[styles.statCard, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+                    <View
+                        style={[
+                            styles.statCard,
+                            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                        ]}
+                    >
                         <Text style={[styles.statValue, { color: colors.success }]}>{result.score}</Text>
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Correct</Text>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
-                        <Text style={[styles.statValue, { color: colors.danger }]}>{result.totalQuestions - result.score}</Text>
+                    <View
+                        style={[
+                            styles.statCard,
+                            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                        ]}
+                    >
+                        <Text style={[styles.statValue, { color: colors.danger }]}>
+                            {result.totalQuestions - result.score}
+                        </Text>
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Wrong</Text>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+                    <View
+                        style={[
+                            styles.statCard,
+                            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                        ]}
+                    >
                         <Text style={[styles.statValue, { color: colors.textPrimary }]}>{result.totalQuestions}</Text>
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total</Text>
                     </View>
@@ -230,7 +241,12 @@ export default function ExamResultsScreen() {
                                     </View>
                                     <View style={styles.reviewRight}>
                                         {answer.selected ? (
-                                            <Text style={[styles.reviewAnswer, { color: answer.isCorrect ? colors.success : colors.danger }]}>
+                                            <Text
+                                                style={[
+                                                    styles.reviewAnswer,
+                                                    { color: answer.isCorrect ? colors.success : colors.danger },
+                                                ]}
+                                            >
                                                 {answer.selected} {!answer.isCorrect && `→ ${answer.correctAnswer}`}
                                             </Text>
                                         ) : (
@@ -273,14 +289,22 @@ export default function ExamResultsScreen() {
                                                         isWrongSelection && { backgroundColor: colors.dangerLight },
                                                     ]}
                                                 >
-                                                    <Text style={[styles.reviewOptionLetter, { color: colors.textSecondary }]}>
+                                                    <Text
+                                                        style={[
+                                                            styles.reviewOptionLetter,
+                                                            { color: colors.textSecondary },
+                                                        ]}
+                                                    >
                                                         {opt}.
                                                     </Text>
                                                     <Text
                                                         style={[
                                                             styles.reviewOptionText,
                                                             { color: colors.textPrimary },
-                                                            isCorrectOpt && { fontWeight: '700', color: colors.success },
+                                                            isCorrectOpt && {
+                                                                fontWeight: '700',
+                                                                color: colors.success,
+                                                            },
                                                             isWrongSelection && { color: colors.danger },
                                                         ]}
                                                     >
@@ -294,14 +318,18 @@ export default function ExamResultsScreen() {
                                         })}
 
                                         {q.explanation && (
-                                            <View style={[styles.explanationBox, { backgroundColor: colors.infoLight }]}>
+                                            <View
+                                                style={[styles.explanationBox, { backgroundColor: colors.infoLight }]}
+                                            >
                                                 <Ionicons name="bulb-outline" size={16} color={colors.info} />
                                                 {q.explanation_has_latex ? (
                                                     <View style={{ flex: 1 }}>
                                                         <MathRenderer content={q.explanation} fontSize={13} />
                                                     </View>
                                                 ) : (
-                                                    <Text style={[styles.explanationText, { color: colors.textPrimary }]}>
+                                                    <Text
+                                                        style={[styles.explanationText, { color: colors.textPrimary }]}
+                                                    >
                                                         {q.explanation}
                                                     </Text>
                                                 )}

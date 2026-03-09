@@ -2,7 +2,8 @@ import ScreenHeader from '@/components/ScreenHeader';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AdminScreen() {
     const { colors } = useTheme();
@@ -12,9 +13,7 @@ export default function AdminScreen() {
             <ScreenHeader title="Admin" />
             <View style={styles.placeholder}>
                 <Ionicons name="settings-outline" size={64} color={colors.textTertiary} />
-                <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
-                    Admin panel coming soon
-                </Text>
+                <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>Admin panel coming soon</Text>
             </View>
         </SafeAreaView>
     );

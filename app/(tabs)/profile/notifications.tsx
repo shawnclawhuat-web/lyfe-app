@@ -2,7 +2,8 @@ import ScreenHeader from '@/components/ScreenHeader';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Linking, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const NOTIFICATION_TYPES = [
     {
@@ -34,14 +35,14 @@ export default function NotificationsScreen() {
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             <ScreenHeader title="Notifications" showBack backLabel="Profile" />
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
                 {/* Info card */}
                 <View style={[styles.infoCard, { backgroundColor: colors.accentLight }]}>
                     <Ionicons name="notifications" size={24} color={colors.accent} />
                     <View style={styles.infoText}>
                         <Text style={[styles.infoTitle, { color: colors.accent }]}>Push Notifications Active</Text>
                         <Text style={[styles.infoSubtitle, { color: colors.accent }]}>
-                            Lyfe sends you notifications for the activities below. Manage permissions from device settings.
+                            Lyfe sends you notifications for the activities below. Manage permissions from device
+                            settings.
                         </Text>
                     </View>
                 </View>
@@ -57,7 +58,9 @@ export default function NotificationsScreen() {
                                 </View>
                                 <View style={styles.rowText}>
                                     <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>{item.title}</Text>
-                                    <Text style={[styles.rowSubtitle, { color: colors.textTertiary }]}>{item.subtitle}</Text>
+                                    <Text style={[styles.rowSubtitle, { color: colors.textTertiary }]}>
+                                        {item.subtitle}
+                                    </Text>
                                 </View>
                                 <Ionicons name="checkmark-circle" size={20} color={colors.success} />
                             </View>

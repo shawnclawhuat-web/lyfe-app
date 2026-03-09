@@ -9,15 +9,8 @@ import type { ExamPaper, PaperStats } from '@/types/exam';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-    RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 export default function ExamsListScreen() {
     const { colors } = useTheme();
     const { user } = useAuth();
@@ -63,11 +56,17 @@ export default function ExamsListScreen() {
                             };
                         } else {
                             existing.attemptCount++;
-                            if (attempt.percentage && (!existing.bestScore || attempt.percentage > existing.bestScore)) {
+                            if (
+                                attempt.percentage &&
+                                (!existing.bestScore || attempt.percentage > existing.bestScore)
+                            ) {
                                 existing.bestScore = attempt.percentage;
                                 existing.bestPassed = attempt.passed;
                             }
-                            if (attempt.submitted_at && (!existing.lastAttemptDate || attempt.submitted_at > existing.lastAttemptDate)) {
+                            if (
+                                attempt.submitted_at &&
+                                (!existing.lastAttemptDate || attempt.submitted_at > existing.lastAttemptDate)
+                            ) {
                                 existing.lastAttemptDate = attempt.submitted_at;
                             }
                         }
@@ -108,48 +107,51 @@ export default function ExamsListScreen() {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-            <ScreenHeader
-                title="Exams"
-                subtitle="Complete all 4 mandatory papers to get licensed"
-            />
+            <ScreenHeader title="Exams" subtitle="Complete all 4 mandatory papers to get licensed" />
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 refreshControl={
                     <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.accent} />
                 }
             >
-
                 {/* Progress Overview */}
-                <View style={[styles.progressCard, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+                <View
+                    style={[
+                        styles.progressCard,
+                        { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                    ]}
+                >
                     <View style={styles.progressHeader}>
                         <Ionicons name="ribbon-outline" size={20} color={colors.accent} />
                         <Text style={[styles.progressTitle, { color: colors.textPrimary }]}>Your Progress</Text>
                     </View>
                     <View style={styles.progressBar}>
-                        {papers.filter(p => p.is_mandatory).map((paper) => {
-                            const passed = stats[paper.id]?.bestPassed === true;
-                            return (
-                                <View
-                                    key={paper.id}
-                                    style={[
-                                        styles.progressSegment,
-                                        {
-                                            backgroundColor: passed ? colors.success : colors.surfacePrimary,
-                                            borderColor: passed ? colors.success : colors.border,
-                                        },
-                                    ]}
-                                >
-                                    <Text
+                        {papers
+                            .filter((p) => p.is_mandatory)
+                            .map((paper) => {
+                                const passed = stats[paper.id]?.bestPassed === true;
+                                return (
+                                    <View
+                                        key={paper.id}
                                         style={[
-                                            styles.progressSegmentText,
-                                            { color: passed ? colors.textInverse : colors.textTertiary },
+                                            styles.progressSegment,
+                                            {
+                                                backgroundColor: passed ? colors.success : colors.surfacePrimary,
+                                                borderColor: passed ? colors.success : colors.border,
+                                            },
                                         ]}
                                     >
-                                        {paper.code}
-                                    </Text>
-                                </View>
-                            );
-                        })}
+                                        <Text
+                                            style={[
+                                                styles.progressSegmentText,
+                                                { color: passed ? colors.textInverse : colors.textTertiary },
+                                            ]}
+                                        >
+                                            {paper.code}
+                                        </Text>
+                                    </View>
+                                );
+                            })}
                     </View>
                 </View>
 
@@ -171,9 +173,7 @@ export default function ExamsListScreen() {
                 {papers.length === 0 && !error && (
                     <View style={styles.emptyContainer}>
                         <Ionicons name="school-outline" size={64} color={colors.textTertiary} />
-                        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                            No exams available yet
-                        </Text>
+                        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No exams available yet</Text>
                     </View>
                 )}
             </ScrollView>
