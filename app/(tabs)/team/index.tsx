@@ -36,7 +36,7 @@ export default function TeamScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const isDirector = user?.role === 'director' || user?.role === 'admin'; // UI branching for filter chips
+    const canFilter = user?.role === 'director' || user?.role === 'admin' || user?.role === 'manager';
 
     const loadMembers = useCallback(async () => {
         if (!user?.id) return;
@@ -48,16 +48,20 @@ export default function TeamScreen() {
             setMembers(data);
         }
         setIsLoading(false);
-    }, [user?.id, user?.role, isDirector]);
+    }, [user?.id, user?.role, canFilter]);
 
     useFocusEffect(
         useCallback(() => {
             loadMembers();
-        }, [loadMembers])
+        }, [loadMembers]),
     );
 
     const { filtered: filteredMembers, counts: baseCounts } = useFilteredList(
-        members, search, filter, 'role', TEAM_SEARCH_FIELDS,
+        members,
+        search,
+        filter,
+        'role',
+        TEAM_SEARCH_FIELDS,
     );
 
     const { counts, totalLeads, totalWon, avgConversion } = useMemo(() => {
@@ -67,7 +71,7 @@ export default function TeamScreen() {
         };
         const tl = members.reduce((sum, m) => sum + m.leadsCount, 0);
         const tw = members.reduce((sum, m) => sum + m.wonCount, 0);
-        return { counts: c, totalLeads: tl, totalWon: tw, avgConversion: tl > 0 ? Math.round(tw / tl * 100) : 0 };
+        return { counts: c, totalLeads: tl, totalWon: tw, avgConversion: tl > 0 ? Math.round((tw / tl) * 100) : 0 };
     }, [members, baseCounts]);
 
     const onRefresh = useCallback(async () => {
@@ -76,8 +80,12 @@ export default function TeamScreen() {
         setRefreshing(false);
     }, [loadMembers]);
 
-    const filters: { key: FilterKey; label: string }[] = isDirector
-        ? [{ key: 'all', label: 'All' }, { key: 'manager', label: 'Managers' }, { key: 'agent', label: 'Agents' }]
+    const filters: { key: FilterKey; label: string }[] = canFilter
+        ? [
+              { key: 'all', label: 'All' },
+              { key: 'manager', label: 'Managers' },
+              { key: 'agent', label: 'Agents' },
+          ]
         : [{ key: 'all', label: 'All' }];
 
     const getAvatarColor = (name: string) => {
@@ -110,7 +118,10 @@ export default function TeamScreen() {
                 <View style={styles.cardTop}>
                     <View style={[styles.avatar, { backgroundColor: avatarColor + '18' }]}>
                         <Text style={[styles.avatarText, { color: avatarColor }]}>
-                            {item.name.split(' ').map(n => n[0]).join('')}
+                            {item.name
+                                .split(' ')
+                                .map((n) => n[0])
+                                .join('')}
                         </Text>
                     </View>
 
@@ -119,36 +130,45 @@ export default function TeamScreen() {
                             {item.name}
                         </Text>
                         <View style={styles.metaRow}>
-                            <View style={[
-                                styles.roleBadge,
-                                { backgroundColor: isManager ? colors.statusProposed + '18' : colors.accentLight }
-                            ]}>
-                                <View style={[
-                                    styles.roleDot,
-                                    { backgroundColor: isManager ? colors.statusProposed : colors.accent }
-                                ]} />
-                                <Text style={[
-                                    styles.roleText,
-                                    { color: isManager ? colors.statusProposed : colors.accent }
-                                ]}>
+                            <View
+                                style={[
+                                    styles.roleBadge,
+                                    { backgroundColor: isManager ? colors.statusProposed + '18' : colors.accentLight },
+                                ]}
+                            >
+                                <View
+                                    style={[
+                                        styles.roleDot,
+                                        { backgroundColor: isManager ? colors.statusProposed : colors.accent },
+                                    ]}
+                                />
+                                <Text
+                                    style={[
+                                        styles.roleText,
+                                        { color: isManager ? colors.statusProposed : colors.accent },
+                                    ]}
+                                >
                                     {isManager ? 'Manager' : 'Agent'}
                                 </Text>
                             </View>
                         </View>
                     </View>
 
-                    <View style={[
-                        styles.statusPill,
-                        { backgroundColor: item.isActive ? colors.successLight : colors.surfaceSecondary }
-                    ]}>
-                        <View style={[
-                            styles.statusDot,
-                            { backgroundColor: item.isActive ? colors.success : colors.textTertiary }
-                        ]} />
-                        <Text style={[
-                            styles.statusText,
-                            { color: item.isActive ? colors.success : colors.textTertiary }
-                        ]}>
+                    <View
+                        style={[
+                            styles.statusPill,
+                            { backgroundColor: item.isActive ? colors.successLight : colors.surfaceSecondary },
+                        ]}
+                    >
+                        <View
+                            style={[
+                                styles.statusDot,
+                                { backgroundColor: item.isActive ? colors.success : colors.textTertiary },
+                            ]}
+                        />
+                        <Text
+                            style={[styles.statusText, { color: item.isActive ? colors.success : colors.textTertiary }]}
+                        >
                             {item.isActive ? 'Active' : 'Inactive'}
                         </Text>
                     </View>
@@ -167,13 +187,18 @@ export default function TeamScreen() {
                     </View>
                     <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
                     <View style={styles.statItem}>
-                        <Text style={[styles.statValue, { color: item.conversionRate >= 30 ? colors.success : colors.textPrimary }]}>
+                        <Text
+                            style={[
+                                styles.statValue,
+                                { color: item.conversionRate >= 30 ? colors.success : colors.textPrimary },
+                            ]}
+                        >
                             {item.conversionRate}%
                         </Text>
                         <Text style={[styles.statLabel, { color: colors.textTertiary }]}>Conv.</Text>
                     </View>
                 </View>
-            </TouchableOpacity >
+            </TouchableOpacity>
         );
     };
 
@@ -184,7 +209,9 @@ export default function TeamScreen() {
             {/* Pinned Search + Filters */}
             <View style={styles.stickyHeader}>
                 {/* Search Bar */}
-                <View style={[styles.searchBar, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                <View
+                    style={[styles.searchBar, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                >
                     <Ionicons name="search" size={18} color={colors.textTertiary} />
                     <TextInput
                         style={[styles.searchInput, { color: colors.textPrimary }]}
@@ -195,7 +222,10 @@ export default function TeamScreen() {
                         returnKeyType="search"
                     />
                     {search.length > 0 && (
-                        <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <TouchableOpacity
+                            onPress={() => setSearch('')}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
                             <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
                         </TouchableOpacity>
                     )}
@@ -222,10 +252,17 @@ export default function TeamScreen() {
                                     accessibilityLabel={`Filter by ${f.label}`}
                                     accessibilityState={{ selected: isActive }}
                                 >
-                                    <Text style={[styles.filterText, { color: isActive ? '#FFF' : colors.textSecondary }]}>
+                                    <Text
+                                        style={[styles.filterText, { color: isActive ? '#FFF' : colors.textSecondary }]}
+                                    >
                                         {f.label}
                                     </Text>
-                                    <Text style={[styles.filterCount, { color: isActive ? 'rgba(255,255,255,0.8)' : colors.textTertiary }]}>
+                                    <Text
+                                        style={[
+                                            styles.filterCount,
+                                            { color: isActive ? 'rgba(255,255,255,0.8)' : colors.textTertiary },
+                                        ]}
+                                    >
                                         {count}
                                     </Text>
                                 </TouchableOpacity>
@@ -236,7 +273,11 @@ export default function TeamScreen() {
             </View>
 
             {/* Error Banner */}
-            {error && <View style={{ paddingHorizontal: 16 }}><ErrorBanner message={error} onRetry={loadMembers} /></View>}
+            {error && (
+                <View style={{ paddingHorizontal: 16 }}>
+                    <ErrorBanner message={error} onRetry={loadMembers} />
+                </View>
+            )}
 
             <FlatList
                 data={filteredMembers}
@@ -253,13 +294,25 @@ export default function TeamScreen() {
                         <View style={styles.heroRow}>
                             <View style={[styles.heroCard, { backgroundColor: colors.accent }]}>
                                 <Text style={[styles.heroValue, { color: colors.textInverse }]}>{counts.all}</Text>
-                                <Text style={[styles.heroLabel, { color: colors.textInverse, opacity: 0.8 }]}>Members</Text>
+                                <Text style={[styles.heroLabel, { color: colors.textInverse, opacity: 0.8 }]}>
+                                    Members
+                                </Text>
                             </View>
-                            <View style={[styles.heroCard, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                            <View
+                                style={[
+                                    styles.heroCard,
+                                    { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
+                                ]}
+                            >
                                 <Text style={[styles.heroValue, { color: colors.textPrimary }]}>{totalLeads}</Text>
                                 <Text style={[styles.heroLabel, { color: colors.textTertiary }]}>Total Leads</Text>
                             </View>
-                            <View style={[styles.heroCard, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                            <View
+                                style={[
+                                    styles.heroCard,
+                                    { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
+                                ]}
+                            >
                                 <Text style={[styles.heroValue, { color: colors.success }]}>{avgConversion}%</Text>
                                 <Text style={[styles.heroLabel, { color: colors.textTertiary }]}>Avg Conv.</Text>
                             </View>
@@ -340,7 +393,6 @@ const styles = StyleSheet.create({
         fontSize: 15,
         padding: 0,
     },
-
 
     // ── Filters ──
     filterRow: {

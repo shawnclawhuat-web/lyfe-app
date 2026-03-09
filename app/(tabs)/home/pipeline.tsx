@@ -2,16 +2,14 @@ import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { CANDIDATE_STATUS_CONFIG, type CandidateStatus } from '@/types/recruitment';
-import { useTypedRouter } from '@/hooks/useTypedRouter';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
     FadeInDown,
     useAnimatedStyle,
     useSharedValue,
     withRepeat,
-    withSpring,
     withTiming,
 } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
@@ -66,10 +64,7 @@ function SkeletonLoader() {
     return (
         <View style={skeletonStyles.container}>
             {[0, 1, 2, 3, 4].map((i) => (
-                <View
-                    key={i}
-                    style={[skeletonStyles.stageCard, { backgroundColor: colors.cardBackground }]}
-                >
+                <View key={i} style={[skeletonStyles.stageCard, { backgroundColor: colors.cardBackground }]}>
                     <SkeletonBlock width={40} height={40} style={{ borderRadius: 20 }} />
                     <View style={skeletonStyles.stageInfo}>
                         <SkeletonBlock width={100} height={18} style={{ marginBottom: 8 }} />
@@ -168,64 +163,46 @@ function FunnelStageCard({
     maxCount: number;
 }) {
     const { colors } = useTheme();
-    const router = useTypedRouter();
-    const scale = useSharedValue(1);
 
     const statusConfig = CANDIDATE_STATUS_CONFIG[stage.key];
     const barPercent = maxCount > 0 ? (stage.count / maxCount) * 100 : 0;
 
-    const animScaleStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: scale.value }],
-    }));
-
-    const onPressIn = () => {
-        scale.value = withSpring(0.97, { damping: 15 });
-    };
-    const onPressOut = () => {
-        scale.value = withSpring(1, { damping: 15 });
-    };
-
     return (
         <>
-            <Animated.View entering={FadeInDown.delay(index * 50).duration(400).springify()}>
-                <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPressIn={onPressIn}
-                    onPressOut={onPressOut}
-                    onPress={() => router.back()}
-                    accessibilityRole="button"
+            <Animated.View
+                entering={FadeInDown.delay(index * 50)
+                    .duration(400)
+                    .springify()}
+            >
+                <View
+                    style={[
+                        cardStyles.container,
+                        {
+                            backgroundColor: colors.cardBackground,
+                            shadowColor: colors.textPrimary,
+                        },
+                    ]}
                     accessibilityLabel={`${stage.label}: ${stage.count} candidates`}
                 >
-                    <Animated.View
-                        style={[
-                            cardStyles.container,
-                            {
-                                backgroundColor: colors.cardBackground,
-                                shadowColor: colors.textPrimary,
-                            },
-                            animScaleStyle,
-                        ]}
-                    >
-                        <View style={cardStyles.topRow}>
-                            <View style={[cardStyles.iconCircle, { backgroundColor: colors.accentLight }]}>
-                                <Ionicons name={stage.icon as any} size={20} color={colors.accent} />
-                            </View>
-                            <View style={cardStyles.labelWrap}>
-                                <Text style={[cardStyles.label, { color: colors.textPrimary }]}>{stage.label}</Text>
-                                <Text style={[cardStyles.count, { color: colors.textTertiary }]}>
-                                    {stage.count} candidate{stage.count !== 1 ? 's' : ''}
-                                </Text>
-                            </View>
-                            <Text style={[cardStyles.bigCount, { color: colors.accent }]}>{stage.count}</Text>
+                    <View style={cardStyles.topRow}>
+                        <View style={[cardStyles.iconCircle, { backgroundColor: colors.accentLight }]}>
+                            <Ionicons name={stage.icon as any} size={20} color={colors.accent} />
                         </View>
-                        <View style={[cardStyles.barTrack, { backgroundColor: colors.borderLight }]}>
-                            <AnimatedBar
-                                widthPercent={Math.max(barPercent, stage.count > 0 ? 5 : 0)}
-                                color={statusConfig.color}
-                            />
+                        <View style={cardStyles.labelWrap}>
+                            <Text style={[cardStyles.label, { color: colors.textPrimary }]}>{stage.label}</Text>
+                            <Text style={[cardStyles.count, { color: colors.textTertiary }]}>
+                                {stage.count} candidate{stage.count !== 1 ? 's' : ''}
+                            </Text>
                         </View>
-                    </Animated.View>
-                </TouchableOpacity>
+                        <Text style={[cardStyles.bigCount, { color: colors.accent }]}>{stage.count}</Text>
+                    </View>
+                    <View style={[cardStyles.barTrack, { backgroundColor: colors.borderLight }]}>
+                        <AnimatedBar
+                            widthPercent={Math.max(barPercent, stage.count > 0 ? 5 : 0)}
+                            color={statusConfig.color}
+                        />
+                    </View>
+                </View>
             </Animated.View>
             {conversionToNext !== null && (
                 <Animated.View
@@ -302,10 +279,7 @@ export default function PipelineScreen() {
         if (!user?.id) return;
         try {
             // Fetch candidates managed by this manager
-            const { data, error } = await supabase
-                .from('candidates')
-                .select('status')
-                .eq('manager_id', user.id);
+            const { data, error } = await supabase.from('candidates').select('status').eq('manager_id', user.id);
 
             if (!error && data) {
                 const counts: Record<string, number> = {};
@@ -367,10 +341,7 @@ export default function PipelineScreen() {
                     }
                 >
                     {/* Summary */}
-                    <Animated.View
-                        entering={FadeInDown.delay(0).duration(400).springify()}
-                        style={styles.summaryRow}
-                    >
+                    <Animated.View entering={FadeInDown.delay(0).duration(400).springify()} style={styles.summaryRow}>
                         <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
                             {totalCandidates} total candidate{totalCandidates !== 1 ? 's' : ''} in pipeline
                         </Text>
@@ -380,9 +351,7 @@ export default function PipelineScreen() {
                     {funnelData.map((stage, index) => {
                         const nextStage = funnelData[index + 1];
                         const conversionToNext =
-                            nextStage && stage.count > 0
-                                ? Math.round((nextStage.count / stage.count) * 100)
-                                : null;
+                            nextStage && stage.count > 0 ? Math.round((nextStage.count / stage.count) * 100) : null;
 
                         return (
                             <FunnelStageCard

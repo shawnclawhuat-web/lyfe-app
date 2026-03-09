@@ -13,9 +13,14 @@ import {
     markBiometricsPromptShown,
     type BiometryType,
 } from '@/lib/biometrics';
-import { fetchLeadStats, fetchManagerDashboardStats, fetchRecentActivities, type LeadPipelineStats, type ManagerDashboardStats } from '@/lib/leads';
+import {
+    fetchLeadStats,
+    fetchManagerDashboardStats,
+    fetchRecentActivities,
+    type LeadPipelineStats,
+    type ManagerDashboardStats,
+} from '@/lib/leads';
 import { formatDateShort, formatTime, timeAgo } from '@/lib/dateTime';
-import { PA_MANAGER_COLORS } from '@/constants/ui';
 import { MOCK_AGENT_STATS, MOCK_LEAD_PIPELINE, MOCK_MANAGER_ACTIVITIES, MOCK_MANAGER_STATS } from '@/lib/mockData';
 import { fetchUpcomingEvents } from '@/lib/events';
 import { fetchPAManagerIds, fetchPACandidateCount, fetchPAInterviewCount } from '@/lib/recruitment';
@@ -56,7 +61,9 @@ const ACTIVITY_ICONS: Record<LeadActivityType, string> = {
 };
 
 /** Convert Supabase LeadActivity (+ lead_name) → render shape */
-function formatActivities(activities: (LeadActivity & { lead_name?: string })[]): { id: string; type: string; leadName: string; detail: string; time: string; icon: string }[] {
+function formatActivities(
+    activities: (LeadActivity & { lead_name?: string })[],
+): { id: string; type: string; leadName: string; detail: string; time: string; icon: string }[] {
     return activities.map((a) => {
         // Build detail string
         let detail = a.description || '';
@@ -67,7 +74,9 @@ function formatActivities(activities: (LeadActivity & { lead_name?: string })[])
         } else if (a.type === 'created') {
             detail = detail || 'Lead created';
         } else if (a.type === 'note') {
-            detail = a.description ? `Note: ${a.description.substring(0, 40)}${a.description.length > 40 ? '...' : ''}` : 'Added a note';
+            detail = a.description
+                ? `Note: ${a.description.substring(0, 40)}${a.description.length > 40 ? '...' : ''}`
+                : 'Added a note';
         }
 
         const time = timeAgo(a.created_at);
@@ -82,7 +91,6 @@ function formatActivities(activities: (LeadActivity & { lead_name?: string })[])
         };
     });
 }
-
 
 export default function HomeScreen() {
     const { colors } = useTheme();
@@ -134,7 +142,9 @@ export default function HomeScreen() {
 
     // PA state
     const [paStats, setPaStats] = useState<{ candidateCount: number; interviewCount: number; events: AgencyEvent[] }>({
-        candidateCount: 0, interviewCount: 0, events: [],
+        candidateCount: 0,
+        interviewCount: 0,
+        events: [],
     });
 
     const greeting = useMemo(() => getGreeting(), []);
@@ -143,6 +153,7 @@ export default function HomeScreen() {
     const role = user?.role;
     const isCandidate = role === 'candidate';
     const isPa = role === 'pa';
+    const isAdminRole = role === 'admin';
 
     const loadDashboardData = useCallback(async () => {
         if (!user?.id) return;
@@ -161,12 +172,13 @@ export default function HomeScreen() {
                 return;
             }
 
-            // ── Agent / Manager branch ──
+            // ── Agent / Manager / Admin branch ──
+            const isManagerLike = isManagerView || isAdminRole;
             const promises: Promise<any>[] = [
-                fetchLeadStats(user.id, isManagerView),
-                fetchRecentActivities(user.id, isManagerView, 5),
+                fetchLeadStats(user.id, isManagerLike),
+                fetchRecentActivities(user.id, isManagerLike, 5),
             ];
-            if (isManagerView && user.role) {
+            if (isManagerLike && user.role) {
                 promises.push(fetchManagerDashboardStats(user.id, user.role));
             }
             const results = await Promise.all(promises);
@@ -177,7 +189,7 @@ export default function HomeScreen() {
         } catch {
             setError('Failed to load dashboard data');
         }
-    }, [user?.id, isPa, isManagerView, user?.role]);
+    }, [user?.id, isPa, isManagerView, isAdminRole, user?.role]);
 
     useEffect(() => {
         loadDashboardData();
@@ -194,9 +206,15 @@ export default function HomeScreen() {
     const pipeline = stats?.pipeline || MOCK_LEAD_PIPELINE;
 
     // Normalize recent activities for display
-    const displayActivities = useMemo(() => recentActivities.length > 0
-        ? formatActivities(recentActivities)
-        : (isManagerView ? MOCK_MANAGER_ACTIVITIES : []), [recentActivities, isManagerView]);
+    const displayActivities = useMemo(
+        () =>
+            recentActivities.length > 0
+                ? formatActivities(recentActivities)
+                : isManagerView
+                  ? MOCK_MANAGER_ACTIVITIES
+                  : [],
+        [recentActivities, isManagerView],
+    );
 
     const totalPipeline = useMemo(() => pipeline.reduce((n, s) => n + s.count, 0), [pipeline]);
 
@@ -232,15 +250,11 @@ export default function HomeScreen() {
                 }
             >
                 {/* Greeting */}
-                <Text style={[styles.greetingText, { color: colors.textSecondary }]}>{greeting}, {firstName}</Text>
+                <Text style={[styles.greetingText, { color: colors.textSecondary }]}>
+                    {greeting}, {firstName}
+                </Text>
 
-                {error && (
-                    <ErrorBanner
-                        message={error}
-                        onRetry={loadDashboardData}
-                        onDismiss={() => setError(null)}
-                    />
-                )}
+                {error && <ErrorBanner message={error} onRetry={loadDashboardData} onDismiss={() => setError(null)} />}
 
                 {/* Hero Stats */}
                 <View style={styles.heroStatsContainer}>
@@ -248,9 +262,16 @@ export default function HomeScreen() {
                         <>
                             <View style={styles.statsRow}>
                                 <View style={[styles.heroCardPrimary, { backgroundColor: colors.warning }]}>
-                                    <Ionicons name="school" size={80} color="rgba(255,255,255,0.15)" style={styles.heroIconBg} />
+                                    <Ionicons
+                                        name="school"
+                                        size={80}
+                                        color="rgba(255,255,255,0.15)"
+                                        style={styles.heroIconBg}
+                                    />
                                     <Text style={[styles.heroStatValue, { color: colors.textInverse }]}>2</Text>
-                                    <Text style={[styles.heroStatLabel, { color: colors.textInverse, opacity: 0.9 }]}>Exams to Pass</Text>
+                                    <Text style={[styles.heroStatLabel, { color: colors.textInverse, opacity: 0.9 }]}>
+                                        Exams to Pass
+                                    </Text>
                                 </View>
                                 <View style={styles.statsColumn}>
                                     <StatCardSmall label="Stage" value="Exam Prep" colors={colors} />
@@ -261,26 +282,64 @@ export default function HomeScreen() {
                     ) : isPa ? (
                         <View style={styles.statsRow}>
                             <View style={[styles.heroCardPrimary, { backgroundColor: colors.accent }]}>
-                                <Ionicons name="document-text" size={80} color="rgba(255,255,255,0.15)" style={styles.heroIconBg} />
-                                <Text style={[styles.heroStatValue, { color: '#FFFFFF' }]}>{paStats.candidateCount}</Text>
-                                <Text style={[styles.heroStatLabel, { color: 'rgba(255,255,255,0.9)' }]}>Candidates</Text>
+                                <Ionicons
+                                    name="document-text"
+                                    size={80}
+                                    color="rgba(255,255,255,0.15)"
+                                    style={styles.heroIconBg}
+                                />
+                                <Text style={[styles.heroStatValue, { color: colors.textInverse }]}>
+                                    {paStats.candidateCount}
+                                </Text>
+                                <Text style={[styles.heroStatLabel, { color: colors.textInverse, opacity: 0.9 }]}>
+                                    Candidates
+                                </Text>
                             </View>
                             <View style={styles.statsColumn}>
-                                <StatCardSmall label="Interviews" value={paStats.interviewCount.toString()} colors={colors} />
-                                <StatCardSmall label="Events" value={paStats.events.length.toString()} colors={colors} />
+                                <StatCardSmall
+                                    label="Interviews"
+                                    value={paStats.interviewCount.toString()}
+                                    colors={colors}
+                                />
+                                <StatCardSmall
+                                    label="Events"
+                                    value={paStats.events.length.toString()}
+                                    colors={colors}
+                                />
                             </View>
                         </View>
-                    ) : isManagerView ? (
+                    ) : isAdminRole || isManagerView ? (
                         <>
                             <View style={styles.statsRow}>
                                 <View style={[styles.heroCardPrimary, { backgroundColor: colors.accent }]}>
-                                    <Ionicons name="people" size={80} color="rgba(255,255,255,0.15)" style={styles.heroIconBg} />
-                                    <Text style={[styles.heroStatValue, { color: colors.textInverse }]}>{isManagerView ? (stats?.totalLeads || MOCK_MANAGER_STATS.teamLeads) : 0}</Text>
-                                    <Text style={[styles.heroStatLabel, { color: colors.textInverse, opacity: 0.9 }]}>Team Leads</Text>
+                                    <Ionicons
+                                        name="people"
+                                        size={80}
+                                        color="rgba(255,255,255,0.15)"
+                                        style={styles.heroIconBg}
+                                    />
+                                    <Text style={[styles.heroStatValue, { color: colors.textInverse }]}>
+                                        {isManagerView ? stats?.totalLeads || MOCK_MANAGER_STATS.teamLeads : 0}
+                                    </Text>
+                                    <Text style={[styles.heroStatLabel, { color: colors.textInverse, opacity: 0.9 }]}>
+                                        Team Leads
+                                    </Text>
                                 </View>
                                 <View style={styles.statsColumn}>
-                                    <StatCardSmall label="Candidates" value={(managerStats?.activeCandidates ?? MOCK_MANAGER_STATS.activeCandidates).toString()} colors={colors} />
-                                    <StatCardSmall label="Agents" value={(managerStats?.agentsManaged ?? MOCK_MANAGER_STATS.agentsManaged).toString()} colors={colors} />
+                                    <StatCardSmall
+                                        label="Candidates"
+                                        value={(
+                                            managerStats?.activeCandidates ?? MOCK_MANAGER_STATS.activeCandidates
+                                        ).toString()}
+                                        colors={colors}
+                                    />
+                                    <StatCardSmall
+                                        label="Agents"
+                                        value={(
+                                            managerStats?.agentsManaged ?? MOCK_MANAGER_STATS.agentsManaged
+                                        ).toString()}
+                                        colors={colors}
+                                    />
                                 </View>
                             </View>
                         </>
@@ -288,13 +347,30 @@ export default function HomeScreen() {
                         <>
                             <View style={styles.statsRow}>
                                 <View style={[styles.heroCardPrimary, { backgroundColor: colors.accent }]}>
-                                    <Ionicons name="briefcase" size={80} color="rgba(255,255,255,0.15)" style={styles.heroIconBg} />
-                                    <Text style={[styles.heroStatValue, { color: colors.textInverse }]}>{agentStats.totalLeads}</Text>
-                                    <Text style={[styles.heroStatLabel, { color: colors.textInverse, opacity: 0.9 }]}>Total Leads</Text>
+                                    <Ionicons
+                                        name="briefcase"
+                                        size={80}
+                                        color="rgba(255,255,255,0.15)"
+                                        style={styles.heroIconBg}
+                                    />
+                                    <Text style={[styles.heroStatValue, { color: colors.textInverse }]}>
+                                        {agentStats.totalLeads}
+                                    </Text>
+                                    <Text style={[styles.heroStatLabel, { color: colors.textInverse, opacity: 0.9 }]}>
+                                        Total Leads
+                                    </Text>
                                 </View>
                                 <View style={styles.statsColumn}>
-                                    <StatCardSmall label="New Leads" value={agentStats.newThisWeek.toString()} colors={colors} />
-                                    <StatCardSmall label="Conversion" value={`${agentStats.conversionRate}%`} colors={colors} />
+                                    <StatCardSmall
+                                        label="New Leads"
+                                        value={agentStats.newThisWeek.toString()}
+                                        colors={colors}
+                                    />
+                                    <StatCardSmall
+                                        label="Conversion"
+                                        value={`${agentStats.conversionRate}%`}
+                                        colors={colors}
+                                    />
                                 </View>
                             </View>
                         </>
@@ -307,33 +383,138 @@ export default function HomeScreen() {
                     <View style={styles.quickActionsGrid}>
                         {isCandidate ? (
                             <>
-                                <QuickActionBtn icon="school" label="Exams" colors={colors} onPress={() => router.push('/(tabs)/exams')} />
-                                <QuickActionBtn icon="book" label="Study" colors={colors} onPress={() => router.push('/(tabs)/exams/study')} />
-                                <QuickActionBtn icon="help-circle" label="Support" colors={colors} onPress={() => { }} />
-                                <QuickActionBtn icon="person" label="Profile" colors={colors} onPress={() => router.push('/(tabs)/profile')} />
+                                <QuickActionBtn
+                                    icon="school"
+                                    label="Exams"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/exams')}
+                                />
+                                <QuickActionBtn
+                                    icon="book"
+                                    label="Study"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/exams/study')}
+                                />
+                                <QuickActionBtn
+                                    icon="calendar"
+                                    label="My Events"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/events')}
+                                />
+                                <QuickActionBtn
+                                    icon="person"
+                                    label="Profile"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/profile')}
+                                />
                             </>
                         ) : isPa ? (
                             <>
-                                <QuickActionBtn icon="document-text" label="Candidates" colors={colors} onPress={() => router.push('/(tabs)/pa')} />
-                                <QuickActionBtn icon="calendar" label="Events" colors={colors} onPress={() => router.push('/(tabs)/events')} />
-                                <QuickActionBtn icon="person-add" label="Add Candidate" colors={colors} onPress={() => router.push('/(tabs)/pa/add-candidate')} />
-                                <QuickActionBtn icon="person" label="Profile" colors={colors} onPress={() => router.push('/(tabs)/profile')} />
+                                <QuickActionBtn
+                                    icon="document-text"
+                                    label="Candidates"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/pa')}
+                                />
+                                <QuickActionBtn
+                                    icon="calendar"
+                                    label="Events"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/events')}
+                                />
+                                <QuickActionBtn
+                                    icon="person-add"
+                                    label="Add Candidate"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/pa/add-candidate')}
+                                />
+                                <QuickActionBtn
+                                    icon="person"
+                                    label="Profile"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/profile')}
+                                />
+                            </>
+                        ) : isAdminRole ? (
+                            <>
+                                <QuickActionBtn
+                                    icon="briefcase"
+                                    label="Team"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/team')}
+                                />
+                                <QuickActionBtn
+                                    icon="calendar"
+                                    label="Events"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/events')}
+                                />
+                                <QuickActionBtn
+                                    icon="people"
+                                    label="Leads"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/leads')}
+                                />
+                                <QuickActionBtn
+                                    icon="person"
+                                    label="Profile"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/profile')}
+                                />
                             </>
                         ) : isManagerView ? (
                             <>
-                                <QuickActionBtn icon="briefcase" label="Team" colors={colors} onPress={() => router.push('/(tabs)/team')} />
-                                <QuickActionBtn icon="people" label="Leads" colors={colors} onPress={() => router.push('/(tabs)/leads')} />
-                                <QuickActionBtn icon="analytics" label="Analytics" colors={colors} onPress={() => router.push('/(tabs)/home/analytics')} />
-                                <QuickActionBtn icon="funnel" label="Pipeline" colors={colors} onPress={() => router.push('/(tabs)/home/pipeline')} />
-                                <QuickActionBtn icon="document-text" label="Candidates" colors={colors} onPress={() => router.push('/(tabs)/candidates')} />
-                                <QuickActionBtn icon="person" label="Profile" colors={colors} onPress={() => router.push('/(tabs)/profile')} />
+                                <QuickActionBtn
+                                    icon="briefcase"
+                                    label="Team"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/team')}
+                                />
+                                <QuickActionBtn
+                                    icon="people"
+                                    label="Leads"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/leads')}
+                                />
+                                <QuickActionBtn
+                                    icon="analytics"
+                                    label="Analytics"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/home/analytics')}
+                                />
+                                <QuickActionBtn
+                                    icon="funnel"
+                                    label="Pipeline"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/home/pipeline')}
+                                />
                             </>
                         ) : (
                             <>
-                                <QuickActionBtn icon="person-add" label="Add Lead" colors={colors} onPress={() => router.push('/(tabs)/leads/add')} />
-                                <QuickActionBtn icon="list" label="All Leads" colors={colors} onPress={() => router.push('/(tabs)/leads')} />
-                                <QuickActionBtn icon="calendar" label="Follow-ups" colors={colors} onPress={() => router.push('/(tabs)/leads')} />
-                                <QuickActionBtn icon="person" label="Profile" colors={colors} onPress={() => router.push('/(tabs)/profile')} />
+                                <QuickActionBtn
+                                    icon="person-add"
+                                    label="Add Lead"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/leads/add')}
+                                />
+                                <QuickActionBtn
+                                    icon="list"
+                                    label="All Leads"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/leads')}
+                                />
+                                <QuickActionBtn
+                                    icon="calendar"
+                                    label="My Events"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/events')}
+                                />
+                                <QuickActionBtn
+                                    icon="person"
+                                    label="Profile"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/profile')}
+                                />
                             </>
                         )}
                     </View>
@@ -350,9 +531,11 @@ export default function HomeScreen() {
                         </View>
 
                         {paStats.events.length === 0 ? (
-                            <Text style={[styles.emptyActivityText, { color: colors.textTertiary }]}>No upcoming events</Text>
+                            <Text style={[styles.emptyActivityText, { color: colors.textTertiary }]}>
+                                No upcoming events
+                            </Text>
                         ) : (
-                            paStats.events.map(event => {
+                            paStats.events.map((event) => {
                                 const typeColor = EVENT_TYPE_COLORS[event.event_type] ?? colors.accent;
                                 return (
                                     <TouchableOpacity
@@ -363,14 +546,20 @@ export default function HomeScreen() {
                                     >
                                         <View style={[styles.managerEventStripe, { backgroundColor: typeColor }]} />
                                         <View style={styles.managerEventContent}>
-                                            <Text style={[styles.managerEventTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                                            <Text
+                                                style={[styles.managerEventTitle, { color: colors.textPrimary }]}
+                                                numberOfLines={1}
+                                            >
                                                 {event.title}
                                             </Text>
                                             <Text style={[styles.managerEventMeta, { color: colors.textTertiary }]}>
                                                 {formatDateShort(event.event_date)} · {formatTime(event.start_time)}
                                             </Text>
                                             {event.location ? (
-                                                <Text style={[styles.managerEventOwner, { color: typeColor }]} numberOfLines={1}>
+                                                <Text
+                                                    style={[styles.managerEventOwner, { color: typeColor }]}
+                                                    numberOfLines={1}
+                                                >
                                                     {event.location}
                                                 </Text>
                                             ) : null}
@@ -384,34 +573,51 @@ export default function HomeScreen() {
 
                 {/* Lead Pipeline — hidden for candidates and PA */}
                 {!isCandidate && !isPa && (
-                    <View style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                    <View
+                        style={[
+                            styles.card,
+                            { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
+                        ]}
+                    >
                         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Lead Pipeline</Text>
                         <View style={[styles.pipelineWrapper, { backgroundColor: colors.borderLight }]}>
                             <View style={styles.pipelineBar}>
-                                {pipeline.filter(s => s.count > 0).map((seg) => (
-                                    <View
-                                        key={seg.status}
-                                        style={[
-                                            styles.pipelineSegment,
-                                            {
-                                                flex: seg.count / totalPipeline,
-                                                backgroundColor: STATUS_CONFIG[seg.status].color,
-                                            },
-                                        ]}
-                                    />
-                                ))}
+                                {pipeline
+                                    .filter((s) => s.count > 0)
+                                    .map((seg) => (
+                                        <View
+                                            key={seg.status}
+                                            style={[
+                                                styles.pipelineSegment,
+                                                {
+                                                    flex: seg.count / totalPipeline,
+                                                    backgroundColor: STATUS_CONFIG[seg.status].color,
+                                                },
+                                            ]}
+                                        />
+                                    ))}
                             </View>
                         </View>
                         <View style={styles.pipelineLegend}>
                             {pipeline.map((seg) => {
                                 if (seg.count === 0) return null;
                                 return (
-                                    <View key={seg.status} style={[styles.legendChip, { backgroundColor: colors.background }]}>
-                                        <View style={[styles.legendDot, { backgroundColor: STATUS_CONFIG[seg.status].color }]} />
+                                    <View
+                                        key={seg.status}
+                                        style={[styles.legendChip, { backgroundColor: colors.background }]}
+                                    >
+                                        <View
+                                            style={[
+                                                styles.legendDot,
+                                                { backgroundColor: STATUS_CONFIG[seg.status].color },
+                                            ]}
+                                        />
                                         <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>
                                             {STATUS_CONFIG[seg.status].label}
                                         </Text>
-                                        <Text style={[styles.legendCount, { color: colors.textPrimary }]}>{seg.count}</Text>
+                                        <Text style={[styles.legendCount, { color: colors.textPrimary }]}>
+                                            {seg.count}
+                                        </Text>
                                     </View>
                                 );
                             })}
@@ -421,7 +627,12 @@ export default function HomeScreen() {
 
                 {/* Recent Activity — hidden for candidates and PA */}
                 {!isCandidate && !isPa && (
-                    <View style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+                    <View
+                        style={[
+                            styles.card,
+                            { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
+                        ]}
+                    >
                         <View style={styles.sectionHeaderRow}>
                             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Recent Activity</Text>
                             <TouchableOpacity
@@ -441,14 +652,22 @@ export default function HomeScreen() {
                             ) : (
                                 displayActivities.map((activity) => (
                                     <View key={activity.id} style={styles.activityRow}>
-                                        <View style={[styles.activityIconCircle, { backgroundColor: colors.accentLight }]}>
+                                        <View
+                                            style={[styles.activityIconCircle, { backgroundColor: colors.accentLight }]}
+                                        >
                                             <Ionicons name={activity.icon as any} size={18} color={colors.accent} />
                                         </View>
                                         <View style={styles.activityContent}>
-                                            <Text style={[styles.activityLeadName, { color: colors.textPrimary }]}>{activity.leadName}</Text>
-                                            <Text style={[styles.activityDetail, { color: colors.textSecondary }]}>{activity.detail}</Text>
+                                            <Text style={[styles.activityLeadName, { color: colors.textPrimary }]}>
+                                                {activity.leadName}
+                                            </Text>
+                                            <Text style={[styles.activityDetail, { color: colors.textSecondary }]}>
+                                                {activity.detail}
+                                            </Text>
                                         </View>
-                                        <Text style={[styles.activityTime, { color: colors.textTertiary }]}>{activity.time}</Text>
+                                        <Text style={[styles.activityTime, { color: colors.textTertiary }]}>
+                                            {activity.time}
+                                        </Text>
                                     </View>
                                 ))
                             )}
@@ -478,7 +697,8 @@ export default function HomeScreen() {
                             Sign in with {biometryType === 'faceid' ? 'Face ID' : 'Touch ID'}
                         </Text>
                         <Text style={[styles.biometricSubtitle, { color: colors.textSecondary }]}>
-                            Skip the OTP next time — use {biometryType === 'faceid' ? 'Face ID' : 'Touch ID'} to sign in instantly.
+                            Skip the OTP next time — use {biometryType === 'faceid' ? 'Face ID' : 'Touch ID'} to sign in
+                            instantly.
                         </Text>
                         <TouchableOpacity
                             style={[styles.biometricEnableBtn, { backgroundColor: colors.accent }]}
@@ -515,16 +735,36 @@ export default function HomeScreen() {
 
 // ── Sub-Components ──
 
-const StatCardSmall = memo(function StatCardSmall({ label, value, colors }: { label: string; value: string; colors: any }) {
+const StatCardSmall = memo(function StatCardSmall({
+    label,
+    value,
+    colors,
+}: {
+    label: string;
+    value: string;
+    colors: any;
+}) {
     return (
-        <View style={[styles.statCardSmall, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
+        <View
+            style={[styles.statCardSmall, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}
+        >
             <Text style={[styles.statValueSmall, { color: colors.textPrimary }]}>{value}</Text>
             <Text style={[styles.statLabelSmall, { color: colors.textTertiary }]}>{label}</Text>
         </View>
     );
 });
 
-const QuickActionBtn = memo(function QuickActionBtn({ icon, label, colors, onPress }: { icon: string; label: string; colors: any; onPress: () => void }) {
+const QuickActionBtn = memo(function QuickActionBtn({
+    icon,
+    label,
+    colors,
+    onPress,
+}: {
+    icon: string;
+    label: string;
+    colors: any;
+    onPress: () => void;
+}) {
     const scale = useSharedValue(1);
     const animatedStyle = useAnimatedStyle(() => ({
         transform: [{ scale: scale.value }],
@@ -538,7 +778,10 @@ const QuickActionBtn = memo(function QuickActionBtn({ icon, label, colors, onPre
 
     return (
         <TouchableOpacity
-            style={[styles.quickActionSurface, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}
+            style={[
+                styles.quickActionSurface,
+                { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
+            ]}
             onPress={onPress}
             onPressIn={onPressIn}
             onPressOut={onPressOut}
@@ -671,7 +914,7 @@ const styles = StyleSheet.create({
     },
     quickActionLabel: {
         fontSize: 12,
-        fontWeight: '600'
+        fontWeight: '600',
     },
 
     // Pipeline

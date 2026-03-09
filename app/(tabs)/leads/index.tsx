@@ -65,11 +65,15 @@ export default function LeadsListScreen() {
     useFocusEffect(
         useCallback(() => {
             loadLeads();
-        }, [loadLeads])
+        }, [loadLeads]),
     );
 
     const { filtered: filteredLeads, counts } = useFilteredList(
-        leads, search, activeFilter, 'status', LEAD_SEARCH_FIELDS,
+        leads,
+        search,
+        activeFilter,
+        'status',
+        LEAD_SEARCH_FIELDS,
     );
 
     const onRefresh = useCallback(async () => {
@@ -92,7 +96,7 @@ export default function LeadsListScreen() {
             {/* Header */}
             <ScreenHeader
                 title="Leads"
-                rightAction={!isManagerView ? (
+                rightAction={
                     <TouchableOpacity
                         style={[styles.addButton, { backgroundColor: colors.accent }]}
                         onPress={() => router.push('/(tabs)/leads/add')}
@@ -101,12 +105,14 @@ export default function LeadsListScreen() {
                         <Ionicons name="add" size={20} color={colors.textInverse} />
                         <Text style={[styles.addButtonText, { color: colors.textInverse }]}>Add</Text>
                     </TouchableOpacity>
-                ) : undefined}
+                }
             />
 
             {/* Search */}
             <View style={styles.stickyHeader}>
-                <View style={[styles.searchBar, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                <View
+                    style={[styles.searchBar, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                >
                     <Ionicons name="search" size={18} color={colors.textTertiary} />
                     <TextInput
                         style={[styles.searchInput, { color: colors.textPrimary }]}
@@ -175,7 +181,11 @@ export default function LeadsListScreen() {
             </View>
 
             {/* Error Banner */}
-            {error && <View style={{ paddingHorizontal: 16 }}><ErrorBanner message={error} onRetry={loadLeads} /></View>}
+            {error && (
+                <View style={{ paddingHorizontal: 16 }}>
+                    <ErrorBanner message={error} onRetry={loadLeads} />
+                </View>
+            )}
 
             {/* Lead List */}
             <FlatList
@@ -184,11 +194,7 @@ export default function LeadsListScreen() {
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={onRefresh}
-                        tintColor={colors.accent}
-                    />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
                 }
                 ListEmptyComponent={
                     <EmptyState
@@ -198,10 +204,7 @@ export default function LeadsListScreen() {
                     />
                 }
                 renderItem={({ item }) => (
-                    <LeadCard
-                        lead={item}
-                        onPress={() => router.push(`/(tabs)/leads/${item.id}`)}
-                    />
+                    <LeadCard lead={item} onPress={() => router.push(`/(tabs)/leads/${item.id}`)} />
                 )}
             />
         </SafeAreaView>

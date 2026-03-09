@@ -41,7 +41,7 @@ let Clipboard: typeof import('expo-clipboard') | null = null;
 try {
     Clipboard = require('expo-clipboard');
 } catch (e) {
-    console.warn('expo-clipboard not available:', e);
+    if (__DEV__) console.warn('expo-clipboard not available:', e);
 }
 
 // ── Wheel Picker ──
@@ -443,7 +443,13 @@ export default function CandidateDetailScreen() {
                         { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
                     ]}
                 >
-                    <QuickAction icon="call" label="Call" color={colors.success} bgColor={colors.successLight} onPress={handleCall} />
+                    <QuickAction
+                        icon="call"
+                        label="Call"
+                        color={colors.success}
+                        bgColor={colors.successLight}
+                        onPress={handleCall}
+                    />
                     <QuickAction
                         icon="logo-whatsapp"
                         label="WhatsApp"

@@ -11,8 +11,8 @@ export default function CandidatesScreen() {
 
     return (
         <CandidateListScreen
-            candidateRoute={(id) => `/candidates/${id}`}
-            addRoute="/team/add-candidate"
+            candidateRoute={(id) => `/(tabs)/candidates/${id}`}
+            addRoute="/(tabs)/team/add-candidate"
             isManagerView={isManagerView}
         />
     );

@@ -798,6 +798,7 @@ export default function EventsScreen() {
     const [isLoading, setIsLoading] = useState(true);
 
     const isPA = user?.role === 'pa' || user?.role === 'admin';
+    const canCreateEvents = user?.role && ['admin', 'director', 'manager', 'pa'].includes(user.role);
 
     const loadEvents = useCallback(async () => {
         if (!user?.id) return;
@@ -871,14 +872,16 @@ export default function EventsScreen() {
                 )}
             />
 
-            <TouchableOpacity
-                style={[styles.fab, { backgroundColor: colors.accent }]}
-                onPress={() => router.push('/(tabs)/events/create' as any)}
-                activeOpacity={0.85}
-                accessibilityLabel="Create event"
-            >
-                <Ionicons name="add" size={28} color="#FFFFFF" />
-            </TouchableOpacity>
+            {canCreateEvents && (
+                <TouchableOpacity
+                    style={[styles.fab, { backgroundColor: colors.accent }]}
+                    onPress={() => router.push('/(tabs)/events/create' as any)}
+                    activeOpacity={0.85}
+                    accessibilityLabel="Create event"
+                >
+                    <Ionicons name="add" size={28} color="#FFFFFF" />
+                </TouchableOpacity>
+            )}
         </SafeAreaView>
     );
 }

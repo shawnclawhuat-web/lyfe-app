@@ -86,6 +86,31 @@ export default function AddLeadScreen() {
         router.back();
     };
 
+    const canViewLeads = user?.role && ['admin', 'director', 'manager', 'agent'].includes(user.role);
+
+    if (!canViewLeads) {
+        return (
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+                <View style={[styles.headerBar, { borderBottomColor: colors.borderLight }]}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.cancelBtn}>
+                        <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Back</Text>
+                    </TouchableOpacity>
+                    <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>New Lead</Text>
+                    <View style={styles.cancelBtn} />
+                </View>
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+                    <Ionicons name="lock-closed-outline" size={48} color={colors.textTertiary} />
+                    <Text style={{ fontSize: 17, fontWeight: '600', color: colors.textPrimary, marginTop: 16 }}>
+                        Not Authorized
+                    </Text>
+                    <Text style={{ fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginTop: 8 }}>
+                        You don&apos;t have permission to add leads.
+                    </Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             {/* Header */}

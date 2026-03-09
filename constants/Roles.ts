@@ -30,9 +30,35 @@ export type Capability =
     | 'view_candidates';
 
 const ROLE_CAPABILITIES: Record<UserRole, Capability[]> = {
-    admin: ['hold_agents', 'reassign_leads', 'reassign_leads_globally', 'invite_agents', 'create_candidates', 'schedule_interviews', 'view_admin'],
-    director: ['hold_agents', 'reassign_leads', 'invite_agents', 'create_candidates', 'schedule_interviews', 'view_team', 'view_leads', 'view_candidates'],
-    manager: ['hold_agents', 'reassign_leads', 'invite_agents', 'create_candidates', 'schedule_interviews', 'view_team', 'view_leads', 'view_candidates'],
+    admin: [
+        'hold_agents',
+        'reassign_leads',
+        'reassign_leads_globally',
+        'invite_agents',
+        'create_candidates',
+        'schedule_interviews',
+        'view_admin',
+    ],
+    director: [
+        'hold_agents',
+        'reassign_leads',
+        'invite_agents',
+        'create_candidates',
+        'schedule_interviews',
+        'view_team',
+        'view_leads',
+        'view_candidates',
+    ],
+    manager: [
+        'hold_agents',
+        'reassign_leads',
+        'invite_agents',
+        'create_candidates',
+        'schedule_interviews',
+        'view_team',
+        'view_leads',
+        'view_candidates',
+    ],
     agent: ['view_leads'],
     pa: ['create_candidates', 'schedule_interviews', 'view_candidates'],
     candidate: [],
@@ -47,7 +73,7 @@ export function hasCapability(role: UserRole, capability: Capability): boolean {
 
 /** Tabs each role can see (base configuration — use getVisibleTabs() for view-mode-aware tabs) */
 export const ROLE_TABS: Record<UserRole, string[]> = {
-    admin: ['home', 'profile'],
+    admin: ['home', 'leads', 'team', 'events', 'profile'],
     director: ['home', 'leads', 'team', 'events', 'profile'],
     manager: ['home', 'leads', 'team', 'events', 'profile'],
     agent: ['home', 'leads', 'events', 'profile'],
@@ -118,7 +144,7 @@ export const TAB_CONFIG: Record<string, { label: string; icon: string }> = {
     candidates: { label: 'Candidates', icon: 'document-text' },
     team: { label: 'Team', icon: 'business' },
     events: { label: 'Events', icon: 'calendar' },
-    pa: { label: 'PA', icon: 'clipboard' },
+    pa: { label: 'Candidates', icon: 'clipboard' },
     admin: { label: 'Admin', icon: 'settings' },
     profile: { label: 'Profile', icon: 'person' },
 };

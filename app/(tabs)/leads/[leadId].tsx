@@ -7,9 +7,24 @@ import StatusBadge from '@/components/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useViewMode } from '@/contexts/ViewModeContext';
-import { addLeadActivity, addLeadNote, fetchLead, fetchLeadActivities, fetchTeamAgents, reassignLead, updateLeadStatus } from '@/lib/leads';
+import {
+    addLeadActivity,
+    addLeadNote,
+    fetchLead,
+    fetchLeadActivities,
+    fetchTeamAgents,
+    reassignLead,
+    updateLeadStatus,
+} from '@/lib/leads';
 import type { Lead } from '@/types/lead';
-import { LEAD_STATUSES, PRODUCT_LABELS, SOURCE_LABELS, STATUS_CONFIG, type LeadActivity, type LeadStatus } from '@/types/lead';
+import {
+    LEAD_STATUSES,
+    PRODUCT_LABELS,
+    SOURCE_LABELS,
+    STATUS_CONFIG,
+    type LeadActivity,
+    type LeadStatus,
+} from '@/types/lead';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -25,9 +40,8 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from 'react-native';
-
 
 export default function LeadDetailScreen() {
     const { leadId } = useLocalSearchParams<{ leadId: string }>();
@@ -74,10 +88,7 @@ export default function LeadDetailScreen() {
 
         try {
             setError(null);
-            const [leadResult, activitiesResult] = await Promise.all([
-                fetchLead(leadId),
-                fetchLeadActivities(leadId),
-            ]);
+            const [leadResult, activitiesResult] = await Promise.all([fetchLead(leadId), fetchLeadActivities(leadId)]);
 
             if (leadResult.data) {
                 setLead(leadResult.data);
@@ -161,9 +172,12 @@ export default function LeadDetailScreen() {
         setShowContactConfirm(false);
         if (!pc || outcome === 'skip') return;
 
-        const description = pc.type === 'call'
-            ? outcome === 'reached' ? `Called ${pc.phone} — reached` : `Called ${pc.phone} — no answer`
-            : `Sent WhatsApp to ${pc.phone}`;
+        const description =
+            pc.type === 'call'
+                ? outcome === 'reached'
+                    ? `Called ${pc.phone} — reached`
+                    : `Called ${pc.phone} — no answer`
+                : `Sent WhatsApp to ${pc.phone}`;
 
         logActivity(pc.type, description, { phone: pc.phone, outcome });
 
@@ -192,7 +206,12 @@ export default function LeadDetailScreen() {
             user_id: user?.id || 'me',
             type: 'reassignment',
             description: null,
-            metadata: { from_agent_id: fromId, to_agent_id: toAgent.id, from_agent_name: fromName, to_agent_name: toAgent.full_name },
+            metadata: {
+                from_agent_id: fromId,
+                to_agent_id: toAgent.id,
+                from_agent_name: fromName,
+                to_agent_name: toAgent.full_name,
+            },
             created_at: new Date().toISOString(),
             actor_name: user?.full_name || undefined,
         };
@@ -262,24 +281,35 @@ export default function LeadDetailScreen() {
                 showBack
                 backLabel="Leads"
                 title={lead.full_name}
-                banner={isManagerView ? {
-                    text: 'Manager View — Read-only. Switch to Agent View to edit this lead.',
-                    icon: 'shield-outline',
-                } : undefined}
+                banner={
+                    isManagerView
+                        ? {
+                              text: 'Manager View — Limited actions available.',
+                              icon: 'shield-outline',
+                          }
+                        : undefined
+                }
             />
 
-            {error && (
-                <ErrorBanner message={error} onRetry={loadData} onDismiss={() => setError(null)} />
-            )}
+            {error && <ErrorBanner message={error} onRetry={loadData} onDismiss={() => setError(null)} />}
 
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 keyboardVerticalOffset={100}
             >
-                <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                >
                     {/* Lead Header Card */}
-                    <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+                    <View
+                        style={[
+                            styles.card,
+                            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                        ]}
+                    >
                         <View style={styles.leadHeaderRow}>
                             <View style={[styles.avatar, { backgroundColor: colors.accentLight }]}>
                                 <Text style={[styles.avatarText, { color: colors.accent }]}>
@@ -299,13 +329,17 @@ export default function LeadDetailScreen() {
                             {lead.phone && (
                                 <View style={styles.contactRow}>
                                     <Ionicons name="call-outline" size={16} color={colors.textTertiary} />
-                                    <Text style={[styles.contactText, { color: colors.textSecondary }]}>{lead.phone}</Text>
+                                    <Text style={[styles.contactText, { color: colors.textSecondary }]}>
+                                        {lead.phone}
+                                    </Text>
                                 </View>
                             )}
                             {lead.email && (
                                 <View style={styles.contactRow}>
                                     <Ionicons name="mail-outline" size={16} color={colors.textTertiary} />
-                                    <Text style={[styles.contactText, { color: colors.textSecondary }]}>{lead.email}</Text>
+                                    <Text style={[styles.contactText, { color: colors.textSecondary }]}>
+                                        {lead.email}
+                                    </Text>
                                 </View>
                             )}
                             <View style={styles.tagsRow}>
@@ -326,7 +360,12 @@ export default function LeadDetailScreen() {
                     </View>
 
                     {/* Quick Actions */}
-                    <View style={[styles.actionsCard, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+                    <View
+                        style={[
+                            styles.actionsCard,
+                            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                        ]}
+                    >
                         <QuickAction
                             icon="call"
                             label="Call"
@@ -374,7 +413,12 @@ export default function LeadDetailScreen() {
 
                     {/* Status Picker */}
                     {!isManagerView && showStatusPicker && (
-                        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+                        <View
+                            style={[
+                                styles.card,
+                                { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                            ]}
+                        >
                             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Change Status</Text>
                             <View style={styles.statusGrid}>
                                 {LEAD_STATUSES.map((s) => {
@@ -395,8 +439,17 @@ export default function LeadDetailScreen() {
                                             onPress={() => handleChangeStatus(s)}
                                             disabled={isUpdatingStatus}
                                         >
-                                            <Ionicons name={cfg.icon as any} size={16} color={isActive ? cfg.color : colors.textTertiary} />
-                                            <Text style={[styles.statusOptionText, { color: isActive ? cfg.color : colors.textSecondary }]}>
+                                            <Ionicons
+                                                name={cfg.icon as any}
+                                                size={16}
+                                                color={isActive ? cfg.color : colors.textTertiary}
+                                            />
+                                            <Text
+                                                style={[
+                                                    styles.statusOptionText,
+                                                    { color: isActive ? cfg.color : colors.textSecondary },
+                                                ]}
+                                            >
                                                 {cfg.label}
                                             </Text>
                                         </TouchableOpacity>
@@ -408,10 +461,22 @@ export default function LeadDetailScreen() {
 
                     {/* Add Note Input */}
                     {!isManagerView && showNoteInput && (
-                        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+                        <View
+                            style={[
+                                styles.card,
+                                { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                            ]}
+                        >
                             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Add Note</Text>
                             <TextInput
-                                style={[styles.noteInput, { color: colors.textPrimary, borderColor: colors.borderLight, backgroundColor: colors.surfacePrimary }]}
+                                style={[
+                                    styles.noteInput,
+                                    {
+                                        color: colors.textPrimary,
+                                        borderColor: colors.borderLight,
+                                        backgroundColor: colors.surfacePrimary,
+                                    },
+                                ]}
                                 placeholder="Write a note..."
                                 placeholderTextColor={colors.textTertiary}
                                 value={noteText}
@@ -423,34 +488,48 @@ export default function LeadDetailScreen() {
                             <View style={styles.noteActions}>
                                 <TouchableOpacity
                                     style={[styles.noteCancel, { borderColor: colors.borderLight }]}
-                                    onPress={() => { setShowNoteInput(false); setNoteText(''); }}
+                                    onPress={() => {
+                                        setShowNoteInput(false);
+                                        setNoteText('');
+                                    }}
                                 >
                                     <Text style={[styles.noteCancelText, { color: colors.textSecondary }]}>Cancel</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
-                                    style={[styles.noteSave, { backgroundColor: colors.accent, opacity: noteText.trim() && !isSavingNote ? 1 : 0.4 }]}
+                                    style={[
+                                        styles.noteSave,
+                                        {
+                                            backgroundColor: colors.accent,
+                                            opacity: noteText.trim() && !isSavingNote ? 1 : 0.4,
+                                        },
+                                    ]}
                                     onPress={handleAddNote}
                                     disabled={!noteText.trim() || isSavingNote}
                                 >
-                                    <Text style={[styles.noteSaveText, { color: colors.textInverse }]}>{isSavingNote ? 'Saving...' : 'Save Note'}</Text>
+                                    <Text style={[styles.noteSaveText, { color: colors.textInverse }]}>
+                                        {isSavingNote ? 'Saving...' : 'Save Note'}
+                                    </Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
                     )}
 
                     {/* Activity Timeline */}
-                    <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+                    <View
+                        style={[
+                            styles.card,
+                            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                        ]}
+                    >
                         <View style={styles.timelineHeader}>
                             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Activity</Text>
-                            <Text style={[styles.activityCount, { color: colors.textTertiary }]}>{activities.length} entries</Text>
+                            <Text style={[styles.activityCount, { color: colors.textTertiary }]}>
+                                {activities.length} entries
+                            </Text>
                         </View>
                         <View style={styles.timelineContent}>
                             {activities.map((act, idx) => (
-                                <LeadActivityItem
-                                    key={act.id}
-                                    activity={act}
-                                    isLast={idx === activities.length - 1}
-                                />
+                                <LeadActivityItem key={act.id} activity={act} isLast={idx === activities.length - 1} />
                             ))}
                             {activities.length === 0 && (
                                 <EmptyState
@@ -478,8 +557,12 @@ export default function LeadDetailScreen() {
                                 <View style={[styles.confirmIconWrap, { backgroundColor: '#DCFCE7' }]}>
                                     <Ionicons name="call" size={26} color="#16A34A" />
                                 </View>
-                                <Text style={[styles.confirmTitle, { color: colors.textPrimary }]}>How did the call go?</Text>
-                                <Text style={[styles.confirmSubtitle, { color: colors.textSecondary }]}>With {lead.full_name}</Text>
+                                <Text style={[styles.confirmTitle, { color: colors.textPrimary }]}>
+                                    How did the call go?
+                                </Text>
+                                <Text style={[styles.confirmSubtitle, { color: colors.textSecondary }]}>
+                                    With {lead.full_name}
+                                </Text>
                                 <TouchableOpacity
                                     style={[styles.confirmBtn, { backgroundColor: '#16A34A' }]}
                                     onPress={() => handleContactConfirm('reached')}
@@ -488,11 +571,20 @@ export default function LeadDetailScreen() {
                                     <Text style={styles.confirmBtnText}>Reached them</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
-                                    style={[styles.confirmBtn, { backgroundColor: colors.surfacePrimary, borderWidth: 0.5, borderColor: colors.borderLight }]}
+                                    style={[
+                                        styles.confirmBtn,
+                                        {
+                                            backgroundColor: colors.surfacePrimary,
+                                            borderWidth: 0.5,
+                                            borderColor: colors.borderLight,
+                                        },
+                                    ]}
                                     onPress={() => handleContactConfirm('no_answer')}
                                 >
                                     <Ionicons name="close-circle-outline" size={18} color={colors.textSecondary} />
-                                    <Text style={[styles.confirmBtnText, { color: colors.textSecondary }]}>No answer</Text>
+                                    <Text style={[styles.confirmBtnText, { color: colors.textSecondary }]}>
+                                        No answer
+                                    </Text>
                                 </TouchableOpacity>
                             </>
                         ) : (
@@ -500,8 +592,12 @@ export default function LeadDetailScreen() {
                                 <View style={[styles.confirmIconWrap, { backgroundColor: '#D1FAE5' }]}>
                                     <Ionicons name="logo-whatsapp" size={26} color="#25D366" />
                                 </View>
-                                <Text style={[styles.confirmTitle, { color: colors.textPrimary }]}>Did you send the message?</Text>
-                                <Text style={[styles.confirmSubtitle, { color: colors.textSecondary }]}>To {lead.full_name}</Text>
+                                <Text style={[styles.confirmTitle, { color: colors.textPrimary }]}>
+                                    Did you send the message?
+                                </Text>
+                                <Text style={[styles.confirmSubtitle, { color: colors.textSecondary }]}>
+                                    To {lead.full_name}
+                                </Text>
                                 <TouchableOpacity
                                     style={[styles.confirmBtn, { backgroundColor: '#25D366' }]}
                                     onPress={() => handleContactConfirm('sent')}
@@ -536,7 +632,9 @@ export default function LeadDetailScreen() {
                             Select an agent to reassign {lead.full_name} to
                         </Text>
                         {reassignAgents.length === 0 ? (
-                            <Text style={[styles.reassignEmpty, { color: colors.textTertiary }]}>No agents available</Text>
+                            <Text style={[styles.reassignEmpty, { color: colors.textTertiary }]}>
+                                No agents available
+                            </Text>
                         ) : (
                             reassignAgents.map((agent) => (
                                 <TouchableOpacity
@@ -549,7 +647,9 @@ export default function LeadDetailScreen() {
                                             {agent.full_name.charAt(0).toUpperCase()}
                                         </Text>
                                     </View>
-                                    <Text style={[styles.agentName, { color: colors.textPrimary }]}>{agent.full_name}</Text>
+                                    <Text style={[styles.agentName, { color: colors.textPrimary }]}>
+                                        {agent.full_name}
+                                    </Text>
                                     <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
                                 </TouchableOpacity>
                             ))
