@@ -96,7 +96,7 @@ function formatActivities(
 export default function HomeScreen() {
     const { colors } = useTheme();
     const { user, enableBiometrics } = useAuth();
-    const { viewMode, canToggle } = useViewMode();
+    const { viewMode, canToggle, setViewMode } = useViewMode();
     const { unreadCount } = useNotifications();
     const router = useTypedRouter();
     const [refreshing, setRefreshing] = useState(false);
@@ -272,10 +272,86 @@ export default function HomeScreen() {
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
                 }
             >
-                {/* Greeting */}
-                <Text style={[styles.greetingText, { color: colors.textSecondary }]}>
-                    {greeting}, {firstName}
-                </Text>
+                {/* Greeting + View Mode */}
+                <View style={styles.greetingRow}>
+                    <Text style={[styles.greetingText, { color: colors.textSecondary }]}>
+                        {greeting}, {firstName}
+                    </Text>
+                    {canToggle && (
+                        <View style={[styles.viewModeToggle, { backgroundColor: colors.inputBackground }]}>
+                            <TouchableOpacity
+                                style={[
+                                    styles.viewModeBtn,
+                                    viewMode === 'agent' && {
+                                        backgroundColor: colors.cardBackground,
+                                        shadowColor: '#000',
+                                        shadowOffset: { width: 0, height: 1 },
+                                        shadowOpacity: 0.1,
+                                        shadowRadius: 2,
+                                        elevation: 2,
+                                    },
+                                ]}
+                                onPress={() => setViewMode('agent')}
+                                activeOpacity={0.7}
+                                accessibilityRole="button"
+                                accessibilityLabel="Switch to Agent View"
+                                accessibilityState={{ selected: viewMode === 'agent' }}
+                            >
+                                <Ionicons
+                                    name="person-outline"
+                                    size={14}
+                                    color={viewMode === 'agent' ? colors.accent : colors.textTertiary}
+                                />
+                                <Text
+                                    style={[
+                                        styles.viewModeBtnText,
+                                        {
+                                            color: viewMode === 'agent' ? colors.accent : colors.textTertiary,
+                                            fontWeight: viewMode === 'agent' ? '600' : '400',
+                                        },
+                                    ]}
+                                >
+                                    Agent
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    styles.viewModeBtn,
+                                    viewMode === 'manager' && {
+                                        backgroundColor: colors.cardBackground,
+                                        shadowColor: '#000',
+                                        shadowOffset: { width: 0, height: 1 },
+                                        shadowOpacity: 0.1,
+                                        shadowRadius: 2,
+                                        elevation: 2,
+                                    },
+                                ]}
+                                onPress={() => setViewMode('manager')}
+                                activeOpacity={0.7}
+                                accessibilityRole="button"
+                                accessibilityLabel="Switch to Manager View"
+                                accessibilityState={{ selected: viewMode === 'manager' }}
+                            >
+                                <Ionicons
+                                    name="shield-outline"
+                                    size={14}
+                                    color={viewMode === 'manager' ? colors.accent : colors.textTertiary}
+                                />
+                                <Text
+                                    style={[
+                                        styles.viewModeBtnText,
+                                        {
+                                            color: viewMode === 'manager' ? colors.accent : colors.textTertiary,
+                                            fontWeight: viewMode === 'manager' ? '600' : '400',
+                                        },
+                                    ]}
+                                >
+                                    Manager
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </View>
 
                 {error && <ErrorBanner message={error} onRetry={loadDashboardData} onDismiss={() => setError(null)} />}
 
@@ -488,16 +564,16 @@ export default function HomeScreen() {
                         ) : isManagerView ? (
                             <>
                                 <QuickActionBtn
+                                    icon="person-add"
+                                    label="Add Lead"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/leads/add')}
+                                />
+                                <QuickActionBtn
                                     icon="briefcase"
                                     label="Team"
                                     colors={colors}
                                     onPress={() => router.push('/(tabs)/team')}
-                                />
-                                <QuickActionBtn
-                                    icon="people"
-                                    label="Leads"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/leads')}
                                 />
                                 <QuickActionBtn
                                     icon="document-text"
@@ -826,7 +902,28 @@ const QuickActionBtn = memo(function QuickActionBtn({
 const styles = StyleSheet.create({
     container: { flex: 1 },
     scrollContent: { paddingBottom: 40, paddingTop: 4 },
-    greetingText: { fontSize: 15, fontWeight: '400', paddingHorizontal: 20, marginBottom: 4 },
+    greetingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        marginBottom: 4,
+    },
+    greetingText: { fontSize: 15, fontWeight: '400' },
+    viewModeToggle: {
+        flexDirection: 'row',
+        borderRadius: 8,
+        padding: 2,
+    },
+    viewModeBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    viewModeBtnText: { fontSize: 12 },
 
     // Header
     headerRight: {

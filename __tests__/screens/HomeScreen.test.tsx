@@ -152,8 +152,8 @@ describe('HomeScreen', () => {
         setupRole('manager', 'manager');
         const { getByText } = render(<HomeScreen />);
         await waitFor(() => {
+            expect(getByText('Add Lead')).toBeTruthy();
             expect(getByText('Team')).toBeTruthy();
-            expect(getByText('Leads')).toBeTruthy();
         });
     });
 
