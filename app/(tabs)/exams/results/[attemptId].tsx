@@ -1,3 +1,4 @@
+import ErrorBanner from '@/components/ErrorBanner';
 import MathRenderer from '@/components/MathRenderer';
 import { useTheme } from '@/contexts/ThemeContext';
 import { fetchExamResult } from '@/lib/exams';
@@ -39,28 +40,33 @@ export default function ExamResultsScreen() {
 
     const [result, setResult] = useState<ExamResult | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
 
-    useEffect(() => {
-        const loadResult = async () => {
-            try {
-                // Try AsyncStorage first (covers mock mode and immediate post-submit)
-                const stored = await AsyncStorage.getItem(`exam_result_${attemptId}`);
-                if (stored) {
-                    setResult(JSON.parse(stored));
-                    setIsLoading(false);
-                    return;
-                }
-
-                // If not in AsyncStorage, try Supabase
-                const { data, error } = await fetchExamResult(attemptId || '');
-                if (data && !error) {
-                    setResult(data);
-                }
-            } catch { } finally {
+    const loadResult = async () => {
+        try {
+            setError(null);
+            // Try AsyncStorage first (covers mock mode and immediate post-submit)
+            const stored = await AsyncStorage.getItem(`exam_result_${attemptId}`);
+            if (stored) {
+                setResult(JSON.parse(stored));
                 setIsLoading(false);
+                return;
             }
-        };
+
+            // If not in AsyncStorage, try Supabase
+            const { data, error } = await fetchExamResult(attemptId || '');
+            if (data && !error) {
+                setResult(data);
+            }
+        } catch {
+            setError('Failed to load exam results');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
         loadResult();
     }, [attemptId]);
 
@@ -111,6 +117,10 @@ export default function ExamResultsScreen() {
                     </Text>
                     <View style={{ width: 32 }} />
                 </View>
+
+                {error && (
+                    <ErrorBanner message={error} onRetry={loadResult} onDismiss={() => setError(null)} />
+                )}
 
                 {/* Score Card */}
                 <View

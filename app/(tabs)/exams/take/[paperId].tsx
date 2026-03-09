@@ -1,4 +1,5 @@
 import ConfirmDialog, { type ConfirmDialogButton } from '@/components/ConfirmDialog';
+import ErrorBanner from '@/components/ErrorBanner';
 import MathRenderer from '@/components/MathRenderer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -43,6 +44,7 @@ export default function TakeExamScreen() {
     const [timeLeft, setTimeLeft] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [showGrid, setShowGrid] = useState(false);
     const [dialogConfig, setDialogConfig] = useState<{
         visible: boolean;
@@ -75,7 +77,8 @@ export default function TakeExamScreen() {
                 .order('question_number');
 
             if (error) {
-                router.back();
+                setError('Failed to load exam questions. Please try again.');
+                setIsLoading(false);
                 return;
             }
             questionsData = data as ExamQuestion[];
@@ -358,6 +361,14 @@ export default function TakeExamScreen() {
                     ]}
                 />
             </View>
+
+            {error && (
+                <ErrorBanner
+                    message={error}
+                    onRetry={() => router.replace(`/exams/take/${paperId}`)}
+                    onDismiss={() => setError(null)}
+                />
+            )}
 
             {/* Question Content */}
             <ScrollView

@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import Avatar from '@/components/Avatar';
+import ErrorBanner from '@/components/ErrorBanner';
 import LyfeLogo from '@/components/LyfeLogo';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
@@ -60,6 +61,7 @@ export default function ProfileScreen() {
     const { viewMode, canToggle, setViewMode } = useViewMode();
     const router = useTypedRouter();
     const [showSignOutModal, setShowSignOutModal] = useState(false);
+<<<<<<< HEAD
     const [managers, setManagers] = useState<AssignedManager[]>([]);
     const [showAvatarSheet, setShowAvatarSheet] = useState(false);
     const [avatarUploading, setAvatarUploading] = useState(false);
@@ -120,14 +122,19 @@ export default function ProfileScreen() {
         },
         [enableBiometrics, disableBiometrics],
     );
+    const [error, setError] = useState<string | null>(null);
 
     const handleSignOut = () => {
         setShowSignOutModal(true);
     };
 
-    const confirmSignOut = () => {
+    const confirmSignOut = async () => {
         setShowSignOutModal(false);
-        signOut();
+        try {
+            await signOut();
+        } catch {
+            setError('Failed to sign out. Please try again.');
+        }
     };
 
     const handleViewModeChange = useCallback(
@@ -218,6 +225,7 @@ export default function ProfileScreen() {
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             <ScreenHeader title="Profile" />
+            {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {/* Hero User Card */}
                 <View

@@ -1,4 +1,5 @@
 import EmptyState from '@/components/EmptyState';
+import ErrorBanner from '@/components/ErrorBanner';
 import LeadActivityItem from '@/components/LeadActivityItem';
 import LoadingState from '@/components/LoadingState';
 import ScreenHeader from '@/components/ScreenHeader';
@@ -48,6 +49,7 @@ export default function LeadDetailScreen() {
     const [showReassignModal, setShowReassignModal] = useState(false);
     const [reassignAgents, setReassignAgents] = useState<{ id: string; full_name: string }[]>([]);
     const [isReassigning, setIsReassigning] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     // Contact confirmation (AppState-based)
     const [pendingContact, setPendingContact] = useState<{ type: 'call' | 'whatsapp'; phone: string } | null>(null);
@@ -70,17 +72,25 @@ export default function LeadDetailScreen() {
     const loadData = useCallback(async () => {
         if (!leadId) return;
 
-        const [leadResult, activitiesResult] = await Promise.all([
-            fetchLead(leadId),
-            fetchLeadActivities(leadId),
-        ]);
+        try {
+            setError(null);
+            const [leadResult, activitiesResult] = await Promise.all([
+                fetchLead(leadId),
+                fetchLeadActivities(leadId),
+            ]);
 
-        if (leadResult.data) {
-            setLead(leadResult.data);
-            setCurrentStatus(leadResult.data.status);
-        }
-        if (activitiesResult.data) {
-            setActivities(activitiesResult.data);
+            if (leadResult.data) {
+                setLead(leadResult.data);
+                setCurrentStatus(leadResult.data.status);
+            }
+            if (leadResult.error) {
+                setError('Failed to load lead details');
+            }
+            if (activitiesResult.data) {
+                setActivities(activitiesResult.data);
+            }
+        } catch {
+            setError('Failed to load lead details');
         }
         setIsLoading(false);
     }, [leadId]);
@@ -213,6 +223,7 @@ export default function LeadDetailScreen() {
             setNoteText('');
             setShowNoteInput(false);
         } else if (error) {
+            setError('Failed to add note');
             if (__DEV__) console.error('Failed to add note:', error);
         }
     };
@@ -239,6 +250,7 @@ export default function LeadDetailScreen() {
         } else {
             // Rollback on failure
             setCurrentStatus(previousStatus);
+            setError('Failed to update status');
             if (__DEV__) console.error('Failed to update status:', error);
         }
     };
@@ -255,6 +267,10 @@ export default function LeadDetailScreen() {
                     icon: 'shield-outline',
                 } : undefined}
             />
+
+            {error && (
+                <ErrorBanner message={error} onRetry={loadData} onDismiss={() => setError(null)} />
+            )}
 
             <KeyboardAvoidingView
                 style={{ flex: 1 }}

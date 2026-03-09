@@ -1,4 +1,5 @@
 import Avatar from '@/components/Avatar';
+import ErrorBanner from '@/components/ErrorBanner';
 import LyfeLogo from '@/components/LyfeLogo';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
@@ -88,6 +89,7 @@ export default function HomeScreen() {
     const { viewMode, canToggle } = useViewMode();
     const router = useTypedRouter();
     const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const isManagerView = canToggle && viewMode === 'manager';
 
     // Biometrics setup prompt (one-time, shown after first OTP login)
@@ -143,31 +145,37 @@ export default function HomeScreen() {
 
     const loadDashboardData = useCallback(async () => {
         if (!user?.id) return;
+        try {
+            setError(null);
 
-        // ── PA branch ──
-        if (isPa) {
-            const managerIds = await fetchPAManagerIds(user.id);
-            const [total, interviews, eventsResult] = await Promise.all([
-                fetchPACandidateCount(managerIds),
-                fetchPAInterviewCount(managerIds),
-                fetchUpcomingEvents(user.id, 5),
-            ]);
-            setPaStats({ candidateCount: total ?? 0, interviewCount: interviews ?? 0, events: eventsResult.data });
-            return;
-        }
+            // ── PA branch ──
+            if (isPa) {
+                const managerIds = await fetchPAManagerIds(user.id);
+                const [total, interviews, eventsResult] = await Promise.all([
+                    fetchPACandidateCount(managerIds),
+                    fetchPAInterviewCount(managerIds),
+                    fetchUpcomingEvents(user.id, 5),
+                ]);
+                setPaStats({ candidateCount: total ?? 0, interviewCount: interviews ?? 0, events: eventsResult.data });
+                return;
+            }
 
-        // ── Agent / Manager branch ──
-        const promises: Promise<any>[] = [
-            fetchLeadStats(user.id, isManagerView),
-            fetchRecentActivities(user.id, isManagerView, 5),
-        ];
-        if (isManagerView && user.role) {
-            promises.push(fetchManagerDashboardStats(user.id, user.role));
+            // ── Agent / Manager branch ──
+            const promises: Promise<any>[] = [
+                fetchLeadStats(user.id, isManagerView),
+                fetchRecentActivities(user.id, isManagerView, 5),
+            ];
+            if (isManagerView && user.role) {
+                promises.push(fetchManagerDashboardStats(user.id, user.role));
+            }
+            const results = await Promise.all(promises);
+            if (results[0].data) setStats(results[0].data);
+            if (results[1].data) setRecentActivities(results[1].data);
+            if (results[2]?.data) setManagerStats(results[2].data);
+            if (results[0].error) setError('Failed to load dashboard data');
+        } catch {
+            setError('Failed to load dashboard data');
         }
-        const results = await Promise.all(promises);
-        if (results[0].data) setStats(results[0].data);
-        if (results[1].data) setRecentActivities(results[1].data);
-        if (results[2]?.data) setManagerStats(results[2].data);
     }, [user?.id, isPa, isManagerView, user?.role]);
 
     useEffect(() => {
@@ -224,6 +232,14 @@ export default function HomeScreen() {
             >
                 {/* Greeting */}
                 <Text style={[styles.greetingText, { color: colors.textSecondary }]}>{greeting}, {firstName}</Text>
+
+                {error && (
+                    <ErrorBanner
+                        message={error}
+                        onRetry={loadDashboardData}
+                        onDismiss={() => setError(null)}
+                    />
+                )}
 
                 {/* Hero Stats */}
                 <View style={styles.heroStatsContainer}>
