@@ -72,6 +72,10 @@ export async function getActivitiesByLead(
 /**
  * Get an activity summary for a specific agent within a date range.
  * Returns counts grouped by activity type.
+ *
+ * @param agentId - The agent's user ID
+ * @param dateRange - Start and end dates (YYYY-MM-DD). Start must be before or equal to end.
+ * @returns Activity summary with counts by type, or an error message
  */
 export async function getAgentActivitySummary(
     agentId: string,
@@ -85,6 +89,10 @@ export async function getAgentActivitySummary(
     };
 
     try {
+        // Validate date range: start must be <= end
+        if (dateRange.start > dateRange.end) {
+            return { data: emptyResult, error: 'Invalid date range: start must be before or equal to end' };
+        }
         const { data, error } = await supabase
             .from('lead_activities')
             .select('type')
