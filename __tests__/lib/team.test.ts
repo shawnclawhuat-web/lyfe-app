@@ -290,6 +290,14 @@ describe('getTeamPerformance', () => {
 
         expect(result.error).toBe('Permission denied');
     });
+
+    it('returns error when date range is invalid (start > end)', async () => {
+        const dateRange = { start: '2026-03-10', end: '2026-03-01' };
+        const result = await getTeamPerformance('mgr-1', dateRange);
+
+        expect(result.error).toBe('Invalid date range: start must be before or equal to end');
+        expect(result.data.agents).toEqual([]);
+    });
 });
 
 // ── inviteAgent ──
@@ -312,5 +320,32 @@ describe('inviteAgent', () => {
         const result = await inviteAgent('agent@example.com', 'mgr-1');
         expect(result.error).toBe('Duplicate email');
         expect(result.data).toBeNull();
+    });
+
+    it('returns error for invalid email format', async () => {
+        const result = await inviteAgent('not-an-email', 'mgr-1');
+        expect(result.error).toBe('Invalid email format');
+        expect(result.data).toBeNull();
+    });
+
+    it('returns error for empty email', async () => {
+        const result = await inviteAgent('', 'mgr-1');
+        expect(result.error).toBe('Invalid email format');
+        expect(result.data).toBeNull();
+    });
+
+    it('returns error for email without domain', async () => {
+        const result = await inviteAgent('user@', 'mgr-1');
+        expect(result.error).toBe('Invalid email format');
+        expect(result.data).toBeNull();
+    });
+
+    it('accepts valid email formats', async () => {
+        const chain = mockSupa.__getChain('invite_tokens');
+        mockResolve(chain, { data: { token: 'inv_123_abc' }, error: null });
+
+        const result = await inviteAgent('user@domain.co', 'mgr-1');
+        expect(result.error).toBeNull();
+        expect(result.data?.token).toBeTruthy();
     });
 });

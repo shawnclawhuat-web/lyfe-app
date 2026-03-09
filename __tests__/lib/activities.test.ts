@@ -168,4 +168,23 @@ describe('getAgentActivitySummary', () => {
         expect(result.error).toBe('Timeout');
         expect(result.data.totalActivities).toBe(0);
     });
+
+    it('returns error when date range is invalid (start > end)', async () => {
+        const dateRange = { start: '2026-03-10', end: '2026-03-01' };
+        const result = await getAgentActivitySummary('agent-1', dateRange);
+
+        expect(result.error).toBe('Invalid date range: start must be before or equal to end');
+        expect(result.data.totalActivities).toBe(0);
+    });
+
+    it('accepts same start and end date', async () => {
+        const chain = mockSupa.__getChain('lead_activities');
+        mockResolve(chain, { data: [{ type: 'call' }], error: null });
+
+        const dateRange = { start: '2026-03-05', end: '2026-03-05' };
+        const result = await getAgentActivitySummary('agent-1', dateRange);
+
+        expect(result.error).toBeNull();
+        expect(result.data.totalActivities).toBe(1);
+    });
 });
