@@ -19,7 +19,7 @@ initSentry();
 SplashScreen.preventAutoHideAsync();
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-    const { isAuthenticated, isLoading } = useAuth();
+    const { isAuthenticated, isLoading, user } = useAuth();
     const segments = useSegments();
     const router = useRouter();
 
@@ -27,15 +27,23 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         if (isLoading) return;
 
         const inAuthGroup = segments[0] === '(auth)';
+        const inOnboarding = segments[0] === 'onboarding';
 
         if (!isAuthenticated && !inAuthGroup) {
             // Not authenticated → redirect to login
             router.replace('/(auth)/login');
         } else if (isAuthenticated && inAuthGroup) {
-            // Already authenticated → redirect to main app
-            router.replace('/(tabs)/home');
+            // Already authenticated → check onboarding status
+            if (user && user.onboarding_complete === false) {
+                router.replace('/onboarding/Welcome');
+            } else {
+                router.replace('/(tabs)/home');
+            }
+        } else if (isAuthenticated && !inOnboarding && user && user.onboarding_complete === false) {
+            // Authenticated but needs onboarding
+            router.replace('/onboarding/Welcome');
         }
-    }, [isAuthenticated, isLoading, segments, router]);
+    }, [isAuthenticated, isLoading, segments, router, user]);
 
     // Block all rendering until auth state is resolved.
     // This prevents any protected screen from flashing before the redirect fires.
@@ -57,6 +65,7 @@ function RootLayoutContent() {
                 }}
             >
                 <Stack.Screen name="(auth)" />
+                <Stack.Screen name="onboarding" />
                 <Stack.Screen name="(tabs)" />
             </Stack>
         </AuthGate>
