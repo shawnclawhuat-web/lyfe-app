@@ -9,7 +9,10 @@ import type { Tables, Enums } from './supabase';
 
 // ── Row types (1:1 with Supabase tables) ──
 
-export type User = Tables<'users'>;
+export type User = Tables<'users'> & {
+    /** Set to true when the user completes the onboarding flow. Defaults to false for new users. */
+    onboarding_complete?: boolean;
+};
 export type PaManagerAssignment = Tables<'pa_manager_assignments'>;
 export type InviteToken = Tables<'invite_tokens'>;
 
