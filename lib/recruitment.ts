@@ -22,16 +22,23 @@ export interface CreateCandidateInput {
 export async function fetchCandidates(
     userId: string,
     isManager: boolean,
-): Promise<{ data: RecruitmentCandidate[]; error: string | null }> {
-    // Fetch candidates
+    page?: number,
+    pageSize: number = 50,
+): Promise<{ data: RecruitmentCandidate[]; error: string | null; hasMore: boolean }> {
     let query = supabase.from('candidates').select('*').order('updated_at', { ascending: false });
 
     if (!isManager) {
         query = query.eq('assigned_manager_id', userId);
     }
 
+    if (page !== undefined) {
+        const from = page * pageSize;
+        const to = from + pageSize;
+        query = query.range(from, to);
+    }
+
     const { data: rows, error } = await query;
-    if (error) return { data: [], error: error.message };
+    if (error) return { data: [], error: error.message, hasMore: false };
 
     const typedRows = (rows || []) as {
         id: string;
@@ -95,7 +102,12 @@ export async function fetchCandidates(
         updated_at: r.updated_at,
     }));
 
-    return { data: candidates, error: null };
+    if (page !== undefined) {
+        const hasMore = candidates.length > pageSize;
+        return { data: hasMore ? candidates.slice(0, pageSize) : candidates, error: null, hasMore };
+    }
+
+    return { data: candidates, error: null, hasMore: false };
 }
 
 /**

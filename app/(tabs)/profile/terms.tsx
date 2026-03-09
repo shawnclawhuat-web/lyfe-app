@@ -14,7 +14,7 @@ const SECTIONS = [
     },
     {
         title: '3. Data Responsibility',
-        body: 'You are responsible for the accuracy of lead, candidate, and client information you enter. Do not input data belonging to individuals without their consent. All client data must be handled in compliance with Singapore\'s Personal Data Protection Act (PDPA).',
+        body: "You are responsible for the accuracy of lead, candidate, and client information you enter. Do not input data belonging to individuals without their consent. All client data must be handled in compliance with Singapore's Personal Data Protection Act (PDPA).",
     },
     {
         title: '4. Confidentiality',
@@ -49,10 +49,7 @@ export default function TermsScreen() {
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             <ScreenHeader title="Terms of Service" showBack backLabel="Profile" />
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-                <Text style={[styles.effective, { color: colors.textTertiary }]}>
-                    Effective date: 1 January 2026
-                </Text>
+                <Text style={[styles.effective, { color: colors.textTertiary }]}>Effective date: 1 January 2026</Text>
 
                 {SECTIONS.map((section) => (
                     <View key={section.title} style={styles.section}>
@@ -63,7 +60,7 @@ export default function TermsScreen() {
 
                 <View style={[styles.footer, { borderTopColor: colors.border }]}>
                     <Text style={[styles.footerText, { color: colors.textTertiary }]}>
-                        For questions about these terms, contact your agency administrator or email legal@lyfe.sg
+                        For questions about these terms, contact your agency administrator or email admin@mktr.sg
                     </Text>
                 </View>
             </ScrollView>

@@ -18,7 +18,7 @@ const PRIVACY_SECTIONS = [
     {
         icon: 'server' as const,
         title: 'Data Storage',
-        body: 'All data is stored securely on Supabase (AWS Singapore region). Session tokens are stored in your device\'s secure enclave and never transmitted.',
+        body: "All data is stored securely on Supabase (AWS Singapore region). Session tokens are stored in your device's secure enclave and never transmitted.",
     },
     {
         icon: 'trash' as const,
@@ -39,16 +39,10 @@ export default function PrivacyScreen() {
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             <ScreenHeader title="Privacy" showBack backLabel="Profile" />
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-                <Text style={[styles.intro, { color: colors.textSecondary }]}>
-                    Last updated: March 2026
-                </Text>
+                <Text style={[styles.intro, { color: colors.textSecondary }]}>Last updated: March 2026</Text>
 
                 {PRIVACY_SECTIONS.map((section, index) => (
-                    <View
-                        key={section.title}
-                        style={[styles.card, { backgroundColor: colors.cardBackground }]}
-                    >
+                    <View key={section.title} style={[styles.card, { backgroundColor: colors.cardBackground }]}>
                         <View style={styles.cardHeader}>
                             <View style={[styles.iconCircle, { backgroundColor: colors.accentLight }]}>
                                 <Ionicons name={section.icon} size={18} color={colors.accent} />
@@ -61,7 +55,7 @@ export default function PrivacyScreen() {
 
                 <TouchableOpacity
                     style={[styles.contactBtn, { borderColor: colors.border }]}
-                    onPress={() => Linking.openURL('mailto:support@lyfe.sg')}
+                    onPress={() => Linking.openURL('mailto:admin@mktr.sg')}
                     activeOpacity={0.7}
                 >
                     <Ionicons name="mail-outline" size={16} color={colors.accent} />

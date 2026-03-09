@@ -20,18 +20,35 @@ export interface CreateLeadInput {
  * `get_team_member_ids()` Postgres function (handled by RLS).
  * In agent mode, fetches only leads assigned to the current user.
  */
-export async function fetchLeads(userId: string, isManager: boolean): Promise<{ data: Lead[]; error: string | null }> {
+export async function fetchLeads(
+    userId: string,
+    isManager: boolean,
+    page?: number,
+    pageSize: number = 50,
+): Promise<{ data: Lead[]; error: string | null; hasMore: boolean }> {
     let query = supabase.from('leads').select('*').order('updated_at', { ascending: false });
 
     if (!isManager) {
         query = query.eq('assigned_to', userId);
     }
-    // In manager mode, RLS allows seeing team members' leads via
-    // the broad "authenticated users can read leads" policy
+
+    if (page !== undefined) {
+        const from = page * pageSize;
+        const to = from + pageSize;
+        query = query.range(from, to);
+    }
 
     const { data, error } = await query;
-    if (error) return { data: [], error: error.message };
-    return { data: (data || []) as Lead[], error: null };
+    if (error) return { data: [], error: error.message, hasMore: false };
+
+    const results = (data || []) as Lead[];
+
+    if (page !== undefined) {
+        const hasMore = results.length > pageSize;
+        return { data: hasMore ? results.slice(0, pageSize) : results, error: null, hasMore };
+    }
+
+    return { data: results, error: null, hasMore: false };
 }
 
 /**
@@ -114,14 +131,25 @@ export async function updateLeadStatus(
 /**
  * Fetch activities for a single lead.
  */
-export async function fetchLeadActivities(leadId: string): Promise<{ data: LeadActivity[]; error: string | null }> {
-    const { data, error } = await supabase
+export async function fetchLeadActivities(
+    leadId: string,
+    page?: number,
+    pageSize: number = 20,
+): Promise<{ data: LeadActivity[]; error: string | null; hasMore: boolean }> {
+    let query = supabase
         .from('lead_activities')
         .select('*, actor:users!lead_activities_user_id_fkey(full_name)')
         .eq('lead_id', leadId)
         .order('created_at', { ascending: false });
 
-    if (error) return { data: [], error: error.message };
+    if (page !== undefined) {
+        const from = page * pageSize;
+        const to = from + pageSize;
+        query = query.range(from, to);
+    }
+
+    const { data, error } = await query;
+    if (error) return { data: [], error: error.message, hasMore: false };
 
     const typedData = (data || []) as {
         id: string;
@@ -145,7 +173,12 @@ export async function fetchLeadActivities(leadId: string): Promise<{ data: LeadA
         actor_name: item.actor?.full_name || undefined,
     })) as LeadActivity[];
 
-    return { data: activities, error: null };
+    if (page !== undefined) {
+        const hasMore = activities.length > pageSize;
+        return { data: hasMore ? activities.slice(0, pageSize) : activities, error: null, hasMore };
+    }
+
+    return { data: activities, error: null, hasMore: false };
 }
 
 /**

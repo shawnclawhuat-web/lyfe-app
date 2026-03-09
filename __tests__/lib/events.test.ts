@@ -119,6 +119,37 @@ describe('fetchAllEvents', () => {
         expect(result.data).toEqual([]);
         expect(result.error).toBeNull();
     });
+
+    it('returns hasMore=false when page not provided (backward compat)', async () => {
+        const chain = mockSupa.__getChain('events');
+        mockResolve(chain, { data: [EVENT_ROW], error: null });
+
+        const result = await fetchAllEvents();
+        expect(result.hasMore).toBe(false);
+        expect(result.data).toHaveLength(1);
+    });
+
+    it('returns hasMore=true when more data exists with pagination', async () => {
+        const rows = Array.from({ length: 3 }, (_, i) => ({
+            ...EVENT_ROW,
+            id: `evt-${i}`,
+        }));
+        const chain = mockSupa.__getChain('events');
+        mockResolve(chain, { data: rows, error: null });
+
+        const result = await fetchAllEvents(0, 2);
+        expect(result.hasMore).toBe(true);
+        expect(result.data).toHaveLength(2);
+    });
+
+    it('returns hasMore=false on last page', async () => {
+        const chain = mockSupa.__getChain('events');
+        mockResolve(chain, { data: [EVENT_ROW], error: null });
+
+        const result = await fetchAllEvents(1, 2);
+        expect(result.hasMore).toBe(false);
+        expect(result.data).toHaveLength(1);
+    });
 });
 
 // ── fetchEventById ──
@@ -386,6 +417,67 @@ describe('fetchRoadshowActivities', () => {
 
         const result = await fetchRoadshowActivities('evt-1');
         expect(result.data[0].full_name).toBe('Unknown');
+    });
+
+    it('returns hasMore=false when page not provided (backward compat)', async () => {
+        const chain = mockSupa.__getChain('roadshow_activities');
+        mockResolve(chain, {
+            data: [
+                {
+                    id: 'act-1',
+                    event_id: 'evt-1',
+                    user_id: 'u1',
+                    type: 'sitdown',
+                    afyc_amount: null,
+                    logged_at: '2026-03-15T10:00:00Z',
+                    users: { full_name: 'Diana' },
+                },
+            ],
+            error: null,
+        });
+
+        const result = await fetchRoadshowActivities('evt-1');
+        expect(result.hasMore).toBe(false);
+    });
+
+    it('returns hasMore=true when more data exists with pagination', async () => {
+        const rows = Array.from({ length: 3 }, (_, i) => ({
+            id: `act-${i}`,
+            event_id: 'evt-1',
+            user_id: 'u1',
+            type: 'sitdown',
+            afyc_amount: null,
+            logged_at: '2026-03-15T10:00:00Z',
+            users: { full_name: 'Diana' },
+        }));
+        const chain = mockSupa.__getChain('roadshow_activities');
+        mockResolve(chain, { data: rows, error: null });
+
+        const result = await fetchRoadshowActivities('evt-1', 0, 2);
+        expect(result.hasMore).toBe(true);
+        expect(result.data).toHaveLength(2);
+    });
+
+    it('returns hasMore=false on last page', async () => {
+        const chain = mockSupa.__getChain('roadshow_activities');
+        mockResolve(chain, {
+            data: [
+                {
+                    id: 'act-1',
+                    event_id: 'evt-1',
+                    user_id: 'u1',
+                    type: 'sitdown',
+                    afyc_amount: null,
+                    logged_at: '2026-03-15T10:00:00Z',
+                    users: { full_name: 'Diana' },
+                },
+            ],
+            error: null,
+        });
+
+        const result = await fetchRoadshowActivities('evt-1', 1, 2);
+        expect(result.hasMore).toBe(false);
+        expect(result.data).toHaveLength(1);
     });
 });
 

@@ -57,8 +57,11 @@ export async function fetchEvents(userId: string): Promise<{ data: AgencyEvent[]
 /**
  * Fetch all events (PA use), ordered by date ascending.
  */
-export async function fetchAllEvents(): Promise<{ data: AgencyEvent[]; error: string | null }> {
-    const { data, error } = await supabase
+export async function fetchAllEvents(
+    page?: number,
+    pageSize: number = 50,
+): Promise<{ data: AgencyEvent[]; error: string | null; hasMore: boolean }> {
+    let query = supabase
         .from('events')
         .select(
             '*, creator_user:users!created_by(full_name), event_attendees(id, event_id, user_id, attendee_role, users(full_name, avatar_url))',
@@ -66,8 +69,23 @@ export async function fetchAllEvents(): Promise<{ data: AgencyEvent[]; error: st
         .order('event_date', { ascending: true })
         .order('start_time', { ascending: true });
 
-    if (error) return { data: [], error: error.message };
-    return { data: mapEvents(data || []), error: null };
+    if (page !== undefined) {
+        const from = page * pageSize;
+        const to = from + pageSize;
+        query = query.range(from, to);
+    }
+
+    const { data, error } = await query;
+    if (error) return { data: [], error: error.message, hasMore: false };
+
+    const results = mapEvents(data || []);
+
+    if (page !== undefined) {
+        const hasMore = results.length > pageSize;
+        return { data: hasMore ? results.slice(0, pageSize) : results, error: null, hasMore };
+    }
+
+    return { data: results, error: null, hasMore: false };
 }
 
 /**
@@ -388,14 +406,23 @@ export async function managerCheckIn(
 
 export async function fetchRoadshowActivities(
     eventId: string,
-): Promise<{ data: RoadshowActivity[]; error: string | null }> {
-    const { data, error } = await supabase
+    page?: number,
+    pageSize: number = 20,
+): Promise<{ data: RoadshowActivity[]; error: string | null; hasMore: boolean }> {
+    let query = supabase
         .from('roadshow_activities')
         .select('*, users!user_id(full_name)')
         .eq('event_id', eventId)
         .order('logged_at', { ascending: false });
 
-    if (error) return { data: [], error: error.message };
+    if (page !== undefined) {
+        const from = page * pageSize;
+        const to = from + pageSize;
+        query = query.range(from, to);
+    }
+
+    const { data, error } = await query;
+    if (error) return { data: [], error: error.message, hasMore: false };
 
     interface ActivityRow {
         id: string;
@@ -420,7 +447,12 @@ export async function fetchRoadshowActivities(
             }) as RoadshowActivity,
     );
 
-    return { data: rows, error: null };
+    if (page !== undefined) {
+        const hasMore = rows.length > pageSize;
+        return { data: hasMore ? rows.slice(0, pageSize) : rows, error: null, hasMore };
+    }
+
+    return { data: rows, error: null, hasMore: false };
 }
 
 export async function logRoadshowActivity(
