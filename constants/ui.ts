@@ -3,9 +3,12 @@
  */
 import type { AttendeeRole } from '@/types/event';
 
+import { ACTIVITY_TYPE_CONFIG } from './displayConfigs';
+import type { RoadshowActivityType } from '@/types/event';
+
 // ── Avatar colour palettes ─────────────────────────────────────
-export const AVATAR_COLORS = ['#6366F1', '#0D9488', '#E11D48', '#F59E0B', '#8B5CF6', '#06B6D4'];
-export const PA_MANAGER_COLORS = ['#6366F1', '#0D9488', '#E11D48', '#F59E0B', '#8B5CF6'];
+export const AVATAR_COLORS = ['#6366F1', '#FF7600', '#E11D48', '#F59E0B', '#8B5CF6', '#06B6D4'];
+export const PA_MANAGER_COLORS = ['#6366F1', '#FF7600', '#E11D48', '#F59E0B', '#8B5CF6'];
 
 /** Deterministic avatar colour from a name string */
 export function getAvatarColor(name: string): string {
@@ -23,7 +26,7 @@ export const ATTENDEE_ROLE_LABELS: Record<AttendeeRole, string> = {
 export const ATTENDEE_ROLE_COLORS: Record<AttendeeRole, string> = {
     host: '#EC4899',
     duty_manager: '#6366F1',
-    presenter: '#0A7E6B',
+    presenter: '#FF7600',
     attendee: '#8E8E93',
 };
 
@@ -81,14 +84,11 @@ export const INTERVIEW_STATUS_COLORS: Record<string, string> = {
     completed: '#34C759',
     cancelled: '#FF3B30',
     rescheduled: '#AF52DE',
-    scheduled: '#FF9500',
+    scheduled: '#EAB308',
 };
 
 // ── Roadshow constants ──────────────────────────────────────────
 export const ROADSHOW_PINK = '#EC4899';
-
-import { ACTIVITY_TYPE_CONFIG } from './displayConfigs';
-import type { RoadshowActivityType } from '@/types/event';
 
 export function activityLabel(type: string): string {
     return ACTIVITY_TYPE_CONFIG[type as RoadshowActivityType]?.label ?? type;

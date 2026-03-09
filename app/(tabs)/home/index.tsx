@@ -261,7 +261,7 @@ export default function HomeScreen() {
                     {isCandidate ? (
                         <>
                             <View style={styles.statsRow}>
-                                <View style={[styles.heroCardPrimary, { backgroundColor: colors.warning }]}>
+                                <View style={[styles.heroCardPrimary, { backgroundColor: colors.accent }]}>
                                     <Ionicons
                                         name="school"
                                         size={80}
@@ -456,10 +456,10 @@ export default function HomeScreen() {
                                     onPress={() => router.push('/(tabs)/leads')}
                                 />
                                 <QuickActionBtn
-                                    icon="person"
-                                    label="Profile"
+                                    icon="document-text"
+                                    label="Candidates"
                                     colors={colors}
-                                    onPress={() => router.push('/(tabs)/profile')}
+                                    onPress={() => router.push('/(tabs)/home/candidates')}
                                 />
                             </>
                         ) : isManagerView ? (
@@ -477,16 +477,16 @@ export default function HomeScreen() {
                                     onPress={() => router.push('/(tabs)/leads')}
                                 />
                                 <QuickActionBtn
+                                    icon="document-text"
+                                    label="Candidates"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/home/candidates')}
+                                />
+                                <QuickActionBtn
                                     icon="analytics"
                                     label="Analytics"
                                     colors={colors}
                                     onPress={() => router.push('/(tabs)/home/analytics')}
-                                />
-                                <QuickActionBtn
-                                    icon="funnel"
-                                    label="Pipeline"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/home/pipeline')}
                                 />
                             </>
                         ) : (

@@ -6,7 +6,16 @@ export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'proposed' | 'won' 
 export const LEAD_STATUSES: LeadStatus[] = ['new', 'contacted', 'qualified', 'proposed', 'won', 'lost'];
 export type LeadSource = 'referral' | 'walk_in' | 'online' | 'event' | 'cold_call' | 'other';
 export type ProductInterest = 'life' | 'health' | 'ilp' | 'general';
-export type LeadActivityType = 'created' | 'note' | 'call' | 'whatsapp' | 'status_change' | 'reassignment' | 'email' | 'meeting' | 'follow_up';
+export type LeadActivityType =
+    | 'created'
+    | 'note'
+    | 'call'
+    | 'whatsapp'
+    | 'status_change'
+    | 'reassignment'
+    | 'email'
+    | 'meeting'
+    | 'follow_up';
 
 export interface Lead {
     id: string;
@@ -37,7 +46,7 @@ export interface LeadActivity {
 /** Status display config */
 export const STATUS_CONFIG: Record<LeadStatus, { label: string; color: string; bgColor: string; icon: string }> = {
     new: { label: 'New', color: '#007AFF', bgColor: '#E5F1FF', icon: 'sparkles' },
-    contacted: { label: 'Contacted', color: '#FF9500', bgColor: '#FFF4E5', icon: 'chatbubble' },
+    contacted: { label: 'Contacted', color: '#EAB308', bgColor: '#FEF9C3', icon: 'chatbubble' },
     qualified: { label: 'Qualified', color: '#34C759', bgColor: '#E8F9ED', icon: 'checkmark-circle' },
     proposed: { label: 'Proposed', color: '#AF52DE', bgColor: '#F5EAFC', icon: 'document-text' },
     won: { label: 'Won', color: '#34C759', bgColor: '#E8F9ED', icon: 'trophy' },
@@ -68,9 +77,9 @@ export const ACTIVITY_ICONS: Record<LeadActivityType, { icon: string; color: str
     note: { icon: 'document-text', color: '#8E8E93' },
     call: { icon: 'call', color: '#34C759' },
     whatsapp: { icon: 'logo-whatsapp', color: '#25D366' },
-    status_change: { icon: 'swap-horizontal', color: '#FF9500' },
+    status_change: { icon: 'swap-horizontal', color: '#EAB308' },
     reassignment: { icon: 'people', color: '#AF52DE' },
     email: { icon: 'mail', color: '#007AFF' },
     meeting: { icon: 'calendar', color: '#FF3B30' },
-    follow_up: { icon: 'time', color: '#0A7E6B' },
+    follow_up: { icon: 'time', color: '#FF7600' },
 };

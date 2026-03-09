@@ -135,9 +135,9 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
 
         if (checkedInByManager) {
             return (
-                <View style={[styles.infoBanner, { backgroundColor: '#DBEAFE', borderColor: '#93C5FD' }]}>
-                    <Ionicons name="information-circle" size={16} color="#2563EB" />
-                    <Text style={{ color: '#1D4ED8', fontSize: 13, flex: 1 }}>
+                <View style={[styles.infoBanner, { backgroundColor: colors.infoLight, borderColor: colors.info }]}>
+                    <Ionicons name="information-circle" size={16} color={colors.info} />
+                    <Text style={{ color: colors.info, fontSize: 13, flex: 1 }}>
                         You were checked in by your manager at {formatCheckinTime(checkedInByManager.checked_in_at)}.
                     </Text>
                 </View>
@@ -237,7 +237,7 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                 <ProgressRing
                     actual={myCounts.pitches}
                     pledged={myAttendance?.pledged_pitches ?? 0}
-                    color="#0D9488"
+                    color="#E67700"
                     label="Pitches"
                     accessLabel={`Pitches: ${myCounts.pitches} of ${myAttendance?.pledged_pitches ?? 0}`}
                 />
@@ -311,7 +311,7 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                         </View>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.logBtnLg, { backgroundColor: '#0D948818', borderColor: '#0D9488' }]}
+                        style={[styles.logBtnLg, { backgroundColor: '#E6770018', borderColor: '#E67700' }]}
                         onPress={() => {
                             initLogTime();
                             setConfirmActivity('pitch');
@@ -320,9 +320,9 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                         activeOpacity={0.7}
                         accessibilityLabel={`Log Pitch, current count ${myCounts.pitches}`}
                     >
-                        <Ionicons name="megaphone-outline" size={26} color="#0D9488" />
-                        <Text style={[styles.logBtnLgLabel, { color: '#0D9488' }]}>Pitch</Text>
-                        <View style={[styles.logBtnBadge, { backgroundColor: '#0D9488' }]}>
+                        <Ionicons name="megaphone-outline" size={26} color="#E67700" />
+                        <Text style={[styles.logBtnLgLabel, { color: '#E67700' }]}>Pitch</Text>
+                        <View style={[styles.logBtnBadge, { backgroundColor: '#E67700' }]}>
                             <Text style={styles.logBtnBadgeText}>{myCounts.pitches}</Text>
                         </View>
                     </TouchableOpacity>
@@ -506,7 +506,7 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                             : {
                                   label: 'Pitch',
                                   icon: 'megaphone-outline' as const,
-                                  color: '#0D9488',
+                                  color: '#E67700',
                                   count: myCounts.pitches,
                               };
                     return (

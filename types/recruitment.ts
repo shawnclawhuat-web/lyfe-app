@@ -21,15 +21,17 @@ export interface CandidateStatusConfig {
 
 export const CANDIDATE_STATUS_CONFIG: Record<CandidateStatus, CandidateStatusConfig> = {
     applied: { label: 'Applied', color: '#007AFF', icon: 'person-add', order: 0 },
-    interview_scheduled: { label: 'Interview', color: '#FF9500', icon: 'calendar', order: 1 },
+    interview_scheduled: { label: 'Interview', color: '#EAB308', icon: 'calendar', order: 1 },
     interviewed: { label: 'Interviewed', color: '#AF52DE', icon: 'checkmark-circle', order: 2 },
     approved: { label: 'Approved', color: '#34C759', icon: 'shield-checkmark', order: 3 },
     exam_prep: { label: 'Exam Prep', color: '#FF3B30', icon: 'school', order: 4 },
     licensed: { label: 'Licensed', color: '#007AFF', icon: 'ribbon', order: 5 },
-    active_agent: { label: 'Active Agent', color: '#0A7E6B', icon: 'star', order: 6 },
+    active_agent: { label: 'Active Agent', color: '#FF7600', icon: 'star', order: 6 },
 };
 
-export const CANDIDATE_STATUSES = (Object.entries(CANDIDATE_STATUS_CONFIG) as [CandidateStatus, CandidateStatusConfig][])
+export const CANDIDATE_STATUSES = (
+    Object.entries(CANDIDATE_STATUS_CONFIG) as [CandidateStatus, CandidateStatusConfig][]
+)
     .sort(([, a], [, b]) => a.order - b.order)
     .map(([key]) => key);
 
@@ -69,10 +71,21 @@ export interface CandidateActivity {
 
 // ── Candidate Document ──
 export const DOCUMENT_LABELS = [
-    'Resume', 'RES5', 'M5', 'M9', 'M9A', 'HI', 'M8', 'M8A', 'ComGI', 'BCP', 'PGI', 'Other',
+    'Resume',
+    'RES5',
+    'M5',
+    'M9',
+    'M9A',
+    'HI',
+    'M8',
+    'M8A',
+    'ComGI',
+    'BCP',
+    'PGI',
+    'Other',
 ] as const;
 
-export type DocumentLabel = typeof DOCUMENT_LABELS[number];
+export type DocumentLabel = (typeof DOCUMENT_LABELS)[number];
 
 export interface CandidateDocument {
     id: string;
@@ -100,5 +113,3 @@ export interface RecruitmentCandidate {
     created_at: string;
     updated_at: string;
 }
-
-

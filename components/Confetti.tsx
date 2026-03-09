@@ -15,23 +15,32 @@ export const CONFETTI_DURATION = 2600;
 
 const COUNT = 40;
 const COLORS = [
-    '#EC4899', '#F59E0B', '#6366F1', '#22C55E',
-    '#EF4444', '#0D9488', '#8B5CF6', '#F97316',
-    '#FBBF24', '#34D399', '#60A5FA', '#FB7185',
+    '#EC4899',
+    '#F59E0B',
+    '#6366F1',
+    '#22C55E',
+    '#EF4444',
+    '#FF7600',
+    '#8B5CF6',
+    '#F97316',
+    '#FBBF24',
+    '#FFB366',
+    '#60A5FA',
+    '#FB7185',
 ];
 
 interface Particle {
     color: string;
-    sx: number;     // start X (absolute)
-    sy: number;     // start Y (absolute)
-    vx: number;     // initial X velocity px/s
-    vy: number;     // initial Y velocity px/s — negative = upward
-    g: number;      // gravity px/s²
-    rot: number;    // total rotation in degrees
-    delay: number;  // stagger delay as fraction of DURATION (0–0.15)
+    sx: number; // start X (absolute)
+    sy: number; // start Y (absolute)
+    vx: number; // initial X velocity px/s
+    vy: number; // initial Y velocity px/s — negative = upward
+    g: number; // gravity px/s²
+    rot: number; // total rotation in degrees
+    delay: number; // stagger delay as fraction of DURATION (0–0.15)
     w: number;
     h: number;
-    br: number;     // border radius
+    br: number; // border radius
 }
 
 function makeParticle(): Particle {
@@ -70,26 +79,25 @@ function ConfettiParticle({ p, progress }: { p: Particle; progress: SharedValue<
         const opacity = local < 0.65 ? 1 : Math.max(0, 1 - (local - 0.65) / 0.35);
 
         return {
-            transform: [
-                { translateX: tx },
-                { translateY: ty },
-                { rotate: `${rotate}deg` },
-            ],
+            transform: [{ translateX: tx }, { translateY: ty }, { rotate: `${rotate}deg` }],
             opacity,
         };
     });
 
     return (
         <Animated.View
-            style={[{
-                position: 'absolute',
-                left: p.sx - p.w / 2,
-                top: p.sy - p.h / 2,
-                width: p.w,
-                height: p.h,
-                backgroundColor: p.color,
-                borderRadius: p.br,
-            }, style]}
+            style={[
+                {
+                    position: 'absolute',
+                    left: p.sx - p.w / 2,
+                    top: p.sy - p.h / 2,
+                    width: p.w,
+                    height: p.h,
+                    backgroundColor: p.color,
+                    borderRadius: p.br,
+                },
+                style,
+            ]}
         />
     );
 }
@@ -102,10 +110,7 @@ interface ConfettiProps {
 export default function Confetti({ visible, confettiKey }: ConfettiProps) {
     const progress = useSharedValue(0);
     // Re-randomize particles each time confettiKey changes
-    const particles = useMemo(
-        () => Array.from({ length: COUNT }, makeParticle),
-        [confettiKey],
-    );
+    const particles = useMemo(() => Array.from({ length: COUNT }, makeParticle), [confettiKey]);
 
     useEffect(() => {
         if (visible) {
@@ -123,10 +128,7 @@ export default function Confetti({ visible, confettiKey }: ConfettiProps) {
     if (!visible) return null;
 
     return (
-        <View
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-            pointerEvents="none"
-        >
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
             {particles.map((p, i) => (
                 <ConfettiParticle key={i} p={p} progress={progress} />
             ))}

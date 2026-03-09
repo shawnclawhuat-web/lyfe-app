@@ -118,7 +118,7 @@ function RoadshowLiveT2Inner(props: RoadshowLiveT2Props) {
                     <ProgressRing
                         actual={boothTotals.pitches}
                         pledged={boothTotals.pledgedPitches}
-                        color="#0D9488"
+                        color="#E67700"
                         label="Pitches"
                         accessLabel={`Booth pitches: ${boothTotals.pitches} of ${boothTotals.pledgedPitches}`}
                     />
@@ -291,7 +291,7 @@ function RoadshowLiveT2Inner(props: RoadshowLiveT2Props) {
                                                                 color:
                                                                     counts.sitdowns >= att.pledged_sitdowns &&
                                                                     att.pledged_sitdowns > 0
-                                                                        ? '#0D9488'
+                                                                        ? '#E67700'
                                                                         : colors.textPrimary,
                                                             },
                                                         ]}
@@ -308,7 +308,7 @@ function RoadshowLiveT2Inner(props: RoadshowLiveT2Props) {
                                                                 color:
                                                                     counts.pitches >= att.pledged_pitches &&
                                                                     att.pledged_pitches > 0
-                                                                        ? '#0D9488'
+                                                                        ? '#E67700'
                                                                         : colors.textPrimary,
                                                             },
                                                         ]}
@@ -325,7 +325,7 @@ function RoadshowLiveT2Inner(props: RoadshowLiveT2Props) {
                                                                 color:
                                                                     counts.closed >= att.pledged_closed &&
                                                                     att.pledged_closed > 0
-                                                                        ? '#0D9488'
+                                                                        ? '#E67700'
                                                                         : colors.textPrimary,
                                                             },
                                                         ]}

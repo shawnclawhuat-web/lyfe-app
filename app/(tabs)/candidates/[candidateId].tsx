@@ -1093,7 +1093,7 @@ export default function CandidateDetailScreen() {
                                 <TouchableOpacity
                                     style={[
                                         sheetStyles.primaryBtn,
-                                        { backgroundColor: '#FF9500', opacity: isScheduling ? 0.6 : 1 },
+                                        { backgroundColor: '#EAB308', opacity: isScheduling ? 0.6 : 1 },
                                     ]}
                                     onPress={handleSubmitSchedule}
                                     activeOpacity={0.85}

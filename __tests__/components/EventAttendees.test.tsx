@@ -21,10 +21,10 @@ jest.mock('@/constants/ui', () => ({
     ATTENDEE_ROLE_COLORS: {
         host: '#E11D48',
         duty_manager: '#6366F1',
-        presenter: '#0D9488',
+        presenter: '#FF7600',
         attendee: '#8B5CF6',
     },
-    AVATAR_COLORS: ['#6366F1', '#0D9488', '#E11D48', '#F59E0B', '#8B5CF6', '#06B6D4'],
+    AVATAR_COLORS: ['#6366F1', '#FF7600', '#E11D48', '#F59E0B', '#8B5CF6', '#06B6D4'],
 }));
 
 const COLORS = {
@@ -38,7 +38,7 @@ const COLORS = {
     border: '#E0E0E0',
     success: '#34C759',
     error: '#FF3B30',
-    warning: '#FF9500',
+    warning: '#EAB308',
 } as any;
 
 const emptyGrouped: Record<AttendeeRole, EventAttendee[]> = {

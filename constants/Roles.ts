@@ -89,7 +89,7 @@ export function getVisibleTabs(role: UserRole, viewMode?: 'agent' | 'manager'): 
             return ['home', 'leads', 'events', 'profile'];
         }
         // manager view
-        return ['home', 'leads', 'team', 'candidates', 'events', 'profile'];
+        return ['home', 'leads', 'team', 'events', 'profile'];
     }
     return ROLE_TABS[role] || ['profile'];
 }

@@ -20,8 +20,8 @@ export interface AgencyEvent {
     title: string;
     description: string | null;
     event_type: EventType;
-    event_date: string;     // 'YYYY-MM-DD'
-    start_time: string;     // 'HH:MM'
+    event_date: string; // 'YYYY-MM-DD'
+    start_time: string; // 'HH:MM'
     end_time: string | null;
     location: string | null;
     created_by: string;
@@ -98,7 +98,7 @@ export interface RoadshowActivity {
 /** @deprecated Use EVENT_TYPE_CONFIG from constants/displayConfigs instead */
 export const EVENT_TYPE_COLORS: Record<EventType, string> = {
     team_meeting: '#6366F1',
-    training: '#0A7E6B',
+    training: '#FF7600',
     agency_event: '#F59E0B',
     roadshow: '#EC4899',
     other: '#8E8E93',

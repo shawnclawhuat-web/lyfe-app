@@ -14,7 +14,7 @@ const COLORS = {
     border: '#E0E0E0',
     success: '#34C759',
     error: '#FF3B30',
-    warning: '#FF9500',
+    warning: '#EAB308',
 } as any;
 
 const makeConfig = (overrides?: Partial<RoadshowConfig>): RoadshowConfig => ({

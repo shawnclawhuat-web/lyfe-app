@@ -128,14 +128,7 @@ describe('getVisibleTabs', () => {
     });
 
     it('returns manager view for manager in manager mode', () => {
-        expect(getVisibleTabs('manager', 'manager')).toEqual([
-            'home',
-            'leads',
-            'team',
-            'candidates',
-            'events',
-            'profile',
-        ]);
+        expect(getVisibleTabs('manager', 'manager')).toEqual(['home', 'leads', 'team', 'events', 'profile']);
     });
 
     it('returns agent view for director in agent mode', () => {
@@ -143,14 +136,7 @@ describe('getVisibleTabs', () => {
     });
 
     it('returns manager view for director in manager mode', () => {
-        expect(getVisibleTabs('director', 'manager')).toEqual([
-            'home',
-            'leads',
-            'team',
-            'candidates',
-            'events',
-            'profile',
-        ]);
+        expect(getVisibleTabs('director', 'manager')).toEqual(['home', 'leads', 'team', 'events', 'profile']);
     });
 
     it('ignores viewMode for roles that cannot toggle', () => {

@@ -29,7 +29,7 @@ jest.mock('@/lib/dateTime', () => ({
 
 jest.mock('@/constants/ui', () => ({
     ERROR_BG: '#FEE2E2',
-    ERROR_TEXT: '#991B1B',
+    ERROR_TEXT: '#DC2626',
     PICKER_HOURS: Array.from({ length: 12 }, (_, i) => ({ label: `${i + 1}`, value: i })),
     PICKER_MINUTES: Array.from({ length: 12 }, (_, i) => ({ label: `${i * 5}`.padStart(2, '0'), value: i })),
     PICKER_AMPM: [
@@ -54,7 +54,7 @@ const COLORS = {
     border: '#E0E0E0',
     success: '#34C759',
     error: '#FF3B30',
-    warning: '#FF9500',
+    warning: '#EAB308',
     warningLight: '#FFF3CD',
     inputBackground: '#F9F9F9',
     inputBorder: '#E0E0E0',

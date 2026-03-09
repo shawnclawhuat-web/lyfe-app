@@ -35,7 +35,7 @@ describe('ProgressRing', () => {
 
     it('renders "No target" when pledged is 0', () => {
         const { getByText } = render(
-            <ProgressRing actual={0} pledged={0} color="#FF9500" label="Calls" accessLabel="0 calls, no target" />,
+            <ProgressRing actual={0} pledged={0} color="#EAB308" label="Calls" accessLabel="0 calls, no target" />,
         );
         expect(getByText('No target')).toBeTruthy();
     });
