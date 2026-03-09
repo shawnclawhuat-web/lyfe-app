@@ -34,6 +34,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 function getGreeting(): string {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -322,6 +323,8 @@ export default function HomeScreen() {
                             <>
                                 <QuickActionBtn icon="briefcase" label="Team" colors={colors} onPress={() => router.push('/(tabs)/team')} />
                                 <QuickActionBtn icon="people" label="Leads" colors={colors} onPress={() => router.push('/(tabs)/leads')} />
+                                <QuickActionBtn icon="analytics" label="Analytics" colors={colors} onPress={() => router.push('/(tabs)/home/analytics')} />
+                                <QuickActionBtn icon="funnel" label="Pipeline" colors={colors} onPress={() => router.push('/(tabs)/home/pipeline')} />
                                 <QuickActionBtn icon="document-text" label="Candidates" colors={colors} onPress={() => router.push('/(tabs)/candidates')} />
                                 <QuickActionBtn icon="person" label="Profile" colors={colors} onPress={() => router.push('/(tabs)/profile')} />
                             </>
@@ -522,12 +525,33 @@ const StatCardSmall = memo(function StatCardSmall({ label, value, colors }: { la
 });
 
 const QuickActionBtn = memo(function QuickActionBtn({ icon, label, colors, onPress }: { icon: string; label: string; colors: any; onPress: () => void }) {
+    const scale = useSharedValue(1);
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }],
+    }));
+    const onPressIn = () => {
+        scale.value = withSpring(0.97, { damping: 15 });
+    };
+    const onPressOut = () => {
+        scale.value = withSpring(1, { damping: 15 });
+    };
+
     return (
-        <TouchableOpacity style={[styles.quickActionSurface, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]} onPress={onPress} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={label}>
-            <View style={[styles.quickActionIconWrapper, { backgroundColor: colors.accentLight }]}>
-                <Ionicons name={icon as any} size={22} color={colors.accent} />
-            </View>
-            <Text style={[styles.quickActionLabel, { color: colors.textPrimary }]}>{label}</Text>
+        <TouchableOpacity
+            style={[styles.quickActionSurface, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}
+            onPress={onPress}
+            onPressIn={onPressIn}
+            onPressOut={onPressOut}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={label}
+        >
+            <Animated.View style={[styles.quickActionInner, animatedStyle]}>
+                <View style={[styles.quickActionIconWrapper, { backgroundColor: colors.accentLight }]}>
+                    <Ionicons name={icon as any} size={22} color={colors.accent} />
+                </View>
+                <Text style={[styles.quickActionLabel, { color: colors.textPrimary }]}>{label}</Text>
+            </Animated.View>
         </TouchableOpacity>
     );
 });
@@ -641,6 +665,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 8,
+    },
+    quickActionInner: {
+        alignItems: 'center',
     },
     quickActionLabel: {
         fontSize: 12,

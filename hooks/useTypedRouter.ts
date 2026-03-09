@@ -2,6 +2,8 @@ import { useRouter } from 'expo-router';
 
 type TabRoute =
     | '/(tabs)/home'
+    | '/(tabs)/home/analytics'
+    | '/(tabs)/home/pipeline'
     | '/(tabs)/exams'
     | `/(tabs)/exams/take/${string}`
     | `/(tabs)/exams/results/${string}`
