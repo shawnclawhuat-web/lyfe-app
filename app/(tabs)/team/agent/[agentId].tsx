@@ -20,7 +20,7 @@ import {
 
 const MOCK_OTP = process.env.EXPO_PUBLIC_MOCK_OTP === 'true';
 
-const AVATAR_COLORS = ['#6366F1', '#0D9488', '#E11D48', '#F59E0B', '#8B5CF6', '#06B6D4'];
+const AVATAR_COLOR_KEYS = ['statusProposed', 'accent', 'danger', 'warning', 'statusProposed', 'info'] as const;
 const PIPELINE_STATUSES: LeadStatus[] = ['new', 'contacted', 'qualified', 'proposed', 'won', 'lost'];
 
 function formatDate(dateStr: string) {
@@ -97,7 +97,7 @@ export default function AgentDetailScreen() {
         );
     }
 
-    const avatarColor = AVATAR_COLORS[agent.name.charCodeAt(0) % AVATAR_COLORS.length];
+    const avatarColor = colors[AVATAR_COLOR_KEYS[agent.name.charCodeAt(0) % AVATAR_COLOR_KEYS.length]];
     const initials = agent.name.split(' ').map((n) => n[0]).join('');
     const isManager = agent.role === 'manager';
     const lostCount = pipelineCounts['lost'] || 0;
@@ -130,9 +130,9 @@ export default function AgentDetailScreen() {
                         <View style={styles.profileInfo}>
                             <Text style={[styles.profileName, { color: colors.textPrimary }]}>{agent.name}</Text>
                             <View style={styles.profileMeta}>
-                                <View style={[styles.roleBadge, { backgroundColor: isManager ? '#6366F118' : colors.accentLight }]}>
-                                    <View style={[styles.roleDot, { backgroundColor: isManager ? '#6366F1' : colors.accent }]} />
-                                    <Text style={[styles.roleText, { color: isManager ? '#6366F1' : colors.accent }]}>
+                                <View style={[styles.roleBadge, { backgroundColor: isManager ? colors.statusProposed + '18' : colors.accentLight }]}>
+                                    <View style={[styles.roleDot, { backgroundColor: isManager ? colors.statusProposed : colors.accent }]} />
+                                    <Text style={[styles.roleText, { color: isManager ? colors.statusProposed : colors.accent }]}>
                                         {isManager ? 'Manager' : 'Agent'}
                                     </Text>
                                 </View>
@@ -166,8 +166,8 @@ export default function AgentDetailScreen() {
                             activeOpacity={0.8}
                             disabled={!agent.phone}
                         >
-                            <Ionicons name="call" size={18} color="#FFF" />
-                            <Text style={styles.actionBtnText}>Call</Text>
+                            <Ionicons name="call" size={18} color={colors.textInverse} />
+                            <Text style={[styles.actionBtnText, { color: colors.textInverse }]}>Call</Text>
                         </TouchableOpacity>
                         {agent.email && (
                             <TouchableOpacity
@@ -186,8 +186,8 @@ export default function AgentDetailScreen() {
                 <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Performance</Text>
                 <View style={styles.statsGrid}>
                     <View style={[styles.statCard, { backgroundColor: colors.accent }]}>
-                        <Text style={styles.statValueWhite}>{agent.leadsCount}</Text>
-                        <Text style={styles.statLabelWhite}>Total Leads</Text>
+                        <Text style={[styles.statValueWhite, { color: colors.textInverse }]}>{agent.leadsCount}</Text>
+                        <Text style={[styles.statLabelWhite, { color: colors.textInverse, opacity: 0.8 }]}>Total Leads</Text>
                     </View>
                     <View style={[styles.statCard, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
                         <Text style={[styles.statValue, { color: colors.success }]}>{agent.wonCount}</Text>
@@ -365,7 +365,6 @@ const styles = StyleSheet.create({
     actionBtnText: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#FFF',
     },
 
     // ── Section Title ──
@@ -404,7 +403,6 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: '800',
         letterSpacing: -0.3,
-        color: '#FFF',
     },
     statLabel: {
         fontSize: 12,
@@ -415,7 +413,6 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '500',
         marginTop: 2,
-        color: 'rgba(255,255,255,0.8)',
     },
 
     // ── Pipeline ──

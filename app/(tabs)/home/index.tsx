@@ -144,10 +144,10 @@ export default function HomeScreen() {
                     {isCandidate ? (
                         <>
                             <View style={styles.statsRow}>
-                                <View style={[styles.heroCardPrimary, { backgroundColor: '#FF9500' }]}>
+                                <View style={[styles.heroCardPrimary, { backgroundColor: colors.warning }]}>
                                     <Ionicons name="school" size={80} color="rgba(255,255,255,0.15)" style={styles.heroIconBg} />
-                                    <Text style={[styles.heroStatValue, { color: '#FFFFFF' }]}>2</Text>
-                                    <Text style={[styles.heroStatLabel, { color: 'rgba(255,255,255,0.9)' }]}>Exams to Pass</Text>
+                                    <Text style={[styles.heroStatValue, { color: colors.textInverse }]}>2</Text>
+                                    <Text style={[styles.heroStatLabel, { color: colors.textInverse, opacity: 0.9 }]}>Exams to Pass</Text>
                                 </View>
                                 <View style={styles.statsColumn}>
                                     <StatCardSmall label="Stage" value="Exam Prep" colors={colors} />
@@ -160,8 +160,8 @@ export default function HomeScreen() {
                             <View style={styles.statsRow}>
                                 <View style={[styles.heroCardPrimary, { backgroundColor: colors.accent }]}>
                                     <Ionicons name="people" size={80} color="rgba(255,255,255,0.15)" style={styles.heroIconBg} />
-                                    <Text style={[styles.heroStatValue, { color: '#FFFFFF' }]}>{isManagerView ? (stats?.totalLeads || MANAGER_STATS.teamLeads) : 0}</Text>
-                                    <Text style={[styles.heroStatLabel, { color: 'rgba(255,255,255,0.9)' }]}>Team Leads</Text>
+                                    <Text style={[styles.heroStatValue, { color: colors.textInverse }]}>{isManagerView ? (stats?.totalLeads || MANAGER_STATS.teamLeads) : 0}</Text>
+                                    <Text style={[styles.heroStatLabel, { color: colors.textInverse, opacity: 0.9 }]}>Team Leads</Text>
                                 </View>
                                 <View style={styles.statsColumn}>
                                     <StatCardSmall label="Candidates" value={(MANAGER_STATS.activeCandidates).toString()} colors={colors} />
@@ -174,8 +174,8 @@ export default function HomeScreen() {
                             <View style={styles.statsRow}>
                                 <View style={[styles.heroCardPrimary, { backgroundColor: colors.accent }]}>
                                     <Ionicons name="briefcase" size={80} color="rgba(255,255,255,0.15)" style={styles.heroIconBg} />
-                                    <Text style={[styles.heroStatValue, { color: '#FFFFFF' }]}>{agentStats.totalLeads}</Text>
-                                    <Text style={[styles.heroStatLabel, { color: 'rgba(255,255,255,0.9)' }]}>Total Leads</Text>
+                                    <Text style={[styles.heroStatValue, { color: colors.textInverse }]}>{agentStats.totalLeads}</Text>
+                                    <Text style={[styles.heroStatLabel, { color: colors.textInverse, opacity: 0.9 }]}>Total Leads</Text>
                                 </View>
                                 <View style={styles.statsColumn}>
                                     <StatCardSmall label="New Leads" value={agentStats.newThisWeek.toString()} colors={colors} />

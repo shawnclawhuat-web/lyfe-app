@@ -104,8 +104,8 @@ export default function AddCandidateScreen() {
                     {/* Save Error */}
                     {saveError && (
                         <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2' }]}>
-                            <Ionicons name="alert-circle" size={16} color="#DC2626" />
-                            <Text style={styles.errorBannerText}>{saveError}</Text>
+                            <Ionicons name="alert-circle" size={16} color={colors.danger} />
+                            <Text style={[styles.errorBannerText, { color: colors.danger }]}>{saveError}</Text>
                         </View>
                     )}
 
@@ -169,11 +169,11 @@ export default function AddCandidateScreen() {
                         disabled={isSaving}
                     >
                         {isSaving ? (
-                            <ActivityIndicator size="small" color="#FFFFFF" />
+                            <ActivityIndicator size="small" color={colors.textInverse} />
                         ) : (
                             <>
-                                <Ionicons name="person-add-outline" size={18} color="#FFFFFF" />
-                                <Text style={styles.submitText}>Create Candidate</Text>
+                                <Ionicons name="person-add-outline" size={18} color={colors.textInverse} />
+                                <Text style={[styles.submitText, { color: colors.textInverse }]}>Create Candidate</Text>
                             </>
                         )}
                     </TouchableOpacity>
@@ -203,7 +203,7 @@ export default function AddCandidateScreen() {
                             style={[styles.doneButton, { backgroundColor: colors.accent }]}
                             onPress={handleDone}
                         >
-                            <Text style={styles.doneText}>Done</Text>
+                            <Text style={[styles.doneText, { color: colors.textInverse }]}>Done</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 16,
         marginBottom: 12,
     },
-    errorBannerText: { flex: 1, fontSize: 13, color: '#DC2626' },
+    errorBannerText: { flex: 1, fontSize: 13 },
 
     // Form Card — iOS grouped style
     formCard: {
@@ -310,7 +310,6 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     submitText: {
-        color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '600',
     },
@@ -355,5 +354,5 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    doneText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+    doneText: { fontSize: 16, fontWeight: '600' },
 });

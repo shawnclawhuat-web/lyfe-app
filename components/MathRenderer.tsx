@@ -22,9 +22,7 @@ function hasLatex(text: string): boolean {
     return /\$[^$]+\$/.test(text) || /\\frac|\\text|\\times|\\div/.test(text);
 }
 
-function buildKatexHtml(content: string, isDark: boolean, fontSize: number): string {
-    const bgColor = isDark ? '#161B22' : '#FFFFFF';
-    const textColor = isDark ? '#E6EDF3' : '#1F2328';
+function buildKatexHtml(content: string, bgColor: string, textColor: string, fontSize: number): string {
 
     return `<!DOCTYPE html>
 <html>
@@ -96,14 +94,14 @@ export default function MathRenderer({ content, style, fontSize = 15 }: MathRend
     if (Platform.OS === 'web') {
         return (
             <View style={[styles.container, style]}>
-                <WebMathRenderer content={content} isDark={isDark} fontSize={fontSize} />
+                <WebMathRenderer content={content} isDark={isDark} fontSize={fontSize} bgColor={colors.webViewBg} textColor={colors.webViewText} />
             </View>
         );
     }
 
     // Native platform: use WebView
     const WebView = require('react-native-webview').default;
-    const html = buildKatexHtml(content, isDark, fontSize);
+    const html = buildKatexHtml(content, colors.webViewBg, colors.webViewText, fontSize);
 
     return (
         <View style={[styles.container, style]}>
@@ -124,11 +122,9 @@ export default function MathRenderer({ content, style, fontSize = 15 }: MathRend
 /**
  * Web-only math renderer using KaTeX auto-render via script injection.
  */
-function WebMathRenderer({ content, isDark, fontSize }: { content: string; isDark: boolean; fontSize: number }) {
-    const textColor = isDark ? '#E6EDF3' : '#1F2328';
-
+function WebMathRenderer({ content, isDark, fontSize, bgColor, textColor }: { content: string; isDark: boolean; fontSize: number; bgColor: string; textColor: string }) {
     // For web, we render in an iframe to isolate KaTeX styles
-    const html = buildKatexHtml(content, isDark, fontSize);
+    const html = buildKatexHtml(content, bgColor, textColor, fontSize);
     const [height, setHeight] = useState(40);
 
     return (

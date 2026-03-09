@@ -106,9 +106,9 @@ export default function AddLeadScreen() {
                     disabled={isSaving}
                 >
                     {isSaving ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <ActivityIndicator size="small" color={colors.textInverse} />
                     ) : (
-                        <Text style={styles.saveBtnText}>Save</Text>
+                        <Text style={[styles.saveBtnText, { color: colors.textInverse }]}>Save</Text>
                     )}
                 </TouchableOpacity>
             </View>
@@ -122,8 +122,8 @@ export default function AddLeadScreen() {
                     {/* Save Error */}
                     {saveError && (
                         <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2' }]}>
-                            <Ionicons name="alert-circle" size={16} color="#DC2626" />
-                            <Text style={styles.errorBannerText}>{saveError}</Text>
+                            <Ionicons name="alert-circle" size={16} color={colors.danger} />
+                            <Text style={[styles.errorBannerText, { color: colors.danger }]}>{saveError}</Text>
                         </View>
                     )}
 
@@ -249,7 +249,7 @@ export default function AddLeadScreen() {
             >
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
-                        <Ionicons name="checkmark-circle" size={48} color="#22C55E" />
+                        <Ionicons name="checkmark-circle" size={48} color={colors.success} />
                         <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Lead Created</Text>
                         <Text style={[styles.modalMessage, { color: colors.textSecondary }]}>
                             {name} has been added to your leads.
@@ -258,7 +258,7 @@ export default function AddLeadScreen() {
                             style={[styles.modalOkBtn, { backgroundColor: colors.accent }]}
                             onPress={handleSuccessDismiss}
                         >
-                            <Text style={styles.modalOkBtnText}>OK</Text>
+                            <Text style={[styles.modalOkBtnText, { color: colors.textInverse }]}>OK</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -297,11 +297,11 @@ function FormField({
                     styles.fieldInputRow,
                     {
                         backgroundColor: colors.surfacePrimary,
-                        borderColor: error ? '#EF4444' : colors.borderLight,
+                        borderColor: error ? colors.danger : colors.borderLight,
                     },
                 ]}
             >
-                <Ionicons name={icon as any} size={18} color={error ? '#EF4444' : colors.textTertiary} />
+                <Ionicons name={icon as any} size={18} color={error ? colors.danger : colors.textTertiary} />
                 <TextInput
                     style={[styles.fieldInput, { color: colors.textPrimary }]}
                     value={value}
@@ -312,7 +312,7 @@ function FormField({
                     autoCapitalize={autoCapitalize}
                 />
             </View>
-            {error && <Text style={styles.fieldError}>{error}</Text>}
+            {error && <Text style={[styles.fieldError, { color: colors.danger }]}>{error}</Text>}
         </View>
     );
 }
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
         minWidth: 60,
         alignItems: 'center',
     },
-    saveBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+    saveBtnText: { fontSize: 14, fontWeight: '700' },
     scrollView: { flex: 1 },
     scrollContent: { padding: 16, paddingBottom: 40 },
     errorBanner: {
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         marginBottom: 12,
     },
-    errorBannerText: { flex: 1, fontSize: 13, color: '#DC2626' },
+    errorBannerText: { flex: 1, fontSize: 13 },
     card: {
         borderRadius: 14,
         borderWidth: 0.5,
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
     },
     fieldInput: { flex: 1, fontSize: 14, padding: 0 },
-    fieldError: { color: '#EF4444', fontSize: 11, marginTop: 4, fontWeight: '500' },
+    fieldError: { fontSize: 11, marginTop: 4, fontWeight: '500' },
     chipGroup: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -419,7 +419,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     modalOkBtnText: {
-        color: '#FFFFFF',
         fontSize: 14,
         fontWeight: '600',
     },

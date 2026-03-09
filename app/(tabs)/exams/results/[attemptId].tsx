@@ -82,7 +82,7 @@ export default function ExamResultsScreen() {
                     <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
                     <Text style={[styles.errorText, { color: colors.textSecondary }]}>Result not found</Text>
                     <TouchableOpacity onPress={handleDone} style={[styles.doneButton, { backgroundColor: colors.accent }]}>
-                        <Text style={styles.doneButtonText}>Back to Exams</Text>
+                        <Text style={[styles.doneButtonText, { color: colors.textInverse }]}>Back to Exams</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -130,9 +130,9 @@ export default function ExamResultsScreen() {
                         <Ionicons
                             name={result.passed ? 'checkmark-circle' : 'close-circle'}
                             size={18}
-                            color="#FFFFFF"
+                            color={colors.textInverse}
                         />
-                        <Text style={styles.resultBadgeText}>
+                        <Text style={[styles.resultBadgeText, { color: colors.textInverse }]}>
                             {result.passed ? 'PASSED' : 'FAILED'}
                         </Text>
                     </View>
@@ -165,8 +165,8 @@ export default function ExamResultsScreen() {
                         style={[styles.retakeButton, { backgroundColor: colors.accent }]}
                         onPress={handleRetake}
                     >
-                        <Ionicons name="refresh" size={18} color="#FFFFFF" />
-                        <Text style={styles.retakeButtonText}>Retake Exam</Text>
+                        <Ionicons name="refresh" size={18} color={colors.textInverse} />
+                        <Text style={[styles.retakeButtonText, { color: colors.textInverse }]}>Retake Exam</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.doneOutlineButton, { borderColor: colors.border }]}
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         borderRadius: 20,
     },
-    resultBadgeText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', letterSpacing: 1 },
+    resultBadgeText: { fontSize: 14, fontWeight: '800', letterSpacing: 1 },
     autoSubmitNote: { fontSize: 12, marginTop: 8 },
     statsRow: {
         flexDirection: 'row',
@@ -372,13 +372,13 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         borderRadius: 12,
     },
-    retakeButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+    retakeButtonText: { fontSize: 15, fontWeight: '700' },
     doneButton: {
         paddingHorizontal: 24,
         paddingVertical: 12,
         borderRadius: 10,
     },
-    doneButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+    doneButtonText: { fontSize: 14, fontWeight: '600' },
     doneOutlineButton: {
         flex: 1,
         alignItems: 'center',

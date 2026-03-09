@@ -173,8 +173,8 @@ export default function LeadsListScreen() {
                         onPress={() => router.push('/leads/add')}
                         accessibilityLabel="Add new lead"
                     >
-                        <Ionicons name="add" size={20} color="#FFFFFF" />
-                        <Text style={styles.addButtonText}>Add</Text>
+                        <Ionicons name="add" size={20} color={colors.textInverse} />
+                        <Text style={[styles.addButtonText, { color: colors.textInverse }]}>Add</Text>
                     </TouchableOpacity>
                 ) : undefined}
             />
@@ -222,9 +222,9 @@ export default function LeadsListScreen() {
                                 style={[styles.errorBanner, { backgroundColor: '#FEE2E2' }]}
                                 onPress={loadLeads}
                             >
-                                <Ionicons name="alert-circle" size={16} color="#DC2626" />
-                                <Text style={styles.errorText}>{error}</Text>
-                                <Text style={styles.retryText}>Tap to retry</Text>
+                                <Ionicons name="alert-circle" size={16} color={colors.danger} />
+                                <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
+                                <Text style={[styles.retryText, { color: colors.danger }]}>Tap to retry</Text>
                             </TouchableOpacity>
                         )}
 
@@ -253,7 +253,7 @@ export default function LeadsListScreen() {
                                         <Text
                                             style={[
                                                 styles.filterChipText,
-                                                { color: isActive ? '#FFFFFF' : colors.textSecondary },
+                                                { color: isActive ? colors.textInverse : colors.textSecondary },
                                             ]}
                                         >
                                             {item.label}
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
         paddingVertical: 9,
         borderRadius: 20,
     },
-    addButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+    addButtonText: { fontSize: 14, fontWeight: '700' },
     headerContainer: {
         paddingBottom: 4,
     },
@@ -339,8 +339,8 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         marginBottom: 12,
     },
-    errorText: { flex: 1, fontSize: 13, color: '#DC2626' },
-    retryText: { fontSize: 12, fontWeight: '600', color: '#DC2626' },
+    errorText: { flex: 1, fontSize: 13 },
+    retryText: { fontSize: 12, fontWeight: '600' },
     filterList: {
         flexGrow: 0,
         marginHorizontal: -16,

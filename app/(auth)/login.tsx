@@ -171,9 +171,9 @@ export default function LoginScreen() {
                                     activeOpacity={0.8}
                                 >
                                     {isLoading ? (
-                                        <ActivityIndicator color="#FFFFFF" />
+                                        <ActivityIndicator color={colors.textInverse} />
                                     ) : (
-                                        <Text style={styles.primaryButtonText}>Send OTP</Text>
+                                        <Text style={[styles.primaryButtonText, { color: colors.textInverse }]}>Send OTP</Text>
                                     )}
                                 </TouchableOpacity>
                             </>
@@ -223,9 +223,9 @@ export default function LoginScreen() {
                                     activeOpacity={0.8}
                                 >
                                     {isLoading ? (
-                                        <ActivityIndicator color="#FFFFFF" />
+                                        <ActivityIndicator color={colors.textInverse} />
                                     ) : (
-                                        <Text style={styles.primaryButtonText}>Verify</Text>
+                                        <Text style={[styles.primaryButtonText, { color: colors.textInverse }]}>Verify</Text>
                                     )}
                                 </TouchableOpacity>
 
@@ -351,7 +351,6 @@ const styles = StyleSheet.create({
         marginTop: 16,
     },
     primaryButtonText: {
-        color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '600',
         letterSpacing: 0.3,

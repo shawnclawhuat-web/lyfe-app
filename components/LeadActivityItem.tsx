@@ -64,7 +64,7 @@ export default function LeadActivityItem({ activity, isLast }: LeadActivityItemP
             {/* Timeline line + dot */}
             <View style={styles.timeline}>
                 <View style={[styles.dot, { backgroundColor: iconConfig.color }]}>
-                    <Ionicons name={iconConfig.icon as any} size={12} color="#FFFFFF" />
+                    <Ionicons name={iconConfig.icon as any} size={12} color={colors.textInverse} />
                 </View>
                 {!isLast && <View style={[styles.line, { backgroundColor: colors.borderLight }]} />}
             </View>

@@ -346,7 +346,7 @@ export default function ProfileScreen() {
                                 accessibilityRole="button"
                                 accessibilityLabel="Confirm sign out"
                             >
-                                <Text style={[styles.modalBtnText, { color: '#FFFFFF' }]}>Sign Out</Text>
+                                <Text style={[styles.modalBtnText, { color: colors.textInverse }]}>Sign Out</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

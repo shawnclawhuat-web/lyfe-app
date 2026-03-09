@@ -56,8 +56,8 @@ function StatusStepper({ currentStatus, colors }: { currentStatus: CandidateStat
                     <View key={step} style={stepperStyles.stepRow}>
                         <View style={stepperStyles.dotCol}>
                             <View style={[stepperStyles.dot, { backgroundColor: dotColor, borderColor: dotColor }]}>
-                                {isComplete && <Ionicons name="checkmark" size={10} color="#FFF" />}
-                                {isCurrent && <View style={stepperStyles.activeDotInner} />}
+                                {isComplete && <Ionicons name="checkmark" size={10} color={colors.textInverse} />}
+                                {isCurrent && <View style={[stepperStyles.activeDotInner, { backgroundColor: colors.textInverse }]} />}
                             </View>
                             {idx < steps.length - 1 && (
                                 <View style={[stepperStyles.line, { backgroundColor: isComplete ? cfg.color : colors.border }]} />
@@ -81,15 +81,15 @@ function StatusStepper({ currentStatus, colors }: { currentStatus: CandidateStat
 
 function InterviewCard({ interview, colors }: { interview: Interview; colors: any }) {
     const isUpcoming = new Date(interview.datetime) > new Date();
-    const statusColor = interview.status === 'completed' ? '#34C759'
-        : interview.status === 'cancelled' ? '#FF3B30'
-            : '#FF9500';
+    const statusColor = interview.status === 'completed' ? colors.success
+        : interview.status === 'cancelled' ? colors.danger
+            : colors.warning;
 
     return (
         <View style={[interviewStyles.card, { backgroundColor: colors.surfacePrimary || colors.background, borderColor: colors.border }]}>
             <View style={interviewStyles.headerRow}>
-                <View style={interviewStyles.roundBadge}>
-                    <Text style={interviewStyles.roundText}>R{interview.round_number}</Text>
+                <View style={[interviewStyles.roundBadge, { backgroundColor: colors.info + '18' }]}>
+                    <Text style={[interviewStyles.roundText, { color: colors.info }]}>R{interview.round_number}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                     <Text style={[interviewStyles.dateText, { color: colors.textPrimary }]}>
@@ -259,15 +259,15 @@ export default function CandidateDetailScreen() {
                     <QuickAction
                         icon="call"
                         label="Call"
-                        color="#16A34A"
-                        bgColor="#DCFCE7"
+                        color={colors.success}
+                        bgColor={colors.successLight}
                         onPress={() => Linking.openURL(`tel:${candidate.phone.replace(/\s/g, '')}`)}
                     />
                     <QuickAction
                         icon="logo-whatsapp"
                         label="WhatsApp"
-                        color="#25D366"
-                        bgColor="#D1FAE5"
+                        color={colors.success}
+                        bgColor={colors.successLight}
                         onPress={() => {
                             const phone = candidate.phone.replace(/[\s+]/g, '');
                             Linking.openURL(`https://wa.me/${phone}`);
@@ -276,14 +276,14 @@ export default function CandidateDetailScreen() {
                     <QuickAction
                         icon="calendar"
                         label="Schedule"
-                        color="#FF9500"
-                        bgColor="#FFF3E0"
+                        color={colors.warning}
+                        bgColor={colors.warningLight}
                         onPress={() => { }}
                     />
                     <QuickAction
                         icon="create-outline"
                         label="Note"
-                        color="#6B7280"
+                        color={colors.textTertiary}
                         bgColor={colors.surfacePrimary || colors.background}
                         onPress={() => { }}
                     />
@@ -453,7 +453,6 @@ const stepperStyles = StyleSheet.create({
         width: 6,
         height: 6,
         borderRadius: 3,
-        backgroundColor: '#FFF',
     },
     line: {
         width: 2,
@@ -478,11 +477,10 @@ const interviewStyles = StyleSheet.create({
         width: 28,
         height: 28,
         borderRadius: 14,
-        backgroundColor: '#007AFF18',
         alignItems: 'center',
         justifyContent: 'center',
     },
-    roundText: { fontSize: 11, fontWeight: '700', color: '#007AFF' },
+    roundText: { fontSize: 11, fontWeight: '700' },
     dateText: { fontSize: 14, fontWeight: '600' },
     typeText: { fontSize: 12, marginTop: 1 },
     statusPill: {

@@ -261,16 +261,16 @@ export default function LeadDetailScreen() {
                         <QuickAction
                             icon="call"
                             label="Call"
-                            color="#16A34A"
-                            bgColor="#DCFCE7"
+                            color={colors.success}
+                            bgColor={colors.successLight}
                             onPress={handleCall}
                             disabled={!lead.phone}
                         />
                         <QuickAction
                             icon="logo-whatsapp"
                             label="WhatsApp"
-                            color="#25D366"
-                            bgColor="#D1FAE5"
+                            color={colors.success}
+                            bgColor={colors.successLight}
                             onPress={handleWhatsApp}
                             disabled={!lead.phone}
                         />
@@ -278,8 +278,8 @@ export default function LeadDetailScreen() {
                             <QuickAction
                                 icon="git-compare-outline"
                                 label="Reassign"
-                                color="#7C3AED"
-                                bgColor="#EDE9FE"
+                                color={colors.statusProposed}
+                                bgColor={colors.surfacePrimary}
                                 onPress={() => { }}
                             />
                         ) : (
@@ -287,14 +287,14 @@ export default function LeadDetailScreen() {
                                 <QuickAction
                                     icon="swap-horizontal"
                                     label="Status"
-                                    color="#D97706"
-                                    bgColor="#FEF3C7"
+                                    color={colors.warning}
+                                    bgColor={colors.warningLight}
                                     onPress={() => setShowStatusPicker(!showStatusPicker)}
                                 />
                                 <QuickAction
                                     icon="create-outline"
                                     label="Note"
-                                    color="#6B7280"
+                                    color={colors.textTertiary}
                                     bgColor={colors.surfacePrimary}
                                     onPress={() => setShowNoteInput(!showNoteInput)}
                                 />
@@ -362,7 +362,7 @@ export default function LeadDetailScreen() {
                                     onPress={handleAddNote}
                                     disabled={!noteText.trim() || isSavingNote}
                                 >
-                                    <Text style={styles.noteSaveText}>{isSavingNote ? 'Saving...' : 'Save Note'}</Text>
+                                    <Text style={[styles.noteSaveText, { color: colors.textInverse }]}>{isSavingNote ? 'Saving...' : 'Save Note'}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         borderRadius: 8,
     },
-    noteSaveText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+    noteSaveText: { fontSize: 13, fontWeight: '700' },
     timelineHeader: {
         flexDirection: 'row',
         alignItems: 'center',

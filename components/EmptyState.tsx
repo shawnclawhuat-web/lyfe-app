@@ -29,7 +29,7 @@ export default function EmptyState({ icon = 'file-tray-outline', title, subtitle
                     onPress={onAction}
                     activeOpacity={0.7}
                 >
-                    <Text style={styles.actionText}>{actionLabel}</Text>
+                    <Text style={[styles.actionText, { color: colors.textInverse }]}>{actionLabel}</Text>
                 </TouchableOpacity>
             )}
         </View>
@@ -70,7 +70,6 @@ const styles = StyleSheet.create({
         borderRadius: 10,
     },
     actionText: {
-        color: '#FFFFFF',
         fontSize: 14,
         fontWeight: '600',
     },

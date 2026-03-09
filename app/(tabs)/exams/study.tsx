@@ -22,7 +22,7 @@ interface StudyTopic {
     chapters: number;
     estimatedMinutes: number;
     icon: keyof typeof Ionicons.glyphMap;
-    color: string;
+    colorKey: 'info' | 'statusProposed' | 'warning' | 'danger';
 }
 
 const STUDY_TOPICS: StudyTopic[] = [
@@ -30,25 +30,25 @@ const STUDY_TOPICS: StudyTopic[] = [
         id: 's1', paperCode: 'M5',
         title: 'Rules & Regulations of Life Insurance',
         description: 'MAS guidelines, policy types, compliance requirements, and regulatory frameworks.',
-        chapters: 12, estimatedMinutes: 180, icon: 'shield-checkmark', color: '#007AFF',
+        chapters: 12, estimatedMinutes: 180, icon: 'shield-checkmark', colorKey: 'info',
     },
     {
         id: 's2', paperCode: 'M9',
         title: 'Investment-Linked Policies',
         description: 'ILP fund structures, risk assessment, suitability analysis, and unit pricing.',
-        chapters: 10, estimatedMinutes: 150, icon: 'trending-up', color: '#AF52DE',
+        chapters: 10, estimatedMinutes: 150, icon: 'trending-up', colorKey: 'statusProposed',
     },
     {
         id: 's3', paperCode: 'M9A',
         title: 'ILP Supplementary Module',
         description: 'Additional ILP regulations, switching rules, and advanced product features.',
-        chapters: 6, estimatedMinutes: 90, icon: 'documents', color: '#FF9500',
+        chapters: 6, estimatedMinutes: 90, icon: 'documents', colorKey: 'warning',
     },
     {
         id: 's4', paperCode: 'HI',
         title: 'Health Insurance Fundamentals',
         description: 'MediShield Life, Integrated Shield Plans, riders, and claims processes.',
-        chapters: 8, estimatedMinutes: 120, icon: 'heart', color: '#FF3B30',
+        chapters: 8, estimatedMinutes: 120, icon: 'heart', colorKey: 'danger',
     },
 ];
 
@@ -78,23 +78,23 @@ export default function StudyScreen() {
                 {/* Overview Card */}
                 <View style={[styles.overviewCard, { backgroundColor: colors.accent }]}>
                     <Ionicons name="book" size={60} color="rgba(255,255,255,0.15)" style={styles.overviewIcon} />
-                    <Text style={styles.overviewTitle}>Your Study Plan</Text>
+                    <Text style={[styles.overviewTitle, { color: colors.textInverse }]}>Your Study Plan</Text>
                     <Text style={styles.overviewSub}>
                         Complete all 4 modules to prepare for your licensing exams
                     </Text>
                     <View style={styles.overviewStats}>
                         <View style={styles.overviewStat}>
-                            <Text style={styles.overviewStatValue}>4</Text>
+                            <Text style={[styles.overviewStatValue, { color: colors.textInverse }]}>4</Text>
                             <Text style={styles.overviewStatLabel}>Modules</Text>
                         </View>
                         <View style={[styles.overviewDivider]} />
                         <View style={styles.overviewStat}>
-                            <Text style={styles.overviewStatValue}>{totalChapters}</Text>
+                            <Text style={[styles.overviewStatValue, { color: colors.textInverse }]}>{totalChapters}</Text>
                             <Text style={styles.overviewStatLabel}>Chapters</Text>
                         </View>
                         <View style={[styles.overviewDivider]} />
                         <View style={styles.overviewStat}>
-                            <Text style={styles.overviewStatValue}>~{Math.round(totalMinutes / 60)}h</Text>
+                            <Text style={[styles.overviewStatValue, { color: colors.textInverse }]}>~{Math.round(totalMinutes / 60)}h</Text>
                             <Text style={styles.overviewStatLabel}>Est. Time</Text>
                         </View>
                     </View>
@@ -103,7 +103,7 @@ export default function StudyScreen() {
                 {/* Study Tips */}
                 <View style={[styles.tipsCard, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
                     <View style={styles.tipsHeader}>
-                        <Ionicons name="bulb" size={18} color="#FF9500" />
+                        <Ionicons name="bulb" size={18} color={colors.warning} />
                         <Text style={[styles.tipsTitle, { color: colors.textPrimary }]}>Study Tips</Text>
                     </View>
                     {STUDY_TIPS.map((tip) => (
@@ -126,13 +126,13 @@ export default function StudyScreen() {
                         }}
                     >
                         <View style={styles.topicRow}>
-                            <View style={[styles.topicIconWrap, { backgroundColor: topic.color + '14' }]}>
-                                <Ionicons name={topic.icon} size={22} color={topic.color} />
+                            <View style={[styles.topicIconWrap, { backgroundColor: colors[topic.colorKey] + '14' }]}>
+                                <Ionicons name={topic.icon} size={22} color={colors[topic.colorKey]} />
                             </View>
                             <View style={styles.topicInfo}>
                                 <View style={styles.topicHeaderRow}>
-                                    <View style={[styles.paperBadge, { backgroundColor: topic.color + '18' }]}>
-                                        <Text style={[styles.paperBadgeText, { color: topic.color }]}>{topic.paperCode}</Text>
+                                    <View style={[styles.paperBadge, { backgroundColor: colors[topic.colorKey] + '18' }]}>
+                                        <Text style={[styles.paperBadgeText, { color: colors[topic.colorKey] }]}>{topic.paperCode}</Text>
                                     </View>
                                 </View>
                                 <Text style={[styles.topicTitle, { color: colors.textPrimary }]} numberOfLines={2}>
@@ -181,11 +181,11 @@ const styles = StyleSheet.create({
         right: -5,
         transform: [{ rotate: '15deg' }],
     },
-    overviewTitle: { color: '#FFF', fontSize: 20, fontWeight: '800', marginBottom: 4 },
+    overviewTitle: { fontSize: 20, fontWeight: '800', marginBottom: 4 },
     overviewSub: { color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 20, marginBottom: 20 },
     overviewStats: { flexDirection: 'row', alignItems: 'center' },
     overviewStat: { flex: 1, alignItems: 'center' },
-    overviewStatValue: { color: '#FFF', fontSize: 22, fontWeight: '800' },
+    overviewStatValue: { fontSize: 22, fontWeight: '800' },
     overviewStatLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 2 },
     overviewDivider: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.2)' },
     tipsCard: {

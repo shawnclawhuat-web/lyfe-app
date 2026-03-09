@@ -36,7 +36,7 @@ const MOCK_MANAGERS: TeamMember[] = [
 // Export mock data for agent detail screen
 export { MOCK_AGENTS, MOCK_MANAGERS };
 
-const AVATAR_COLORS = ['#6366F1', '#0D9488', '#E11D48', '#F59E0B', '#8B5CF6', '#06B6D4'];
+const AVATAR_COLOR_KEYS = ['statusProposed', 'accent', 'danger', 'warning', 'statusProposed', 'info'] as const;
 
 type FilterKey = 'all' | 'manager' | 'agent';
 
@@ -114,8 +114,8 @@ export default function TeamScreen() {
         : [{ key: 'all', label: 'All' }];
 
     const getAvatarColor = (name: string) => {
-        const index = name.charCodeAt(0) % AVATAR_COLORS.length;
-        return AVATAR_COLORS[index];
+        const index = name.charCodeAt(0) % AVATAR_COLOR_KEYS.length;
+        return colors[AVATAR_COLOR_KEYS[index]];
     };
 
     if (isLoading) {
@@ -154,15 +154,15 @@ export default function TeamScreen() {
                         <View style={styles.metaRow}>
                             <View style={[
                                 styles.roleBadge,
-                                { backgroundColor: isManager ? '#6366F118' : colors.accentLight }
+                                { backgroundColor: isManager ? colors.statusProposed + '18' : colors.accentLight }
                             ]}>
                                 <View style={[
                                     styles.roleDot,
-                                    { backgroundColor: isManager ? '#6366F1' : colors.accent }
+                                    { backgroundColor: isManager ? colors.statusProposed : colors.accent }
                                 ]} />
                                 <Text style={[
                                     styles.roleText,
-                                    { color: isManager ? '#6366F1' : colors.accent }
+                                    { color: isManager ? colors.statusProposed : colors.accent }
                                 ]}>
                                     {isManager ? 'Manager' : 'Agent'}
                                 </Text>
@@ -228,8 +228,8 @@ export default function TeamScreen() {
                         {/* Hero Stats */}
                         <View style={styles.heroRow}>
                             <View style={[styles.heroCard, { backgroundColor: colors.accent }]}>
-                                <Text style={styles.heroValue}>{counts.all}</Text>
-                                <Text style={styles.heroLabel}>Members</Text>
+                                <Text style={[styles.heroValue, { color: colors.textInverse }]}>{counts.all}</Text>
+                                <Text style={[styles.heroLabel, { color: colors.textInverse, opacity: 0.8 }]}>Members</Text>
                             </View>
                             <View style={[styles.heroCard, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
                                 <Text style={[styles.heroValue, { color: colors.textPrimary }]}>{totalLeads}</Text>
@@ -265,9 +265,9 @@ export default function TeamScreen() {
                                 style={[styles.errorBanner, { backgroundColor: '#FEE2E2' }]}
                                 onPress={loadMembers}
                             >
-                                <Ionicons name="alert-circle" size={16} color="#DC2626" />
-                                <Text style={styles.errorText}>{error}</Text>
-                                <Text style={styles.retryText}>Tap to retry</Text>
+                                <Ionicons name="alert-circle" size={16} color={colors.danger} />
+                                <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
+                                <Text style={[styles.retryText, { color: colors.danger }]}>Tap to retry</Text>
                             </TouchableOpacity>
                         )}
 
@@ -289,7 +289,7 @@ export default function TeamScreen() {
                                             ]}
                                             onPress={() => setFilter(f.key)}
                                         >
-                                            <Text style={[styles.filterText, { color: isActive ? '#FFF' : colors.textSecondary }]}>
+                                            <Text style={[styles.filterText, { color: isActive ? colors.textInverse : colors.textSecondary }]}>
                                                 {f.label}
                                             </Text>
                                             <Text style={[styles.filterCount, { color: isActive ? 'rgba(255,255,255,0.8)' : colors.textTertiary }]}>
@@ -346,13 +346,11 @@ const styles = StyleSheet.create({
     heroValue: {
         fontSize: 22,
         fontWeight: '800',
-        color: '#FFFFFF',
         letterSpacing: -0.3,
     },
     heroLabel: {
         fontSize: 11,
         fontWeight: '600',
-        color: 'rgba(255,255,255,0.8)',
         marginTop: 2,
         letterSpacing: 0.2,
     },
@@ -383,8 +381,8 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         marginBottom: 12,
     },
-    errorText: { flex: 1, fontSize: 13, color: '#DC2626' },
-    retryText: { fontSize: 12, fontWeight: '600', color: '#DC2626' },
+    errorText: { flex: 1, fontSize: 13 },
+    retryText: { fontSize: 12, fontWeight: '600' },
 
     // ── Filters ──
     filterRow: {

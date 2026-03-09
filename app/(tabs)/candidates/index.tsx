@@ -175,7 +175,7 @@ export default function CandidatesScreen() {
                         onPress={() => router.push('/team/add-candidate' as any)}
                         accessibilityLabel="Add new candidate"
                     >
-                        <Ionicons name="person-add" size={20} color="#FFFFFF" />
+                        <Ionicons name="person-add" size={20} color={colors.textInverse} />
                     </TouchableOpacity>
                 }
             />
@@ -217,9 +217,9 @@ export default function CandidatesScreen() {
                                 style={[styles.errorBanner, { backgroundColor: '#FEE2E2' }]}
                                 onPress={loadCandidates}
                             >
-                                <Ionicons name="alert-circle" size={16} color="#DC2626" />
-                                <Text style={styles.errorText}>{error}</Text>
-                                <Text style={styles.retryText}>Tap to retry</Text>
+                                <Ionicons name="alert-circle" size={16} color={colors.danger} />
+                                <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
+                                <Text style={[styles.retryText, { color: colors.danger }]}>Tap to retry</Text>
                             </TouchableOpacity>
                         )}
 
@@ -248,7 +248,7 @@ export default function CandidatesScreen() {
                                         <Text
                                             style={[
                                                 styles.filterChipText,
-                                                { color: isActive ? '#FFFFFF' : colors.textSecondary },
+                                                { color: isActive ? colors.textInverse : colors.textSecondary },
                                             ]}
                                         >
                                             {item.label}
@@ -320,8 +320,8 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         marginBottom: 12,
     },
-    errorText: { flex: 1, fontSize: 13, color: '#DC2626' },
-    retryText: { fontSize: 12, fontWeight: '600', color: '#DC2626' },
+    errorText: { flex: 1, fontSize: 13 },
+    retryText: { fontSize: 12, fontWeight: '600' },
     filterList: {
         flexGrow: 0,
         marginBottom: 8,
