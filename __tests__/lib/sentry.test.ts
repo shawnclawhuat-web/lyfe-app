@@ -18,15 +18,12 @@ describe('sentry', () => {
     });
 
     it('does not call Sentry.init when DSN is empty', () => {
-        // The module reads DSN at import time, so we test the behavior
-        // by calling initSentry directly with the current env
         process.env.EXPO_PUBLIC_SENTRY_DSN = '';
         jest.resetModules();
         const { initSentry } = require('@/lib/sentry');
 
         initSentry();
 
-        // Sentry.init should NOT have been called (early return when DSN is empty)
         expect(Sentry.init).not.toHaveBeenCalled();
     });
 
@@ -34,7 +31,6 @@ describe('sentry', () => {
         process.env.EXPO_PUBLIC_SENTRY_DSN = 'https://abc@sentry.io/123';
         jest.resetModules();
 
-        // Re-mock @sentry/react-native after resetModules so it picks up fresh
         jest.mock('@sentry/react-native', () => ({
             init: jest.fn(),
             wrap: jest.fn((c: any) => c),
