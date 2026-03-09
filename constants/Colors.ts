@@ -72,6 +72,10 @@ export const Colors = {
     statusWon: '#34C759',
     statusLost: '#FF3B30',
 
+    // WebView (MathRenderer)
+    webViewBg: '#FFFFFF',
+    webViewText: '#1F2328',
+
     // Shadows (iOS)
     shadow: 'rgba(0, 0, 0, 0.04)',
 
@@ -132,6 +136,10 @@ export const Colors = {
     statusProposed: '#BF5AF2',
     statusWon: '#30D158',
     statusLost: '#FF453A',
+
+    // WebView (MathRenderer)
+    webViewBg: '#161B22',
+    webViewText: '#E6EDF3',
 
     // Shadows
     shadow: 'rgba(0, 0, 0, 0.5)',

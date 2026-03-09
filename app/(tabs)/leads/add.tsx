@@ -100,9 +100,9 @@ export default function AddLeadScreen() {
                     disabled={isSaving}
                 >
                     {isSaving ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <ActivityIndicator size="small" color={colors.textInverse} />
                     ) : (
-                        <Text style={styles.saveBtnText}>Save</Text>
+                        <Text style={[styles.saveBtnText, { color: colors.textInverse }]}>Save</Text>
                     )}
                 </TouchableOpacity>
             </View>
@@ -264,7 +264,7 @@ export default function AddLeadScreen() {
             <Modal visible={showSuccessModal} transparent animationType="fade" onRequestClose={handleSuccessDismiss}>
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
-                        <Ionicons name="checkmark-circle" size={48} color="#22C55E" />
+                        <Ionicons name="checkmark-circle" size={48} color={colors.success} />
                         <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Lead Created</Text>
                         <Text style={[styles.modalMessage, { color: colors.textSecondary }]}>
                             {name} has been added to your leads.
@@ -273,7 +273,7 @@ export default function AddLeadScreen() {
                             style={[styles.modalOkBtn, { backgroundColor: colors.accent }]}
                             onPress={handleSuccessDismiss}
                         >
-                            <Text style={styles.modalOkBtnText}>OK</Text>
+                            <Text style={[styles.modalOkBtnText, { color: colors.textInverse }]}>OK</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
         minWidth: 60,
         alignItems: 'center',
     },
-    saveBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+    saveBtnText: { fontSize: 14, fontWeight: '700' },
     scrollView: { flex: 1 },
     scrollContent: { padding: 16, paddingBottom: 40 },
     card: {
@@ -364,7 +364,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     modalOkBtnText: {
-        color: '#FFFFFF',
         fontSize: 14,
         fontWeight: '600',
     },

@@ -98,8 +98,8 @@ export default function LeadsListScreen() {
                         onPress={() => router.push('/(tabs)/leads/add')}
                         accessibilityLabel="Add new lead"
                     >
-                        <Ionicons name="add" size={20} color="#FFFFFF" />
-                        <Text style={styles.addButtonText}>Add</Text>
+                        <Ionicons name="add" size={20} color={colors.textInverse} />
+                        <Text style={[styles.addButtonText, { color: colors.textInverse }]}>Add</Text>
                     </TouchableOpacity>
                 ) : undefined}
             />
@@ -155,7 +155,7 @@ export default function LeadsListScreen() {
                                 <Text
                                     style={[
                                         styles.filterChipText,
-                                        { color: isActive ? '#FFFFFF' : colors.textSecondary },
+                                        { color: isActive ? colors.textInverse : colors.textSecondary },
                                     ]}
                                 >
                                     {item.label}
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
         paddingVertical: 9,
         borderRadius: 20,
     },
-    addButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+    addButtonText: { fontSize: 14, fontWeight: '700' },
     stickyHeader: {
         paddingHorizontal: 16,
         paddingTop: 16,

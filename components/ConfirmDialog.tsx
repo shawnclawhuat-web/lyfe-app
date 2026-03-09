@@ -89,7 +89,7 @@ function ConfirmDialog({
                                             color:
                                                 btn.style === 'cancel'
                                                     ? colors.textPrimary
-                                                    : '#FFFFFF',
+                                                    : colors.textInverse,
                                         },
                                     ]}
                                 >

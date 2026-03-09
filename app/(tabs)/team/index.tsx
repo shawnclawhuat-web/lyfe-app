@@ -19,9 +19,9 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { AVATAR_COLORS, getAvatarColor } from '@/constants/ui';
 
 const TEAM_SEARCH_FIELDS: (keyof TeamMember)[] = ['name', 'phone', 'email'];
+const AVATAR_COLOR_KEYS = ['statusProposed', 'accent', 'danger', 'warning', 'statusProposed', 'info'] as const;
 
 type FilterKey = 'all' | 'manager' | 'agent';
 
@@ -80,6 +80,11 @@ export default function TeamScreen() {
         ? [{ key: 'all', label: 'All' }, { key: 'manager', label: 'Managers' }, { key: 'agent', label: 'Agents' }]
         : [{ key: 'all', label: 'All' }];
 
+    const getAvatarColor = (name: string) => {
+        const index = name.charCodeAt(0) % AVATAR_COLOR_KEYS.length;
+        return colors[AVATAR_COLOR_KEYS[index]];
+    };
+
     if (isLoading) {
         return (
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -116,15 +121,15 @@ export default function TeamScreen() {
                         <View style={styles.metaRow}>
                             <View style={[
                                 styles.roleBadge,
-                                { backgroundColor: isManager ? colors.managerColorLight : colors.accentLight }
+                                { backgroundColor: isManager ? colors.statusProposed + '18' : colors.accentLight }
                             ]}>
                                 <View style={[
                                     styles.roleDot,
-                                    { backgroundColor: isManager ? colors.managerColor : colors.accent }
+                                    { backgroundColor: isManager ? colors.statusProposed : colors.accent }
                                 ]} />
                                 <Text style={[
                                     styles.roleText,
-                                    { color: isManager ? colors.managerColor : colors.accent }
+                                    { color: isManager ? colors.statusProposed : colors.accent }
                                 ]}>
                                     {isManager ? 'Manager' : 'Agent'}
                                 </Text>
@@ -247,8 +252,8 @@ export default function TeamScreen() {
                         {/* Hero Stats */}
                         <View style={styles.heroRow}>
                             <View style={[styles.heroCard, { backgroundColor: colors.accent }]}>
-                                <Text style={styles.heroValue}>{counts.all}</Text>
-                                <Text style={styles.heroLabel}>Members</Text>
+                                <Text style={[styles.heroValue, { color: colors.textInverse }]}>{counts.all}</Text>
+                                <Text style={[styles.heroLabel, { color: colors.textInverse, opacity: 0.8 }]}>Members</Text>
                             </View>
                             <View style={[styles.heroCard, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}>
                                 <Text style={[styles.heroValue, { color: colors.textPrimary }]}>{totalLeads}</Text>
@@ -310,13 +315,11 @@ const styles = StyleSheet.create({
     heroValue: {
         fontSize: 22,
         fontWeight: '800',
-        color: '#FFFFFF',
         letterSpacing: -0.3,
     },
     heroLabel: {
         fontSize: 11,
         fontWeight: '600',
-        color: 'rgba(255,255,255,0.8)',
         marginTop: 2,
         letterSpacing: 0.2,
     },

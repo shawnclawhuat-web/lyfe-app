@@ -443,25 +443,25 @@ export default function CandidateDetailScreen() {
                         { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
                     ]}
                 >
-                    <QuickAction icon="call" label="Call" color="#16A34A" bgColor="#DCFCE7" onPress={handleCall} />
+                    <QuickAction icon="call" label="Call" color={colors.success} bgColor={colors.successLight} onPress={handleCall} />
                     <QuickAction
                         icon="logo-whatsapp"
                         label="WhatsApp"
-                        color="#25D366"
-                        bgColor="#D1FAE5"
+                        color={colors.success}
+                        bgColor={colors.successLight}
                         onPress={handleWhatsApp}
                     />
                     <QuickAction
                         icon="calendar"
                         label="Schedule"
-                        color="#FF9500"
-                        bgColor="#FFF3E0"
+                        color={colors.warning}
+                        bgColor={colors.warningLight}
                         onPress={openNewInterview}
                     />
                     <QuickAction
                         icon="create-outline"
                         label="Note"
-                        color="#6B7280"
+                        color={colors.textTertiary}
                         bgColor={colors.surfacePrimary || colors.background}
                         onPress={() => setShowNoteSheet(true)}
                     />
@@ -1390,10 +1390,64 @@ const styles = StyleSheet.create({
     notFoundText: { fontSize: 16, fontWeight: '600' },
 });
 
-// ── Resume Styles ──
+// ── Stepper Styles ──
 
-const resumeStyles = StyleSheet.create({
-    errorRow: {
+const stepperStyles = StyleSheet.create({
+    container: { gap: 0 },
+    stepRow: { flexDirection: 'row', alignItems: 'flex-start' },
+    dotCol: { width: 24, alignItems: 'center' },
+    dot: {
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        borderWidth: 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    activeDotInner: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+    },
+    line: {
+        width: 2,
+        height: 18,
+    },
+    label: { fontSize: 13, marginLeft: 10, marginTop: 1 },
+});
+
+// ── Interview Styles ──
+
+const interviewStyles = StyleSheet.create({
+    card: {
+        borderRadius: 10,
+        borderWidth: 0.5,
+        padding: 12,
+        marginBottom: 8,
+    },
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    roundBadge: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    roundText: { fontSize: 11, fontWeight: '700' },
+    dateText: { fontSize: 14, fontWeight: '600' },
+    typeText: { fontSize: 12, marginTop: 1 },
+    statusPill: {
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 8,
+    },
+    statusText: { fontSize: 11, fontWeight: '600' },
+    detailText: { flex: 1, fontSize: 12 },
+    detailRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,

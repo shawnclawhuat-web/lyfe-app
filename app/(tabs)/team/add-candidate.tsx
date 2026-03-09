@@ -223,11 +223,11 @@ export default function AddCandidateScreen() {
                         disabled={isSaving}
                     >
                         {isSaving ? (
-                            <ActivityIndicator size="small" color="#FFFFFF" />
+                            <ActivityIndicator size="small" color={colors.textInverse} />
                         ) : (
                             <>
-                                <Ionicons name="person-add-outline" size={18} color="#FFFFFF" />
-                                <Text style={styles.submitText}>Create Candidate</Text>
+                                <Ionicons name="person-add-outline" size={18} color={colors.textInverse} />
+                                <Text style={[styles.submitText, { color: colors.textInverse }]}>Create Candidate</Text>
                             </>
                         )}
                     </TouchableOpacity>
@@ -266,7 +266,7 @@ export default function AddCandidateScreen() {
                             style={[styles.doneButton, { backgroundColor: colors.accent }]}
                             onPress={handleDone}
                         >
-                            <Text style={styles.doneText}>Done</Text>
+                            <Text style={[styles.doneText, { color: colors.textInverse }]}>Done</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -361,7 +361,6 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     submitText: {
-        color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '600',
     },
@@ -406,5 +405,5 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    doneText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+    doneText: { fontSize: 16, fontWeight: '600' },
 });

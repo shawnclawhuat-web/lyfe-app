@@ -270,7 +270,11 @@ export default function LoginScreen() {
                                             disabled={isLoading}
                                             activeOpacity={0.8}
                                         >
-                                            {isLoading ? <ActivityIndicator color={OVERLAY_TEXT} /> : <Text style={styles.primaryButtonText}>Send OTP</Text>}
+                                            {isLoading ? (
+                                                <ActivityIndicator color={colors.textInverse} />
+                                            ) : (
+                                                <Text style={[styles.primaryButtonText, { color: colors.textInverse }]}>Send OTP</Text>
+                                            )}
                                         </TouchableOpacity>
                                     </>
                                 ) : (
@@ -311,7 +315,11 @@ export default function LoginScreen() {
                                             disabled={isLoading}
                                             activeOpacity={0.8}
                                         >
-                                            {isLoading ? <ActivityIndicator color={OVERLAY_TEXT} /> : <Text style={styles.primaryButtonText}>Verify</Text>}
+                                            {isLoading ? (
+                                                <ActivityIndicator color={colors.textInverse} />
+                                            ) : (
+                                                <Text style={[styles.primaryButtonText, { color: colors.textInverse }]}>Verify</Text>
+                                            )}
                                         </TouchableOpacity>
 
                                         <TouchableOpacity

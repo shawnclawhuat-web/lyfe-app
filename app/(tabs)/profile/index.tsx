@@ -61,7 +61,6 @@ export default function ProfileScreen() {
     const { viewMode, canToggle, setViewMode } = useViewMode();
     const router = useTypedRouter();
     const [showSignOutModal, setShowSignOutModal] = useState(false);
-<<<<<<< HEAD
     const [managers, setManagers] = useState<AssignedManager[]>([]);
     const [showAvatarSheet, setShowAvatarSheet] = useState(false);
     const [avatarUploading, setAvatarUploading] = useState(false);
@@ -756,7 +755,7 @@ export default function ProfileScreen() {
                                 accessibilityRole="button"
                                 accessibilityLabel="Confirm sign out"
                             >
-                                <Text style={[styles.modalBtnText, { color: '#FFFFFF' }]}>Sign Out</Text>
+                                <Text style={[styles.modalBtnText, { color: colors.textInverse }]}>Sign Out</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

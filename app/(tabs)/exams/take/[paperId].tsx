@@ -426,7 +426,7 @@ export default function TakeExamScreen() {
                                 <Text
                                     style={[
                                         styles.optionLetterText,
-                                        { color: isSelected ? '#FFFFFF' : colors.textSecondary },
+                                        { color: isSelected ? colors.textInverse : colors.textSecondary },
                                     ]}
                                 >
                                     {option}
@@ -475,11 +475,11 @@ export default function TakeExamScreen() {
                         disabled={isSubmitting}
                     >
                         {isSubmitting ? (
-                            <ActivityIndicator size="small" color="#FFFFFF" />
+                            <ActivityIndicator size="small" color={colors.textInverse} />
                         ) : (
                             <>
-                                <Text style={styles.submitButtonText}>Submit</Text>
-                                <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
+                                <Text style={[styles.submitButtonText, { color: colors.textInverse }]}>Submit</Text>
+                                <Ionicons name="checkmark-circle" size={18} color={colors.textInverse} />
                             </>
                         )}
                     </TouchableOpacity>
@@ -536,7 +536,7 @@ export default function TakeExamScreen() {
                                                 styles.gridItemText,
                                                 {
                                                     color: isCurrent
-                                                        ? '#FFFFFF'
+                                                        ? colors.textInverse
                                                         : isAnswered
                                                             ? colors.accent
                                                             : colors.textTertiary,
@@ -661,7 +661,7 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         borderRadius: 10,
     },
-    submitButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+    submitButtonText: { fontSize: 14, fontWeight: '700' },
     gridOverlay: {
         ...StyleSheet.absoluteFillObject,
         justifyContent: 'center',
