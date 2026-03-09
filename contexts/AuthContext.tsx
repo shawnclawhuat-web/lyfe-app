@@ -1,9 +1,4 @@
-import {
-    authenticate,
-    isBiometricsAvailable,
-    isBiometricsEnabled,
-    setBiometricsEnabled,
-} from '@/lib/biometrics';
+import { authenticate, isBiometricsAvailable, isBiometricsEnabled, setBiometricsEnabled } from '@/lib/biometrics';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@/types/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -50,11 +45,7 @@ const BiometricsContext = createContext<BiometricsContextType | undefined>(undef
 
 /** Fetch the user profile from public.users, creating it if needed */
 async function fetchUserProfile(userId: string, phone?: string | null): Promise<User | null> {
-    const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+    const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
 
     if (data) return data as User;
 
@@ -71,6 +62,11 @@ async function fetchUserProfile(userId: string, phone?: string | null): Promise<
             .single();
 
         if (insertError) {
+            // Unique constraint violation — user was created by a concurrent request
+            if (insertError.code === '23505') {
+                const { data: retry } = await supabase.from('users').select('*').eq('id', userId).single();
+                return retry as User | null;
+            }
             if (__DEV__) console.error('Error creating user profile:', insertError.message);
             return null;
         }
@@ -85,28 +81,20 @@ async function fetchUserProfile(userId: string, phone?: string | null): Promise<
 }
 
 async function updateLastLogin(userId: string) {
-    await supabase
-        .from('users')
-        .update({ last_login_at: new Date().toISOString() })
-        .eq('id', userId);
+    await supabase.from('users').update({ last_login_at: new Date().toISOString() }).eq('id', userId);
 }
 
 async function registerPushToken(userId: string) {
     try {
         const Notifications = await import('expo-notifications');
         const { status } = await Notifications.getPermissionsAsync();
-        const finalStatus = status === 'granted'
-            ? status
-            : (await Notifications.requestPermissionsAsync()).status;
+        const finalStatus = status === 'granted' ? status : (await Notifications.requestPermissionsAsync()).status;
         if (finalStatus !== 'granted') return;
 
         const tokenData = await Notifications.getExpoPushTokenAsync();
         if (!tokenData?.data) return;
 
-        await supabase
-            .from('users')
-            .update({ push_token: tokenData.data })
-            .eq('id', userId);
+        await supabase.from('users').update({ push_token: tokenData.data }).eq('id', userId);
     } catch {
         // Push token registration is non-critical — never throw
     }
@@ -135,7 +123,9 @@ function BiometricsProvider({
             const success = await authenticate('Sign in to Lyfe');
             if (!success) return { success: false };
 
-            const { data: { session } } = await supabase.auth.getSession();
+            const {
+                data: { session },
+            } = await supabase.auth.getSession();
             if (!session) {
                 setBiometricsEnabledState(false);
                 await setBiometricsEnabled(false);
@@ -195,22 +185,28 @@ function ProfileProvider({
     user: User | null;
     setUser: React.Dispatch<React.SetStateAction<User | null>>;
 }) {
-    const updateProfile = useCallback(async (name: string, email: string | null): Promise<{ error: string | null }> => {
-        const trimmedName = name.trim();
-        const trimmedEmail = email?.trim() || null;
-        if (!sessionRef.current?.user?.id) return { error: 'Not authenticated' };
-        const { error } = await supabase
-            .from('users')
-            .update({ full_name: trimmedName, email: trimmedEmail })
-            .eq('id', sessionRef.current.user.id);
-        if (error) return { error: error.message };
-        setUser(prev => prev ? { ...prev, full_name: trimmedName, email: trimmedEmail } : prev);
-        return { error: null };
-    }, [sessionRef, setUser]);
+    const updateProfile = useCallback(
+        async (name: string, email: string | null): Promise<{ error: string | null }> => {
+            const trimmedName = name.trim();
+            const trimmedEmail = email?.trim() || null;
+            if (!sessionRef.current?.user?.id) return { error: 'Not authenticated' };
+            const { error } = await supabase
+                .from('users')
+                .update({ full_name: trimmedName, email: trimmedEmail })
+                .eq('id', sessionRef.current.user.id);
+            if (error) return { error: error.message };
+            setUser((prev) => (prev ? { ...prev, full_name: trimmedName, email: trimmedEmail } : prev));
+            return { error: null };
+        },
+        [sessionRef, setUser],
+    );
 
-    const updateAvatarUrl = useCallback((url: string | null) => {
-        setUser(prev => prev ? { ...prev, avatar_url: url } : prev);
-    }, [setUser]);
+    const updateAvatarUrl = useCallback(
+        (url: string | null) => {
+            setUser((prev) => (prev ? { ...prev, avatar_url: url } : prev));
+        },
+        [setUser],
+    );
 
     const refreshUser = useCallback(async () => {
         if (sessionRef.current?.user) {
@@ -241,7 +237,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     /** Called by BiometricsProvider after successful Face ID */
     const handleBiometricUnlock = useCallback((session: Session, profile: User | null) => {
         setUser(profile);
-        setAuthState(prev => ({
+        setAuthState((prev) => ({
             ...prev,
             session,
             isAuthenticated: !!profile,
@@ -252,7 +248,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const initAuth = async () => {
             try {
-                const { data: { session } } = await supabase.auth.getSession();
+                const {
+                    data: { session },
+                } = await supabase.auth.getSession();
 
                 if (session?.user) {
                     const bioEnabled = await isBiometricsEnabled();
@@ -302,14 +300,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         initAuth();
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return;
 
             if (session?.user) {
                 const profile = await fetchUserProfile(session.user.id, session.user.phone || null);
                 if (profile) registerPushToken(session.user.id);
                 setUser(profile);
-                setAuthState(prev => ({
+                setAuthState((prev) => ({
                     ...prev,
                     session,
                     isLoading: false,
@@ -318,7 +318,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }));
             } else {
                 setUser(null);
-                setAuthState(prev => ({
+                setAuthState((prev) => ({
                     ...prev,
                     session: null,
                     isLoading: false,
@@ -349,7 +349,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (bioEnabled && hasLiveSession) {
             setUser(null);
-            setAuthState(prev => ({
+            setAuthState((prev) => ({
                 ...prev,
                 session: null,
                 isAuthenticated: false,
@@ -360,7 +360,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         await supabase.auth.signOut();
         setUser(null);
-        setAuthState(prev => ({
+        setAuthState((prev) => ({
             ...prev,
             session: null,
             isLoading: false,
@@ -417,7 +417,17 @@ export function useAuth() {
     const biometrics = useContext(BiometricsContext);
     return {
         ...auth,
-        ...(profile ?? { user: null, updateProfile: async () => ({ error: 'Not ready' }), updateAvatarUrl: () => {}, refreshUser: async () => {} }),
-        ...(biometrics ?? { biometricsEnabled: false, authenticateWithBiometrics: async () => ({ success: false }), enableBiometrics: async () => false, disableBiometrics: async () => {} }),
+        ...(profile ?? {
+            user: null,
+            updateProfile: async () => ({ error: 'Not ready' }),
+            updateAvatarUrl: () => {},
+            refreshUser: async () => {},
+        }),
+        ...(biometrics ?? {
+            biometricsEnabled: false,
+            authenticateWithBiometrics: async () => ({ success: false }),
+            enableBiometrics: async () => false,
+            disableBiometrics: async () => {},
+        }),
     };
 }

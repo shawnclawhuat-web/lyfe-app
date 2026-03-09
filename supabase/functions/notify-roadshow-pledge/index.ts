@@ -96,6 +96,23 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ error: 'Event not found' }), { status: 404, headers: corsHeaders });
         }
 
+        // ── Authorization: caller must be an attendee or the event creator ──
+        const isCreator = caller.id === event.created_by;
+        if (!isCreator) {
+            const { data: attendance } = await supabase
+                .from('event_attendees')
+                .select('id')
+                .eq('event_id', eventId)
+                .eq('user_id', caller.id)
+                .single();
+            if (!attendance) {
+                return new Response(JSON.stringify({ error: 'Not authorized for this event' }), {
+                    status: 403,
+                    headers: corsHeaders,
+                });
+            }
+        }
+
         // Get T2 (manager) and T3 (director = manager's reports_to)
         const { data: manager } = await supabase
             .from('users')

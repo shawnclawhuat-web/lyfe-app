@@ -37,6 +37,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ERROR_BG, ERROR_TEXT } from '@/constants/ui';
 import { formatCreatedAt } from '@/lib/dateTime';
 import { WebView } from 'react-native-webview';
+import WheelPicker, { WHEEL_ITEM_H } from '@/components/WheelPicker';
 let Clipboard: typeof import('expo-clipboard') | null = null;
 try {
     Clipboard = require('expo-clipboard');
@@ -44,97 +45,9 @@ try {
     if (__DEV__) console.warn('expo-clipboard not available:', e);
 }
 
-// ── Wheel Picker ──
-
 const HOURS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
 const MINUTES = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
 const AMPM = ['AM', 'PM'];
-const WHEEL_ITEM_H = 44;
-
-function WheelPicker({
-    items,
-    selectedIndex,
-    onChange,
-    colors,
-    width = 80,
-}: {
-    items: string[];
-    selectedIndex: number;
-    onChange: (i: number) => void;
-    colors: any;
-    width?: number;
-}) {
-    const scrollRef = useRef<ScrollView>(null);
-    const [scrollY, setScrollY] = useState(selectedIndex * WHEEL_ITEM_H);
-
-    useEffect(() => {
-        const t = setTimeout(() => {
-            scrollRef.current?.scrollTo({ y: selectedIndex * WHEEL_ITEM_H, animated: false });
-        }, 50);
-        return () => clearTimeout(t);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    const handleEnd = (e: any) => {
-        const y = e.nativeEvent.contentOffset.y;
-        const idx = Math.max(0, Math.min(items.length - 1, Math.round(y / WHEEL_ITEM_H)));
-        setScrollY(idx * WHEEL_ITEM_H);
-        onChange(idx);
-    };
-
-    const centerIdx = scrollY / WHEEL_ITEM_H;
-
-    return (
-        <View style={{ height: WHEEL_ITEM_H * 5, width, overflow: 'hidden' }}>
-            {/* Selection indicator lines */}
-            <View
-                pointerEvents="none"
-                style={{
-                    position: 'absolute',
-                    top: WHEEL_ITEM_H * 2,
-                    left: 6,
-                    right: 6,
-                    height: WHEEL_ITEM_H,
-                    borderTopWidth: StyleSheet.hairlineWidth,
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderColor: colors.border,
-                }}
-            />
-            <ScrollView
-                ref={scrollRef}
-                showsVerticalScrollIndicator={false}
-                snapToInterval={WHEEL_ITEM_H}
-                decelerationRate="fast"
-                onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
-                scrollEventThrottle={16}
-                onMomentumScrollEnd={handleEnd}
-                onScrollEndDrag={handleEnd}
-                contentContainerStyle={{ paddingVertical: WHEEL_ITEM_H * 2 }}
-            >
-                {items.map((item, i) => {
-                    const dist = Math.abs(centerIdx - i);
-                    const opacity = Math.max(0.15, 1 - dist * 0.45);
-                    const isSelected = dist < 0.5;
-                    return (
-                        <View key={i} style={{ height: WHEEL_ITEM_H, alignItems: 'center', justifyContent: 'center' }}>
-                            <Text
-                                style={{
-                                    fontSize: isSelected ? 22 : 16,
-                                    fontWeight: isSelected ? '700' : '400',
-                                    opacity,
-                                    color: isSelected ? colors.accent : colors.textPrimary,
-                                    letterSpacing: -0.3,
-                                }}
-                            >
-                                {item}
-                            </Text>
-                        </View>
-                    );
-                })}
-            </ScrollView>
-        </View>
-    );
-}
 
 // ── Main Screen ──
 

@@ -2,6 +2,7 @@
  * Notifications service — Supabase CRUD for in-app notification inbox
  */
 import type { AppNotification } from '@/types/notification';
+import { applyPageRange, resolvePage } from './pagination';
 import { supabase } from './supabase';
 
 /**
@@ -12,25 +13,20 @@ export async function fetchNotifications(
     page = 0,
     pageSize = 20,
 ): Promise<{ data: AppNotification[]; error: string | null; hasMore: boolean }> {
-    const from = page * pageSize;
-    const to = from + pageSize; // fetch one extra to detect hasMore
-
-    const { data, error } = await supabase
+    let query = supabase
         .from('notifications')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .range(from, to);
+        .order('created_at', { ascending: false });
 
+    query = applyPageRange(query, page, pageSize);
+
+    const { data, error } = await query;
     if (error) return { data: [], error: error.message, hasMore: false };
 
     const rows = (data || []) as AppNotification[];
-    const hasMore = rows.length > pageSize;
-    return {
-        data: hasMore ? rows.slice(0, pageSize) : rows,
-        error: null,
-        hasMore,
-    };
+    const { data: paged, hasMore } = resolvePage(rows, page, pageSize);
+    return { data: paged, error: null, hasMore };
 }
 
 /**

@@ -1,11 +1,9 @@
 /**
- * Recruitment service — Supabase CRUD for candidates & interviews
+ * Candidate CRUD, resume upload, activities, and MKTR sync
  */
-import type { CandidateDocument, CandidateStatus, Interview, RecruitmentCandidate } from '@/types/recruitment';
-import type { User } from '@/types/database';
-import { supabase } from './supabase';
-
-// ── Types ────────────────────────────────────────────────────
+import type { CandidateStatus, Interview, RecruitmentCandidate } from '@/types/recruitment';
+import { applyPageRange, resolvePage } from '../pagination';
+import { supabase } from '../supabase';
 
 export interface CreateCandidateInput {
     name: string;
@@ -13,8 +11,6 @@ export interface CreateCandidateInput {
     email: string | null;
     notes: string | null;
 }
-
-// ── Candidates ───────────────────────────────────────────────
 
 /**
  * Fetch candidates. Managers see all; agents see only their assigned candidates.
@@ -31,11 +27,7 @@ export async function fetchCandidates(
         query = query.eq('assigned_manager_id', userId);
     }
 
-    if (page !== undefined) {
-        const from = page * pageSize;
-        const to = from + pageSize;
-        query = query.range(from, to);
-    }
+    query = applyPageRange(query, page, pageSize);
 
     const { data: rows, error } = await query;
     if (error) return { data: [], error: error.message, hasMore: false };
@@ -102,12 +94,8 @@ export async function fetchCandidates(
         updated_at: r.updated_at,
     }));
 
-    if (page !== undefined) {
-        const hasMore = candidates.length > pageSize;
-        return { data: hasMore ? candidates.slice(0, pageSize) : candidates, error: null, hasMore };
-    }
-
-    return { data: candidates, error: null, hasMore: false };
+    const { data: paged, hasMore } = resolvePage(candidates, page, pageSize);
+    return { data: paged, error: null, hasMore };
 }
 
 /**
@@ -159,7 +147,7 @@ export async function fetchCandidate(
 }
 
 /**
- * Create a new candidate with an generated invite token.
+ * Create a new candidate with a generated invite token.
  */
 export async function createCandidate(
     input: CreateCandidateInput,
@@ -223,11 +211,8 @@ export async function updateCandidateStatus(
     return { error: null };
 }
 
-// ── Resume ───────────────────────────────────────────────────
-
 /**
  * Upload a PDF resume for a candidate and save the URL to the candidate record.
- * Returns the public URL on success.
  */
 export async function uploadCandidateResume(
     candidateId: string,
@@ -267,8 +252,6 @@ export async function uploadCandidateResume(
     }
 }
 
-// ── Candidate Activities ─────────────────────────────────────
-
 /**
  * Log a call or WhatsApp activity against a candidate.
  */
@@ -285,81 +268,6 @@ export async function addCandidateActivity(
     if (error) return { error: error.message };
     return { error: null };
 }
-
-/**
- * Schedule an interview for a candidate.
- */
-export async function scheduleInterview(input: {
-    candidateId: string;
-    managerId: string;
-    scheduledById: string;
-    roundNumber: number;
-    type: 'zoom' | 'in_person';
-    datetime: string;
-    location: string | null;
-    zoomLink: string | null;
-    notes: string | null;
-}): Promise<{ data: Interview | null; error: string | null }> {
-    const { data: row, error } = await supabase
-        .from('interviews')
-        .insert({
-            candidate_id: input.candidateId,
-            manager_id: input.managerId,
-            scheduled_by_id: input.scheduledById,
-            round_number: input.roundNumber,
-            type: input.type,
-            datetime: input.datetime,
-            location: input.location,
-            zoom_link: input.zoomLink,
-            notes: input.notes,
-            status: 'scheduled',
-        })
-        .select()
-        .single();
-
-    if (error) return { data: null, error: error.message };
-    return { data: row as Interview, error: null };
-}
-
-/**
- * Update an existing interview.
- */
-export async function updateInterview(
-    interviewId: string,
-    input: {
-        type: 'zoom' | 'in_person';
-        datetime: string;
-        location: string | null;
-        zoomLink: string | null;
-        notes: string | null;
-        status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
-    },
-): Promise<{ data: Interview | null; error: string | null }> {
-    const { data: row, error } = await supabase
-        .from('interviews')
-        .update({
-            type: input.type,
-            datetime: input.datetime,
-            location: input.location,
-            zoom_link: input.zoomLink,
-            notes: input.notes,
-            status: input.status,
-        })
-        .eq('id', interviewId)
-        .select()
-        .single();
-
-    if (error) return { data: null, error: error.message };
-    return { data: row as Interview, error: null };
-}
-
-export async function deleteInterview(interviewId: string): Promise<{ error: string | null }> {
-    const { error } = await supabase.from('interviews').delete().eq('id', interviewId);
-    if (error) return { error: error.message };
-    return { error: null };
-}
-
-// ── MKTR Agent Sync ──────────────────────────────────────────
 
 /**
  * Sync a newly-activated agent to MKTR so they can receive leads.
@@ -412,101 +320,4 @@ export async function syncAgentToMKTR(candidate: {
         if (__DEV__) console.error('MKTR sync error:', err.message);
         return { success: false, error: err.message };
     }
-}
-
-// ── Candidate Documents ──────────────────────────────────────
-
-export async function fetchCandidateDocuments(
-    candidateId: string,
-): Promise<{ data: CandidateDocument[]; error: string | null }> {
-    const { data, error } = await supabase
-        .from('candidate_documents')
-        .select('*')
-        .eq('candidate_id', candidateId)
-        .order('created_at', { ascending: false });
-
-    if (error) return { data: [], error: error.message };
-    return { data: (data || []) as CandidateDocument[], error: null };
-}
-
-export async function uploadCandidateDocument(
-    candidateId: string,
-    label: string,
-    fileUri: string,
-    fileName: string,
-): Promise<{ data: CandidateDocument | null; error: string | null }> {
-    try {
-        const response = await fetch(fileUri);
-        const arrayBuffer = await response.arrayBuffer();
-
-        const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const filePath = `${candidateId}/docs/${Date.now()}_${safeName}`;
-
-        const { error: uploadError } = await supabase.storage
-            .from('candidate-resumes')
-            .upload(filePath, arrayBuffer, { contentType: 'application/pdf', upsert: true });
-
-        if (uploadError) return { data: null, error: uploadError.message };
-
-        const {
-            data: { publicUrl },
-        } = supabase.storage.from('candidate-resumes').getPublicUrl(filePath);
-
-        const { data: row, error: insertError } = await supabase
-            .from('candidate_documents')
-            .insert({ candidate_id: candidateId, label, file_url: publicUrl, file_name: fileName })
-            .select()
-            .single();
-
-        if (insertError || !row) return { data: null, error: insertError?.message ?? 'Failed to save document' };
-
-        return { data: row as CandidateDocument, error: null };
-    } catch (err: any) {
-        return { data: null, error: err?.message || 'Upload failed' };
-    }
-}
-
-export async function deleteCandidateDocument(documentId: string): Promise<{ error: string | null }> {
-    const { error } = await supabase.from('candidate_documents').delete().eq('id', documentId);
-
-    if (error) return { error: error.message };
-    return { error: null };
-}
-
-// ── PA Helper Queries ──────────────────────────────────────────
-
-/** Fetch manager IDs assigned to a PA */
-export async function fetchPAManagerIds(paId: string): Promise<string[]> {
-    const { data } = await supabase.from('pa_manager_assignments').select('manager_id').eq('pa_id', paId);
-    return (data || []).map((a: { manager_id: string }) => a.manager_id);
-}
-
-/** Fetch managers (with profile info) assigned to a PA */
-export async function fetchPAManagers(paId: string): Promise<User[]> {
-    const { data } = await supabase
-        .from('pa_manager_assignments')
-        .select('manager:users!pa_manager_assignments_manager_id_fkey(id, full_name, role)')
-        .eq('pa_id', paId);
-    return ((data || []) as { manager: User | null }[]).map((r) => r.manager).filter(Boolean) as User[];
-}
-
-/** Count candidates across a set of manager IDs */
-export async function fetchPACandidateCount(managerIds: string[]): Promise<number> {
-    if (managerIds.length === 0) return 0;
-    const { count } = await supabase
-        .from('candidates')
-        .select('id', { count: 'exact', head: true })
-        .in('assigned_manager_id', managerIds);
-    return count ?? 0;
-}
-
-/** Count candidates with interview_scheduled status across manager IDs */
-export async function fetchPAInterviewCount(managerIds: string[]): Promise<number> {
-    if (managerIds.length === 0) return 0;
-    const { count } = await supabase
-        .from('candidates')
-        .select('id', { count: 'exact', head: true })
-        .in('assigned_manager_id', managerIds)
-        .eq('status', 'interview_scheduled');
-    return count ?? 0;
 }
