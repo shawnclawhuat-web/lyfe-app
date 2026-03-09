@@ -229,15 +229,20 @@ export default function HomeScreen() {
                 rightAction={
                     <View style={styles.headerRight}>
                         <TouchableOpacity
+                            style={styles.bellBtn}
                             onPress={() => router.push('/(tabs)/home/notifications')}
                             activeOpacity={0.7}
                             accessibilityRole="button"
-                            accessibilityLabel="Notifications"
+                            accessibilityLabel={
+                                unreadCount > 0
+                                    ? `Notifications, ${unreadCount > 99 ? '99 plus' : unreadCount} unread`
+                                    : 'Notifications'
+                            }
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
                             <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
                             {unreadCount > 0 && (
-                                <View style={[styles.badge, { backgroundColor: colors.error }]}>
+                                <View style={[styles.badge, { backgroundColor: colors.danger }]}>
                                     <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
                                 </View>
                             )}
@@ -337,7 +342,7 @@ export default function HomeScreen() {
                                         style={styles.heroIconBg}
                                     />
                                     <Text style={[styles.heroStatValue, { color: colors.textInverse }]}>
-                                        {isManagerView ? stats?.totalLeads || MOCK_MANAGER_STATS.teamLeads : 0}
+                                        {stats?.totalLeads || MOCK_MANAGER_STATS.teamLeads}
                                     </Text>
                                     <Text style={[styles.heroStatLabel, { color: colors.textInverse, opacity: 0.9 }]}>
                                         Team Leads
@@ -829,20 +834,26 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 16,
     },
+    bellBtn: {
+        minWidth: 44,
+        minHeight: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     avatarBtn: {
         borderRadius: 22,
         overflow: 'hidden',
     },
     badge: {
         position: 'absolute',
-        top: -4,
-        right: -6,
+        top: 2,
+        right: 0,
         minWidth: 16,
         height: 16,
         borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: 3,
+        paddingHorizontal: 4,
     },
     badgeText: {
         color: '#FFFFFF',

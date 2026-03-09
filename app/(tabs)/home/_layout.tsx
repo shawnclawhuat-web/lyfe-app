@@ -16,6 +16,9 @@ export default function HomeLayout() {
             <Stack.Screen name="analytics" />
             <Stack.Screen name="pipeline" />
             <Stack.Screen name="notifications" />
+            <Stack.Screen name="candidates" />
+            <Stack.Screen name="candidate/[candidateId]" />
+            <Stack.Screen name="add-candidate" options={{ presentation: 'modal' }} />
         </Stack>
     );
 }

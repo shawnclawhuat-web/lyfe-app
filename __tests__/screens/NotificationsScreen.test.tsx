@@ -193,4 +193,39 @@ describe('NotificationsScreen', () => {
             expect(getByText('Home')).toBeTruthy();
         });
     });
+
+    it('unread row has accessibility label with Unread suffix', async () => {
+        const { getByLabelText } = render(<NotificationsScreen />);
+
+        await waitFor(() => {
+            const row = getByLabelText(/Roadshow Pledge:.*Unread/);
+            expect(row).toBeTruthy();
+        });
+    });
+
+    it('read row accessibility label does not contain Unread', async () => {
+        const { getByLabelText } = render(<NotificationsScreen />);
+
+        await waitFor(() => {
+            const row = getByLabelText(/Event Reminder:.*Upcoming Team Meeting/);
+            expect(row.props.accessibilityLabel).not.toContain('Unread');
+        });
+    });
+
+    it('Mark All Read button has accessibility label', async () => {
+        const { getByLabelText } = render(<NotificationsScreen />);
+
+        await waitFor(() => {
+            expect(getByLabelText('Mark all notifications as read')).toBeTruthy();
+        });
+    });
+
+    it('renders notification body text', async () => {
+        const { getByText } = render(<NotificationsScreen />);
+
+        await waitFor(() => {
+            expect(getByText('S2 P3 C1 AFYC $5,000')).toBeTruthy();
+            expect(getByText('Tomorrow at 2 PM')).toBeTruthy();
+        });
+    });
 });

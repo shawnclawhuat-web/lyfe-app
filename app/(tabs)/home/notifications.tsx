@@ -95,6 +95,7 @@ export default function NotificationsScreen() {
                 icon: 'notifications-outline',
                 label: 'Notification',
             };
+            const data = item.data as Record<string, string> | null;
             return (
                 <TouchableOpacity
                     style={[
@@ -105,17 +106,27 @@ export default function NotificationsScreen() {
                     ]}
                     onPress={() => handleTap(item)}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${typeConfig.label}: ${item.title}. ${item.body || ''} ${timeAgo(item.created_at)}${!item.is_read ? '. Unread' : ''}`}
+                    accessibilityHint={data?.route ? 'Double tap to open' : undefined}
                 >
                     <View
-                        style={[
-                            styles.iconCircle,
-                            { backgroundColor: item.is_read ? colors.border : colors.accentLight },
-                        ]}
+                        style={[styles.iconCircle, { backgroundColor: item.is_read ? colors.border : colors.accent }]}
                     >
-                        <Ionicons name={typeConfig.icon as any} size={18} color={colors.accent} />
+                        <Ionicons
+                            name={typeConfig.icon as any}
+                            size={18}
+                            color={item.is_read ? colors.accent : colors.textInverse}
+                        />
                     </View>
                     <View style={styles.rowContent}>
-                        <Text style={[styles.rowTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                        <Text
+                            style={[
+                                styles.rowTitle,
+                                { color: colors.textPrimary, fontWeight: item.is_read ? '400' : '600' },
+                            ]}
+                            numberOfLines={1}
+                        >
                             {item.title}
                         </Text>
                         {item.body ? (
@@ -125,7 +136,12 @@ export default function NotificationsScreen() {
                         ) : null}
                         <Text style={[styles.rowTime, { color: colors.textTertiary }]}>{timeAgo(item.created_at)}</Text>
                     </View>
-                    {!item.is_read && <View style={[styles.unreadDot, { backgroundColor: colors.accent }]} />}
+                    {!item.is_read && (
+                        <View
+                            style={[styles.unreadDot, { backgroundColor: colors.accent }]}
+                            accessibilityElementsHidden
+                        />
+                    )}
                 </TouchableOpacity>
             );
         },
@@ -133,6 +149,11 @@ export default function NotificationsScreen() {
     );
 
     const keyExtractor = useCallback((item: AppNotification) => item.id, []);
+
+    const renderSeparator = useCallback(
+        () => <View style={[styles.separator, { backgroundColor: colors.border }]} />,
+        [colors.border],
+    );
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -145,6 +166,8 @@ export default function NotificationsScreen() {
                         <TouchableOpacity
                             onPress={handleMarkAllRead}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Mark all notifications as read"
                         >
                             <Text style={[styles.markAllBtn, { color: colors.accent }]}>Mark All Read</Text>
                         </TouchableOpacity>
@@ -163,6 +186,7 @@ export default function NotificationsScreen() {
                     data={notifications}
                     renderItem={renderItem}
                     keyExtractor={keyExtractor}
+                    ItemSeparatorComponent={renderSeparator}
                     contentContainerStyle={notifications.length === 0 ? styles.emptyContainer : styles.listContent}
                     refreshControl={
                         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
@@ -172,7 +196,7 @@ export default function NotificationsScreen() {
                     ListEmptyComponent={
                         <View style={styles.emptyState}>
                             <Ionicons name="notifications-off-outline" size={48} color={colors.textTertiary} />
-                            <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>No Notifications</Text>
+                            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No Notifications</Text>
                             <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
                                 You're all caught up! Notifications will appear here when there's something new.
                             </Text>
@@ -201,27 +225,31 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 40,
-        gap: 8,
+        gap: 12,
     },
-    emptyTitle: { fontSize: 17, fontWeight: '600', marginTop: 8 },
+    emptyTitle: { fontSize: 17, fontWeight: '600' },
     emptySubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
     markAllBtn: { fontSize: 14, fontWeight: '600' },
+    separator: {
+        height: StyleSheet.hairlineWidth,
+        marginLeft: 68,
+    },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
-        paddingVertical: 14,
+        paddingVertical: 12,
         gap: 12,
     },
     iconCircle: {
         width: 40,
         height: 40,
-        borderRadius: 12,
+        borderRadius: 20,
         alignItems: 'center',
         justifyContent: 'center',
     },
     rowContent: { flex: 1 },
-    rowTitle: { fontSize: 15, fontWeight: '600' },
+    rowTitle: { fontSize: 15 },
     rowBody: { fontSize: 13, marginTop: 2, lineHeight: 18 },
     rowTime: { fontSize: 12, marginTop: 4 },
     unreadDot: {
