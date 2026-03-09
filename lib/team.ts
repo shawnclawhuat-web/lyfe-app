@@ -53,10 +53,7 @@ export async function fetchTeamMembers(
 
         // Fetch lead stats for all members in a single query
         const userIds = (users as { id: string }[]).map((u) => u.id);
-        const { data: leads } = await supabase
-            .from('leads')
-            .select('assigned_to, status')
-            .in('assigned_to', userIds);
+        const { data: leads } = await supabase.from('leads').select('assigned_to, status').in('assigned_to', userIds);
 
         // Aggregate stats per user
         const statsMap: Record<string, { total: number; won: number }> = {};
@@ -172,9 +169,10 @@ export interface TeamPerformanceResult {
 /**
  * Get all active agents reporting to a manager.
  */
-export async function getTeamMembers(
-    managerId: string,
-): Promise<{ data: { id: string; full_name: string; role: string; email: string | null; phone: string | null }[]; error: string | null }> {
+export async function getTeamMembers(managerId: string): Promise<{
+    data: { id: string; full_name: string; role: string; email: string | null; phone: string | null }[];
+    error: string | null;
+}> {
     try {
         const { data, error } = await supabase
             .from('users')
@@ -185,7 +183,13 @@ export async function getTeamMembers(
 
         if (error) return { data: [], error: error.message };
         return {
-            data: (data || []) as { id: string; full_name: string; role: string; email: string | null; phone: string | null }[],
+            data: (data || []) as {
+                id: string;
+                full_name: string;
+                role: string;
+                email: string | null;
+                phone: string | null;
+            }[],
             error: null,
         };
     } catch (err) {
@@ -304,9 +308,9 @@ export async function inviteAgent(
             .from('invite_tokens')
             .insert({
                 token,
-                email,
-                invited_by: managerId,
-                role: 'agent',
+                created_by: managerId,
+                assigned_manager_id: managerId,
+                intended_role: 'agent' as any,
                 expires_at: expiresAt,
             })
             .select('token')

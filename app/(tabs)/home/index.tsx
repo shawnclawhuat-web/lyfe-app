@@ -149,6 +149,9 @@ export default function HomeScreen() {
         events: [],
     });
 
+    // Agent events state
+    const [agentEvents, setAgentEvents] = useState<AgencyEvent[]>([]);
+
     const greeting = useMemo(() => getGreeting(), []);
     const firstName = user?.full_name?.split(' ')[0] || 'there';
 
@@ -188,6 +191,12 @@ export default function HomeScreen() {
             if (results[1].data) setRecentActivities(results[1].data);
             if (results[2]?.data) setManagerStats(results[2].data);
             if (results[0].error) setError('Failed to load dashboard data');
+
+            // Fetch upcoming events for agents
+            if (!isManagerLike) {
+                const eventsResult = await fetchUpcomingEvents(user.id, 5);
+                setAgentEvents(eventsResult.data);
+            }
         } catch {
             setError('Failed to load dashboard data');
         }
@@ -510,6 +519,12 @@ export default function HomeScreen() {
                         ) : isPa ? (
                             <>
                                 <QuickActionBtn
+                                    icon="person-add"
+                                    label="Add Candidate"
+                                    colors={colors}
+                                    onPress={() => router.push('/(tabs)/pa/add-candidate')}
+                                />
+                                <QuickActionBtn
                                     icon="document-text"
                                     label="Candidates"
                                     colors={colors}
@@ -520,12 +535,6 @@ export default function HomeScreen() {
                                     label="Events"
                                     colors={colors}
                                     onPress={() => router.push('/(tabs)/events')}
-                                />
-                                <QuickActionBtn
-                                    icon="person-add"
-                                    label="Add Candidate"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/pa/add-candidate')}
                                 />
                                 <QuickActionBtn
                                     icon="person"
@@ -604,15 +613,15 @@ export default function HomeScreen() {
                                 />
                                 <QuickActionBtn
                                     icon="calendar"
-                                    label="My Events"
+                                    label="Events"
                                     colors={colors}
                                     onPress={() => router.push('/(tabs)/events')}
                                 />
                                 <QuickActionBtn
-                                    icon="person"
-                                    label="Profile"
+                                    icon="bar-chart"
+                                    label="Pipeline"
                                     colors={colors}
-                                    onPress={() => router.push('/(tabs)/profile')}
+                                    onPress={() => router.push('/(tabs)/home/pipeline')}
                                 />
                             </>
                         )}
@@ -641,6 +650,57 @@ export default function HomeScreen() {
                                         key={event.id}
                                         style={styles.managerEventRow}
                                         onPress={() => router.push(`/(tabs)/pa/event/${event.id}`)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={[styles.managerEventStripe, { backgroundColor: typeColor }]} />
+                                        <View style={styles.managerEventContent}>
+                                            <Text
+                                                style={[styles.managerEventTitle, { color: colors.textPrimary }]}
+                                                numberOfLines={1}
+                                            >
+                                                {event.title}
+                                            </Text>
+                                            <Text style={[styles.managerEventMeta, { color: colors.textTertiary }]}>
+                                                {formatDateShort(event.event_date)} · {formatTime(event.start_time)}
+                                            </Text>
+                                            {event.location ? (
+                                                <Text
+                                                    style={[styles.managerEventOwner, { color: typeColor }]}
+                                                    numberOfLines={1}
+                                                >
+                                                    {event.location}
+                                                </Text>
+                                            ) : null}
+                                        </View>
+                                    </TouchableOpacity>
+                                );
+                            })
+                        )}
+                    </View>
+                )}
+
+                {/* My Events — agent only */}
+                {!isCandidate && !isPa && !isAdminRole && !isManagerView && (
+                    <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+                        <View style={styles.sectionHeaderRow}>
+                            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>My Events</Text>
+                            <TouchableOpacity onPress={() => router.push('/(tabs)/events')}>
+                                <Text style={[styles.seeAllText, { color: colors.accent }]}>See All</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {agentEvents.length === 0 ? (
+                            <Text style={[styles.emptyActivityText, { color: colors.textTertiary }]}>
+                                No upcoming events
+                            </Text>
+                        ) : (
+                            agentEvents.map((event) => {
+                                const typeColor = EVENT_TYPE_COLORS[event.event_type] ?? colors.accent;
+                                return (
+                                    <TouchableOpacity
+                                        key={event.id}
+                                        style={styles.managerEventRow}
+                                        onPress={() => router.push(`/(tabs)/events/${event.id}`)}
                                         activeOpacity={0.7}
                                     >
                                         <View style={[styles.managerEventStripe, { backgroundColor: typeColor }]} />

@@ -4,13 +4,16 @@ import LoadingState from '@/components/LoadingState';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { fetchTeamMembers, type TeamMember } from '@/lib/team';
+import { canInviteAgents, type UserRole } from '@/constants/Roles';
+import { fetchTeamMembers, inviteAgent, type TeamMember } from '@/lib/team';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
+    Alert,
     FlatList,
+    Modal,
     RefreshControl,
     SafeAreaView,
     StyleSheet,
@@ -19,6 +22,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 const TEAM_SEARCH_FIELDS: (keyof TeamMember)[] = ['name', 'phone', 'email'];
 const AVATAR_COLOR_KEYS = ['statusProposed', 'accent', 'danger', 'warning', 'statusProposed', 'info'] as const;
@@ -37,6 +41,44 @@ export default function TeamScreen() {
     const [error, setError] = useState<string | null>(null);
 
     const canFilter = user?.role === 'director' || user?.role === 'admin' || user?.role === 'manager';
+    const showInvite = user?.role ? canInviteAgents(user.role as UserRole) : false;
+
+    // Invite modal state
+    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [inviteEmail, setInviteEmail] = useState('');
+    const [inviteSending, setInviteSending] = useState(false);
+    const [inviteError, setInviteError] = useState<string | null>(null);
+    const inviteSheetY = useSharedValue(300);
+
+    const openInviteModal = useCallback(() => {
+        setInviteEmail('');
+        setInviteError(null);
+        setShowInviteModal(true);
+        inviteSheetY.value = 300;
+        inviteSheetY.value = withSpring(0, { damping: 20, stiffness: 200 });
+    }, [inviteSheetY]);
+
+    const closeInviteModal = useCallback(() => {
+        setShowInviteModal(false);
+    }, []);
+
+    const handleInvite = useCallback(async () => {
+        if (!user?.id) return;
+        setInviteSending(true);
+        setInviteError(null);
+        const { data, error: err } = await inviteAgent(inviteEmail, user.id);
+        setInviteSending(false);
+        if (err) {
+            setInviteError(err);
+            return;
+        }
+        setShowInviteModal(false);
+        Alert.alert('Invite Sent', `Invite token: ${data?.token}\n\nShare this with the agent to join.`);
+    }, [inviteEmail, user?.id]);
+
+    const inviteSheetStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: inviteSheetY.value }],
+    }));
 
     const loadMembers = useCallback(async () => {
         if (!user?.id) return;
@@ -334,6 +376,81 @@ export default function TeamScreen() {
                     />
                 }
             />
+
+            {/* Invite Agent FAB */}
+            {showInvite && (
+                <TouchableOpacity
+                    style={[styles.fab, { backgroundColor: colors.accent }]}
+                    onPress={openInviteModal}
+                    activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityLabel="Invite agent"
+                >
+                    <Ionicons name="person-add" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+            )}
+
+            {/* Invite Modal */}
+            <Modal
+                visible={showInviteModal}
+                transparent
+                animationType="none"
+                onRequestClose={closeInviteModal}
+                accessibilityViewIsModal
+            >
+                <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={closeInviteModal}>
+                    <Animated.View style={[styles.sheet, { backgroundColor: colors.cardBackground }, inviteSheetStyle]}>
+                        <TouchableOpacity activeOpacity={1}>
+                            <View style={styles.sheetHandle}>
+                                <View style={[styles.handleBar, { backgroundColor: colors.border }]} />
+                            </View>
+                            <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>Invite Agent</Text>
+                            <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
+                                Enter the agent's email to generate an invite token.
+                            </Text>
+
+                            <TextInput
+                                style={[
+                                    styles.sheetInput,
+                                    {
+                                        color: colors.textPrimary,
+                                        backgroundColor: colors.inputBackground,
+                                        borderColor: inviteError ? colors.danger : colors.border,
+                                    },
+                                ]}
+                                placeholder="agent@example.com"
+                                placeholderTextColor={colors.textTertiary}
+                                value={inviteEmail}
+                                onChangeText={setInviteEmail}
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                autoComplete="email"
+                            />
+
+                            {inviteError && (
+                                <Text style={[styles.sheetError, { color: colors.danger }]}>{inviteError}</Text>
+                            )}
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.sheetBtn,
+                                    {
+                                        backgroundColor: colors.accent,
+                                        opacity: inviteSending || !inviteEmail.trim() ? 0.5 : 1,
+                                    },
+                                ]}
+                                onPress={handleInvite}
+                                disabled={inviteSending || !inviteEmail.trim()}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={[styles.sheetBtnText, { color: colors.textInverse }]}>
+                                    {inviteSending ? 'Sending...' : 'Send Invite'}
+                                </Text>
+                            </TouchableOpacity>
+                        </TouchableOpacity>
+                    </Animated.View>
+                </TouchableOpacity>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -519,5 +636,75 @@ const styles = StyleSheet.create({
     statDivider: {
         width: StyleSheet.hairlineWidth,
         height: '100%',
+    },
+
+    // ── FAB ──
+    fab: {
+        position: 'absolute',
+        right: 20,
+        bottom: 28,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 6,
+    },
+
+    // ── Invite Sheet ──
+    sheetOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'flex-end',
+    },
+    sheet: {
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingHorizontal: 20,
+        paddingBottom: 40,
+    },
+    sheetHandle: {
+        alignItems: 'center',
+        paddingVertical: 12,
+    },
+    handleBar: {
+        width: 36,
+        height: 4,
+        borderRadius: 2,
+    },
+    sheetTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        marginBottom: 4,
+    },
+    sheetSubtitle: {
+        fontSize: 14,
+        marginBottom: 20,
+    },
+    sheetInput: {
+        fontSize: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        marginBottom: 8,
+    },
+    sheetError: {
+        fontSize: 13,
+        marginBottom: 8,
+    },
+    sheetBtn: {
+        borderRadius: 12,
+        paddingVertical: 16,
+        alignItems: 'center',
+        marginTop: 8,
+    },
+    sheetBtnText: {
+        fontSize: 16,
+        fontWeight: '600',
     },
 });

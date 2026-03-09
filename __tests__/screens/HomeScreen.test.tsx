@@ -130,8 +130,8 @@ describe('HomeScreen', () => {
         await waitFor(() => {
             expect(getByText('Add Lead')).toBeTruthy();
             expect(getByText('All Leads')).toBeTruthy();
-            expect(getByText('My Events')).toBeTruthy();
-            expect(getByText('Profile')).toBeTruthy();
+            expect(getByText('Events')).toBeTruthy();
+            expect(getByText('Pipeline')).toBeTruthy();
         });
     });
 
