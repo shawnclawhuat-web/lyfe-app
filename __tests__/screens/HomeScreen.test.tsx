@@ -57,6 +57,14 @@ beforeEach(() => {
     mockBio.isBiometricsEnabled.mockResolvedValue(false);
     mockBio.hasShownBiometricsPrompt.mockResolvedValue(true);
     mockBio.getBiometryType.mockResolvedValue('none');
+    mockBio.biometricMeta.mockImplementation((type: string) => {
+        const map: Record<string, { label: string; icon: string }> = {
+            faceid: { label: 'Face ID', icon: 'scan' },
+            touchid: { label: 'Touch ID', icon: 'finger-print' },
+            biometric: { label: 'Biometrics', icon: 'lock-closed' },
+        };
+        return map[type] || { label: '', icon: '' };
+    });
 
     // Default service mocks
     (fetchLeadStats as jest.Mock).mockResolvedValue({

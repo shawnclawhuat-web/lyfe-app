@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import Avatar from '@/components/Avatar';
+import { KAV_BEHAVIOR, letterSpacing } from '@/constants/platform';
 import ErrorBanner from '@/components/ErrorBanner';
 import LyfeLogo from '@/components/LyfeLogo';
 import ScreenHeader from '@/components/ScreenHeader';
@@ -7,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PA_MANAGER_COLORS, ROLE_LABELS } from '@/constants/ui';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useViewMode, type ViewMode } from '@/contexts/ViewModeContext';
-import { getBiometryType, type BiometryType } from '@/lib/biometrics';
+import { biometricMeta, getBiometryType, type BiometryType } from '@/lib/biometrics';
 import { pickAndUploadAvatar, removeAvatar, takeAndUploadAvatar } from '@/lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import type { AssignedManager } from '@/lib/mockData';
@@ -402,7 +403,7 @@ export default function ProfileScreen() {
                     </View>
                 )}
 
-                {/* Security — Face ID / Touch ID */}
+                {/* Security — Biometrics */}
                 {biometryType !== 'none' && (
                     <View
                         style={[
@@ -414,14 +415,14 @@ export default function ProfileScreen() {
                         <View style={styles.settingsRow}>
                             <View style={[styles.settingsIconCircle, { backgroundColor: colors.accentLight }]}>
                                 <Ionicons
-                                    name={biometryType === 'faceid' ? 'scan' : 'finger-print'}
+                                    name={biometricMeta(biometryType).icon as any}
                                     size={18}
                                     color={colors.accent}
                                 />
                             </View>
                             <View style={styles.settingsTextCol}>
                                 <Text style={[styles.settingsLabel, { color: colors.textPrimary }]}>
-                                    {biometryType === 'faceid' ? 'Face ID' : 'Touch ID'}
+                                    {biometricMeta(biometryType).label}
                                 </Text>
                                 <Text style={[styles.settingsSubtitle, { color: colors.textTertiary }]}>
                                     Sign in without OTP
@@ -432,7 +433,7 @@ export default function ProfileScreen() {
                                 onValueChange={handleToggleBiometrics}
                                 trackColor={{ false: colors.border, true: colors.accent }}
                                 thumbColor="#FFFFFF"
-                                accessibilityLabel={`${biometryType === 'faceid' ? 'Face ID' : 'Touch ID'} sign-in`}
+                                accessibilityLabel={`${biometricMeta(biometryType).label} sign-in`}
                             />
                         </View>
                     </View>
@@ -586,7 +587,7 @@ export default function ProfileScreen() {
                 onRequestClose={() => setShowEditModal(false)}
                 accessibilityViewIsModal
             >
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+                <KeyboardAvoidingView behavior={KAV_BEHAVIOR} style={{ flex: 1 }}>
                     <TouchableOpacity
                         style={styles.sheetOverlay}
                         activeOpacity={1}
@@ -825,7 +826,7 @@ const styles = StyleSheet.create({
     userName: {
         fontSize: 22,
         fontWeight: '800',
-        letterSpacing: -0.3,
+        letterSpacing: letterSpacing(-0.3),
     },
     roleBadge: {
         alignSelf: 'flex-start',

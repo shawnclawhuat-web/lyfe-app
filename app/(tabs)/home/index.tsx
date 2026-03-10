@@ -1,3 +1,4 @@
+import { displayWeight, letterSpacing } from '@/constants/platform';
 import Avatar from '@/components/Avatar';
 import ErrorBanner from '@/components/ErrorBanner';
 import LyfeLogo from '@/components/LyfeLogo';
@@ -7,6 +8,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useViewMode } from '@/contexts/ViewModeContext';
 import {
+    biometricMeta,
     getBiometryType,
     hasShownBiometricsPrompt,
     isBiometricsAvailable,
@@ -838,18 +840,13 @@ export default function HomeScreen() {
                 <View style={styles.biometricOverlay}>
                     <View style={[styles.biometricSheet, { backgroundColor: colors.cardBackground }]}>
                         <View style={[styles.biometricIconCircle, { backgroundColor: colors.accentLight }]}>
-                            <Ionicons
-                                name={biometryType === 'faceid' ? 'scan' : 'finger-print'}
-                                size={40}
-                                color={colors.accent}
-                            />
+                            <Ionicons name={biometricMeta(biometryType).icon as any} size={40} color={colors.accent} />
                         </View>
                         <Text style={[styles.biometricTitle, { color: colors.textPrimary }]}>
-                            Sign in with {biometryType === 'faceid' ? 'Face ID' : 'Touch ID'}
+                            Sign in with {biometricMeta(biometryType).label}
                         </Text>
                         <Text style={[styles.biometricSubtitle, { color: colors.textSecondary }]}>
-                            Skip the OTP next time — use {biometryType === 'faceid' ? 'Face ID' : 'Touch ID'} to sign in
-                            instantly.
+                            Skip the OTP next time — use {biometricMeta(biometryType).label} to sign in instantly.
                         </Text>
                         <TouchableOpacity
                             style={[styles.biometricEnableBtn, { backgroundColor: colors.accent }]}
@@ -857,15 +854,11 @@ export default function HomeScreen() {
                             disabled={isEnablingBiometrics}
                             activeOpacity={0.8}
                             accessibilityRole="button"
-                            accessibilityLabel={`Enable ${biometryType === 'faceid' ? 'Face ID' : 'Touch ID'}`}
+                            accessibilityLabel={`Enable ${biometricMeta(biometryType).label}`}
                         >
-                            <Ionicons
-                                name={biometryType === 'faceid' ? 'scan' : 'finger-print'}
-                                size={20}
-                                color="#FFFFFF"
-                            />
+                            <Ionicons name={biometricMeta(biometryType).icon as any} size={20} color="#FFFFFF" />
                             <Text style={styles.biometricEnableBtnText}>
-                                Enable {biometryType === 'faceid' ? 'Face ID' : 'Touch ID'}
+                                Enable {biometricMeta(biometryType).label}
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -1061,7 +1054,12 @@ const styles = StyleSheet.create({
         right: -10,
         transform: [{ rotate: '15deg' }],
     },
-    heroStatValue: { fontSize: 40, fontWeight: '800', marginBottom: 4, letterSpacing: -1 },
+    heroStatValue: {
+        fontSize: 40,
+        fontWeight: displayWeight('800'),
+        marginBottom: 4,
+        letterSpacing: letterSpacing(-1),
+    },
     heroStatLabel: { fontSize: 15, fontWeight: '500' },
 
     statsColumn: {
@@ -1208,7 +1206,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         marginBottom: 10,
         textAlign: 'center',
-        letterSpacing: -0.3,
+        letterSpacing: letterSpacing(-0.3),
     },
     biometricSubtitle: {
         fontSize: 15,

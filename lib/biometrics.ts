@@ -1,10 +1,13 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 const BIOMETRICS_ENABLED_KEY = 'lyfe_biometrics_enabled';
 const BIOMETRICS_PROMPT_SHOWN_KEY = 'lyfe_biometrics_prompt_shown';
 
-export type BiometryType = 'faceid' | 'touchid' | 'none';
+// iOS distinguishes Face ID vs Touch ID; Android uses a unified BiometricPrompt
+// so we return a generic 'biometric' type.
+export type BiometryType = 'faceid' | 'touchid' | 'biometric' | 'none';
 
 export async function getBiometryType(): Promise<BiometryType> {
     try {
@@ -13,9 +16,14 @@ export async function getBiometryType(): Promise<BiometryType> {
         const isEnrolled = await LocalAuthentication.isEnrolledAsync();
         if (!isEnrolled) return 'none';
         const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
-        if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) return 'faceid';
-        if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) return 'touchid';
-        return 'none';
+        const hasFace = types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION);
+        const hasFingerprint = types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT);
+        if (!hasFace && !hasFingerprint) return 'none';
+        // Android: always return generic 'biometric' — BiometricPrompt handles the rest
+        if (Platform.OS === 'android') return 'biometric';
+        // iOS: distinguish Face ID vs Touch ID
+        if (hasFace) return 'faceid';
+        return 'touchid';
     } catch {
         return 'none';
     }
@@ -55,6 +63,20 @@ export async function hasShownBiometricsPrompt(): Promise<boolean> {
 
 export async function markBiometricsPromptShown(): Promise<void> {
     await SecureStore.setItemAsync(BIOMETRICS_PROMPT_SHOWN_KEY, 'true');
+}
+
+/** Platform-appropriate label and Ionicon name for a given biometry type. */
+export function biometricMeta(type: BiometryType): { label: string; icon: string } {
+    switch (type) {
+        case 'faceid':
+            return { label: 'Face ID', icon: 'scan' };
+        case 'touchid':
+            return { label: 'Touch ID', icon: 'finger-print' };
+        case 'biometric':
+            return { label: 'Biometrics', icon: 'lock-closed' };
+        default:
+            return { label: '', icon: '' };
+    }
 }
 
 export async function authenticate(promptMessage: string): Promise<boolean> {

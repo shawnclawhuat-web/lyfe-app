@@ -1,8 +1,9 @@
 import LyfeLogo from '@/components/LyfeLogo';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { getBiometryType, type BiometryType } from '@/lib/biometrics';
+import { biometricMeta, getBiometryType, type BiometryType } from '@/lib/biometrics';
 import { Ionicons } from '@expo/vector-icons';
+import { letterSpacing } from '@/constants/platform';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -62,8 +63,7 @@ export default function LoginScreen() {
     }, []);
 
     const showBiometricButton = biometricsEnabled && biometryType !== 'none';
-    const biometricLabel = biometryType === 'faceid' ? 'Face ID' : 'Touch ID';
-    const biometricIcon: keyof typeof Ionicons.glyphMap = biometryType === 'faceid' ? 'scan' : 'finger-print';
+    const { label: biometricLabel, icon: biometricIcon } = biometricMeta(biometryType);
 
     /* ── Accordion: ghost button → phone input ── */
 
@@ -505,9 +505,17 @@ const styles = StyleSheet.create({
     keyboardView: { flex: 1 },
     content: { flex: 1, paddingHorizontal: 32, justifyContent: 'center' },
     logoContainer: { alignItems: 'center', marginBottom: 48 },
-    formContainer: { width: '100%', maxWidth: 400, alignSelf: 'center' },
+    formContainer: {
+        width: '100%',
+        maxWidth: 400,
+        alignSelf: 'center',
+        // OTP page (Page 2) uses absoluteFill — its content is taller than Page 1.
+        // On Android, KAV behavior='height' shrinks the view, causing the verify
+        // button to overflow into the TOS footer. minHeight prevents this.
+        ...(Platform.OS === 'android' && { minHeight: 310 }),
+    },
 
-    heading: { fontSize: 28, fontWeight: '700', marginBottom: 8, letterSpacing: -0.5 },
+    heading: { fontSize: 28, fontWeight: '700', marginBottom: 8, letterSpacing: letterSpacing(-0.5) },
     subheading: { fontSize: 15, marginBottom: 28, lineHeight: 22 },
 
     /* Phone input */

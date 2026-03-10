@@ -6,6 +6,7 @@ import * as SecureStore from 'expo-secure-store';
 
 import {
     getBiometryType,
+    biometricMeta,
     isBiometricsAvailable,
     isBiometricsEnabled,
     setBiometricsEnabled,
@@ -80,6 +81,26 @@ describe('getBiometryType', () => {
         mockLA.hasHardwareAsync.mockRejectedValue(new Error('Device error'));
 
         expect(await getBiometryType()).toBe('none');
+    });
+});
+
+// ── biometricMeta ──
+
+describe('biometricMeta', () => {
+    it('returns Face ID label and scan icon for faceid', () => {
+        expect(biometricMeta('faceid')).toEqual({ label: 'Face ID', icon: 'scan' });
+    });
+
+    it('returns Touch ID label and finger-print icon for touchid', () => {
+        expect(biometricMeta('touchid')).toEqual({ label: 'Touch ID', icon: 'finger-print' });
+    });
+
+    it('returns Biometrics label and lock-closed icon for biometric', () => {
+        expect(biometricMeta('biometric')).toEqual({ label: 'Biometrics', icon: 'lock-closed' });
+    });
+
+    it('returns empty strings for none', () => {
+        expect(biometricMeta('none')).toEqual({ label: '', icon: '' });
     });
 });
 
