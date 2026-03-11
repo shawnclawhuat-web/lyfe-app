@@ -197,20 +197,36 @@ describe('fetchAllUsers', () => {
 // ── hasUserCheckedIn ──
 
 describe('hasUserCheckedIn', () => {
-    it('returns true when attendance exists', async () => {
+    it('returns { data: true } when attendance exists', async () => {
         const chain = mockSupa.__getChain('roadshow_attendance');
         mockResolve(chain, { data: { id: 'att-1' }, error: null });
 
         const result = await hasUserCheckedIn('evt-1', 'user-1');
-        expect(result).toBe(true);
+        expect(result).toEqual({ data: true, error: null });
     });
 
-    it('returns false when no attendance', async () => {
+    it('returns { data: false } when no attendance', async () => {
         const chain = mockSupa.__getChain('roadshow_attendance');
         mockResolve(chain, { data: null, error: null });
 
         const result = await hasUserCheckedIn('evt-1', 'user-1');
-        expect(result).toBe(false);
+        expect(result).toEqual({ data: false, error: null });
+    });
+
+    it('returns { data: false } with PGRST116 (no rows found)', async () => {
+        const chain = mockSupa.__getChain('roadshow_attendance');
+        mockResolve(chain, { data: null, error: { code: 'PGRST116', message: 'No rows found' } });
+
+        const result = await hasUserCheckedIn('evt-1', 'user-1');
+        expect(result).toEqual({ data: false, error: null });
+    });
+
+    it('returns error for non-PGRST116 errors', async () => {
+        const chain = mockSupa.__getChain('roadshow_attendance');
+        mockResolve(chain, { data: null, error: { code: '42P01', message: 'Table not found' } });
+
+        const result = await hasUserCheckedIn('evt-1', 'user-1');
+        expect(result).toEqual({ data: false, error: 'Table not found' });
     });
 });
 

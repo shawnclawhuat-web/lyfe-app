@@ -3,7 +3,7 @@
  */
 import { supabase } from '@/lib/supabase';
 
-import { logActivity, getActivitiesByLead, getAgentActivitySummary } from '@/lib/activities';
+import { getAgentActivitySummary } from '@/lib/activities';
 
 jest.mock('@/lib/supabase');
 
@@ -30,104 +30,13 @@ beforeEach(() => {
     jest.clearAllMocks();
 });
 
-// ── logActivity ──
-
-describe('logActivity', () => {
-    it('logs activity and bumps lead updated_at', async () => {
-        const leadsChain = mockSupa.__getChain('leads');
-        mockResolve(leadsChain, { error: null });
-
-        const activitiesChain = mockSupa.__getChain('lead_activities');
-        mockResolve(activitiesChain, { data: ACTIVITY, error: null });
-
-        const result = await logActivity('lead-1', 'call', 'Discussed policy options', 'agent-1', {
-            duration: '10min',
-        });
-
-        expect(result.error).toBeNull();
-        expect(result.data).toBeTruthy();
-        expect(result.data?.type).toBe('call');
-        expect(mockSupa.from).toHaveBeenCalledWith('leads');
-        expect(mockSupa.from).toHaveBeenCalledWith('lead_activities');
-    });
-
-    it('returns error when insert fails', async () => {
-        const leadsChain = mockSupa.__getChain('leads');
-        mockResolve(leadsChain, { error: null });
-
-        const activitiesChain = mockSupa.__getChain('lead_activities');
-        mockResolve(activitiesChain, { data: null, error: { message: 'Insert failed' } });
-
-        const result = await logActivity('lead-1', 'call', null, 'agent-1');
-
-        expect(result.error).toBe('Insert failed');
-        expect(result.data).toBeNull();
-    });
-
-    it('works with null note and empty metadata', async () => {
-        const leadsChain = mockSupa.__getChain('leads');
-        mockResolve(leadsChain, { error: null });
-
-        const activitiesChain = mockSupa.__getChain('lead_activities');
-        mockResolve(activitiesChain, {
-            data: { ...ACTIVITY, description: null, metadata: {} },
-            error: null,
-        });
-
-        const result = await logActivity('lead-1', 'follow_up', null, 'agent-1');
-
-        expect(result.error).toBeNull();
-        expect(result.data).toBeTruthy();
-    });
-});
-
-// ── getActivitiesByLead ──
-
-describe('getActivitiesByLead', () => {
-    it('returns activities for a lead', async () => {
-        const chain = mockSupa.__getChain('lead_activities');
-        mockResolve(chain, { data: [ACTIVITY, { ...ACTIVITY, id: 'act-2', type: 'note' }], error: null });
-
-        const result = await getActivitiesByLead('lead-1');
-
-        expect(result.error).toBeNull();
-        expect(result.data).toHaveLength(2);
-    });
-
-    it('returns empty array when no activities', async () => {
-        const chain = mockSupa.__getChain('lead_activities');
-        mockResolve(chain, { data: [], error: null });
-
-        const result = await getActivitiesByLead('lead-1');
-
-        expect(result.error).toBeNull();
-        expect(result.data).toEqual([]);
-    });
-
-    it('returns error on failure', async () => {
-        const chain = mockSupa.__getChain('lead_activities');
-        mockResolve(chain, { data: null, error: { message: 'Query failed' } });
-
-        const result = await getActivitiesByLead('lead-1');
-
-        expect(result.error).toBe('Query failed');
-        expect(result.data).toEqual([]);
-    });
-});
-
 // ── getAgentActivitySummary ──
 
 describe('getAgentActivitySummary', () => {
     it('returns activity counts grouped by type', async () => {
         const chain = mockSupa.__getChain('lead_activities');
         mockResolve(chain, {
-            data: [
-                { type: 'call' },
-                { type: 'call' },
-                { type: 'meeting' },
-                { type: 'note' },
-                { type: 'call' },
-            ],
+            data: [{ type: 'call' }, { type: 'call' }, { type: 'meeting' }, { type: 'note' }, { type: 'call' }],
             error: null,
         });
 

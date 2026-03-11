@@ -9,6 +9,7 @@ import {
     canScheduleInterviews,
     isAdmin,
     canViewTeam,
+    canToggleViewMode,
     ROLE_TABS,
     TAB_CONFIG,
     type UserRole,
@@ -111,6 +112,16 @@ describe('permission wrappers', () => {
         expect(canViewTeam('manager')).toBe(true);
         expect(canViewTeam('agent')).toBe(false);
     });
+
+    it('canToggleViewMode returns true only for roles with both hold_agents and view_leads', () => {
+        expect(canToggleViewMode('manager')).toBe(true);
+        expect(canToggleViewMode('director')).toBe(true);
+        // admin has hold_agents but not view_leads
+        expect(canToggleViewMode('admin')).toBe(false);
+        expect(canToggleViewMode('agent')).toBe(false);
+        expect(canToggleViewMode('pa')).toBe(false);
+        expect(canToggleViewMode('candidate')).toBe(false);
+    });
 });
 
 // ── getVisibleTabs ──
@@ -120,7 +131,7 @@ describe('getVisibleTabs', () => {
         expect(getVisibleTabs('admin')).toEqual(['home', 'leads', 'team', 'events', 'profile']);
         expect(getVisibleTabs('agent')).toEqual(['home', 'leads', 'events', 'profile']);
         expect(getVisibleTabs('pa')).toEqual(['home', 'pa', 'events', 'profile']);
-        expect(getVisibleTabs('candidate')).toEqual(['home', 'exams', 'events', 'profile']);
+        expect(getVisibleTabs('candidate')).toEqual(['home', 'roadmap', 'events', 'profile']);
     });
 
     it('returns agent view for manager in agent mode', () => {
@@ -142,7 +153,7 @@ describe('getVisibleTabs', () => {
     it('ignores viewMode for roles that cannot toggle', () => {
         expect(getVisibleTabs('agent', 'manager')).toEqual(['home', 'leads', 'events', 'profile']);
         expect(getVisibleTabs('pa', 'manager')).toEqual(['home', 'pa', 'events', 'profile']);
-        expect(getVisibleTabs('candidate', 'agent')).toEqual(['home', 'exams', 'events', 'profile']);
+        expect(getVisibleTabs('candidate', 'agent')).toEqual(['home', 'roadmap', 'events', 'profile']);
     });
 
     it('returns fallback for unknown role', () => {
@@ -167,10 +178,10 @@ describe('ROLE_TABS', () => {
         }
     });
 
-    it('only candidate has exams tab', () => {
-        expect(ROLE_TABS.candidate).toContain('exams');
-        expect(ROLE_TABS.agent).not.toContain('exams');
-        expect(ROLE_TABS.manager).not.toContain('exams');
+    it('only candidate has roadmap tab', () => {
+        expect(ROLE_TABS.candidate).toContain('roadmap');
+        expect(ROLE_TABS.agent).not.toContain('roadmap');
+        expect(ROLE_TABS.manager).not.toContain('roadmap');
     });
 
     it('only pa has pa tab', () => {
@@ -183,7 +194,7 @@ describe('ROLE_TABS', () => {
 
 describe('TAB_CONFIG', () => {
     it('has label and icon for all known tabs', () => {
-        const expectedTabs = ['home', 'leads', 'exams', 'candidates', 'team', 'events', 'pa', 'admin', 'profile'];
+        const expectedTabs = ['home', 'leads', 'roadmap', 'candidates', 'team', 'events', 'pa', 'admin', 'profile'];
         for (const tab of expectedTabs) {
             expect(TAB_CONFIG[tab]).toBeDefined();
             expect(TAB_CONFIG[tab].label).toBeTruthy();

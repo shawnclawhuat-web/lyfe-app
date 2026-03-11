@@ -53,7 +53,7 @@ describe('useCheckInFlow', () => {
     });
 
     it('handleConfirmPledge calls attendance function on success', async () => {
-        mockHasUserCheckedIn.mockResolvedValue(false);
+        mockHasUserCheckedIn.mockResolvedValue({ data: false, error: null });
         mockLogRoadshowAttendanceWithPledge.mockResolvedValue({ error: null });
 
         const { result } = renderHook(() => useCheckInFlow(defaultParams));
@@ -79,7 +79,7 @@ describe('useCheckInFlow', () => {
     });
 
     it('shows error on pledge failure', async () => {
-        mockHasUserCheckedIn.mockResolvedValue(false);
+        mockHasUserCheckedIn.mockResolvedValue({ data: false, error: null });
         mockLogRoadshowAttendanceWithPledge.mockResolvedValue({ error: 'Network error' });
 
         const { result } = renderHook(() => useCheckInFlow(defaultParams));
@@ -92,8 +92,22 @@ describe('useCheckInFlow', () => {
         expect(defaultParams.onCheckedIn).not.toHaveBeenCalled();
     });
 
+    it('shows error when hasUserCheckedIn fails', async () => {
+        mockHasUserCheckedIn.mockResolvedValue({ data: false, error: 'Network error' });
+
+        const { result } = renderHook(() => useCheckInFlow(defaultParams));
+
+        await act(async () => {
+            await result.current.handleConfirmPledge();
+        });
+
+        expect(result.current.checkinError).toBe('Network error');
+        expect(mockLogRoadshowAttendanceWithPledge).not.toHaveBeenCalled();
+        expect(defaultParams.onCheckedIn).not.toHaveBeenCalled();
+    });
+
     it('handles already checked in case', async () => {
-        mockHasUserCheckedIn.mockResolvedValue(true);
+        mockHasUserCheckedIn.mockResolvedValue({ data: true, error: null });
 
         const { result } = renderHook(() => useCheckInFlow(defaultParams));
 
