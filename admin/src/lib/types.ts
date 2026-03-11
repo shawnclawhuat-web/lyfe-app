@@ -3,7 +3,15 @@
 export const USER_ROLES = ['admin', 'director', 'manager', 'agent', 'pa', 'candidate'] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
-export const LIFECYCLE_STAGES = ['applied', 'interview_scheduled', 'interviewed', 'approved', 'exam_prep', 'licensed', 'active_agent'] as const;
+export const LIFECYCLE_STAGES = [
+    'applied',
+    'interview_scheduled',
+    'interviewed',
+    'approved',
+    'exam_prep',
+    'licensed',
+    'active_agent',
+] as const;
 export type LifecycleStage = (typeof LIFECYCLE_STAGES)[number];
 
 export const LEAD_STATUSES = ['new', 'contacted', 'qualified', 'proposed', 'won', 'lost'] as const;
@@ -15,13 +23,30 @@ export type LeadSource = (typeof LEAD_SOURCES)[number];
 export const PRODUCT_INTERESTS = ['life', 'health', 'ilp', 'general'] as const;
 export type ProductInterest = (typeof PRODUCT_INTERESTS)[number];
 
-export const CANDIDATE_STATUSES = ['applied', 'interview_scheduled', 'interviewed', 'approved', 'exam_prep', 'licensed', 'active_agent'] as const;
+export const CANDIDATE_STATUSES = [
+    'applied',
+    'interview_scheduled',
+    'interviewed',
+    'approved',
+    'exam_prep',
+    'licensed',
+    'active_agent',
+] as const;
 export type CandidateStatus = (typeof CANDIDATE_STATUSES)[number];
 
 export const EVENT_TYPES = ['team_meeting', 'training', 'agency_event', 'roadshow', 'other'] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 
-export const LEAD_ACTIVITY_TYPES = ['created', 'note', 'call', 'status_change', 'reassignment', 'email', 'meeting', 'follow_up'] as const;
+export const LEAD_ACTIVITY_TYPES = [
+    'created',
+    'note',
+    'call',
+    'status_change',
+    'reassignment',
+    'email',
+    'meeting',
+    'follow_up',
+] as const;
 export type LeadActivityType = (typeof LEAD_ACTIVITY_TYPES)[number];
 
 export const CANDIDATE_ACTIVITY_TYPES = ['call', 'whatsapp', 'note'] as const;
@@ -33,238 +58,238 @@ export type InterviewStatus = (typeof INTERVIEW_STATUSES)[number];
 // ── Row types ──
 
 export interface User {
-  id: string;
-  email: string | null;
-  phone: string | null;
-  full_name: string;
-  avatar_url: string | null;
-  role: UserRole;
-  reports_to: string | null;
-  reports_to_name?: string | null;
-  lifecycle_stage: LifecycleStage | null;
-  date_of_birth: string | null;
-  last_login_at: string | null;
-  push_token: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+    id: string;
+    email: string | null;
+    phone: string | null;
+    full_name: string;
+    avatar_url: string | null;
+    role: UserRole;
+    reports_to: string | null;
+    reports_to_name?: string | null;
+    lifecycle_stage: LifecycleStage | null;
+    date_of_birth: string | null;
+    last_login_at: string | null;
+    push_token: string | null;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface Lead {
-  id: string;
-  full_name: string;
-  phone: string | null;
-  email: string | null;
-  source: LeadSource | null;
-  source_name: string | null;
-  status: LeadStatus;
-  product_interest: ProductInterest | null;
-  notes: string | null;
-  assigned_to: string;
-  assigned_to_name?: string;
-  created_by: string;
-  created_by_name?: string;
-  created_at: string;
-  updated_at: string;
+    id: string;
+    full_name: string;
+    phone: string | null;
+    email: string | null;
+    source: LeadSource | null;
+    source_name: string | null;
+    status: LeadStatus;
+    product_interest: ProductInterest | null;
+    notes: string | null;
+    assigned_to: string;
+    assigned_to_name?: string;
+    created_by: string;
+    created_by_name?: string;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface Candidate {
-  id: string;
-  name: string;
-  phone: string;
-  email: string | null;
-  status: CandidateStatus;
-  assigned_manager_id: string;
-  assigned_manager_name?: string;
-  created_by_id: string;
-  created_by_name?: string;
-  invite_token: string | null;
-  notes: string | null;
-  resume_url: string | null;
-  created_at: string;
-  updated_at: string;
+    id: string;
+    name: string;
+    phone: string;
+    email: string | null;
+    status: CandidateStatus;
+    assigned_manager_id: string;
+    assigned_manager_name?: string;
+    created_by_id: string;
+    created_by_name?: string;
+    invite_token: string | null;
+    notes: string | null;
+    resume_url: string | null;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface AgencyEvent {
-  id: string;
-  title: string;
-  description: string | null;
-  event_type: EventType;
-  event_date: string;
-  start_time: string;
-  end_time: string | null;
-  location: string | null;
-  created_by: string;
-  creator_name?: string;
-  created_at: string;
-  updated_at: string;
-  external_attendees: unknown[];
-  attendee_count?: number;
+    id: string;
+    title: string;
+    description: string | null;
+    event_type: EventType;
+    event_date: string;
+    start_time: string;
+    end_time: string | null;
+    location: string | null;
+    created_by: string;
+    creator_name?: string;
+    created_at: string;
+    updated_at: string;
+    external_attendees: unknown[];
+    attendee_count?: number;
 }
 
 export interface ExamPaper {
-  id: string;
-  code: string;
-  title: string;
-  description: string | null;
-  duration_minutes: number;
-  pass_percentage: number;
-  question_count: number;
-  is_active: boolean;
-  is_mandatory: boolean;
-  display_order: number;
-  created_at: string;
-  updated_at: string;
-  actual_question_count?: number;
-  attempt_count?: number;
+    id: string;
+    code: string;
+    title: string;
+    description: string | null;
+    duration_minutes: number;
+    pass_percentage: number;
+    question_count: number;
+    is_active: boolean;
+    is_mandatory: boolean;
+    display_order: number;
+    created_at: string;
+    updated_at: string;
+    actual_question_count?: number;
+    attempt_count?: number;
 }
 
 export interface ExamQuestion {
-  id: string;
-  paper_id: string;
-  question_number: number;
-  question_text: string;
-  has_latex: boolean;
-  options: Record<string, string>; // { A: "...", B: "...", C: "...", D: "..." }
-  correct_answer: string;
-  explanation: string | null;
-  explanation_has_latex: boolean;
-  created_at: string;
+    id: string;
+    paper_id: string;
+    question_number: number;
+    question_text: string;
+    has_latex: boolean;
+    options: Record<string, string>; // { A: "...", B: "...", C: "...", D: "..." }
+    correct_answer: string;
+    explanation: string | null;
+    explanation_has_latex: boolean;
+    created_at: string;
 }
 
 export interface ExamAttempt {
-  id: string;
-  user_id: string;
-  user_name?: string;
-  paper_id: string;
-  paper_title?: string;
-  status: string;
-  score: number | null;
-  total_questions: number;
-  percentage: number | null;
-  passed: boolean | null;
-  started_at: string;
-  submitted_at: string | null;
-  duration_seconds: number | null;
-  created_at: string;
+    id: string;
+    user_id: string;
+    user_name?: string;
+    paper_id: string;
+    paper_title?: string;
+    status: string;
+    score: number | null;
+    total_questions: number;
+    percentage: number | null;
+    passed: boolean | null;
+    started_at: string;
+    submitted_at: string | null;
+    duration_seconds: number | null;
+    created_at: string;
 }
 
 export interface Interview {
-  id: string;
-  candidate_id: string;
-  manager_id: string;
-  scheduled_by_id: string;
-  round_number: number;
-  type: 'zoom' | 'in_person';
-  datetime: string;
-  location: string | null;
-  zoom_link: string | null;
-  status: InterviewStatus;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
+    id: string;
+    candidate_id: string;
+    manager_id: string;
+    scheduled_by_id: string;
+    round_number: number;
+    type: 'zoom' | 'in_person';
+    datetime: string;
+    location: string | null;
+    zoom_link: string | null;
+    status: InterviewStatus;
+    notes: string | null;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface LeadActivity {
-  id: string;
-  lead_id: string;
-  user_id: string;
-  user_name?: string;
-  lead_name?: string;
-  type: LeadActivityType;
-  description: string | null;
-  metadata: Record<string, unknown> | null;
-  created_at: string;
+    id: string;
+    lead_id: string;
+    user_id: string;
+    user_name?: string;
+    lead_name?: string;
+    type: LeadActivityType;
+    description: string | null;
+    metadata: Record<string, unknown> | null;
+    created_at: string;
 }
 
 export interface CandidateActivity {
-  id: string;
-  candidate_id: string;
-  user_id: string;
-  user_name?: string;
-  candidate_name?: string;
-  type: CandidateActivityType;
-  outcome: string | null;
-  note: string | null;
-  created_at: string;
+    id: string;
+    candidate_id: string;
+    user_id: string;
+    user_name?: string;
+    candidate_name?: string;
+    type: CandidateActivityType;
+    outcome: string | null;
+    note: string | null;
+    created_at: string;
 }
 
 export interface InviteToken {
-  id: string;
-  token: string;
-  intended_role: UserRole;
-  assigned_manager_id: string | null;
-  assigned_manager_name?: string;
-  created_by: string;
-  created_by_name?: string;
-  consumed_by: string | null;
-  consumed_by_name?: string;
-  consumed_at: string | null;
-  expires_at: string;
-  created_at: string;
+    id: string;
+    token: string;
+    intended_role: UserRole;
+    assigned_manager_id: string | null;
+    assigned_manager_name?: string;
+    created_by: string;
+    created_by_name?: string;
+    consumed_by: string | null;
+    consumed_by_name?: string;
+    consumed_at: string | null;
+    expires_at: string;
+    created_at: string;
 }
 
 export interface PaManagerAssignment {
-  id: string;
-  pa_id: string;
-  pa_name?: string;
-  manager_id: string;
-  manager_name?: string;
-  assigned_at: string;
+    id: string;
+    pa_id: string;
+    pa_name?: string;
+    manager_id: string;
+    manager_name?: string;
+    assigned_at: string;
 }
 
 // ── Label maps ──
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  admin: 'Admin',
-  director: 'Director',
-  manager: 'Manager',
-  agent: 'Agent',
-  pa: 'PA',
-  candidate: 'Candidate',
+    admin: 'Admin',
+    director: 'Director',
+    manager: 'Manager',
+    agent: 'Agent',
+    pa: 'PA',
+    candidate: 'Candidate',
 };
 
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
-  new: 'New',
-  contacted: 'Contacted',
-  qualified: 'Qualified',
-  proposed: 'Proposed',
-  won: 'Won',
-  lost: 'Lost',
+    new: 'New',
+    contacted: 'Contacted',
+    qualified: 'Qualified',
+    proposed: 'Proposed',
+    won: 'Won',
+    lost: 'Lost',
 };
 
 export const CANDIDATE_STATUS_LABELS: Record<CandidateStatus, string> = {
-  applied: 'Applied',
-  interview_scheduled: 'Interview Scheduled',
-  interviewed: 'Interviewed',
-  approved: 'Approved',
-  exam_prep: 'Exam Prep',
-  licensed: 'Licensed',
-  active_agent: 'Active Agent',
+    applied: 'Applied',
+    interview_scheduled: 'Interview Scheduled',
+    interviewed: 'Interviewed',
+    approved: 'Approved',
+    exam_prep: 'Exam Prep',
+    licensed: 'Licensed',
+    active_agent: 'Active Agent',
 };
 
 export const EVENT_TYPE_LABELS: Record<EventType, string> = {
-  team_meeting: 'Team Meeting',
-  training: 'Training',
-  agency_event: 'Agency Event',
-  roadshow: 'Roadshow',
-  other: 'Other',
+    team_meeting: 'Team Meeting',
+    training: 'Training',
+    agency_event: 'Agency Event',
+    roadshow: 'Roadshow',
+    other: 'Other',
 };
 
 export const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {
-  referral: 'Referral',
-  walk_in: 'Walk-in',
-  online: 'Online',
-  event: 'Event',
-  cold_call: 'Cold Call',
-  other: 'Other',
+    referral: 'Referral',
+    walk_in: 'Walk-in',
+    online: 'Online',
+    event: 'Event',
+    cold_call: 'Cold Call',
+    other: 'Other',
 };
 
 export const PRODUCT_INTEREST_LABELS: Record<ProductInterest, string> = {
-  life: 'Life',
-  health: 'Health',
-  ilp: 'ILP',
-  general: 'General',
+    life: 'Life',
+    health: 'Health',
+    ilp: 'ILP',
+    general: 'General',
 };
 
 // ── Supabase join response helpers ──
@@ -273,15 +298,98 @@ export const PRODUCT_INTEREST_LABELS: Record<ProductInterest, string> = {
 export type WithJoin<T> = T & { [key: string]: { full_name: string } | { name: string } | null };
 
 export interface NameJoin {
-  full_name: string;
+    full_name: string;
 }
 
 /** Extract `full_name` from a Supabase join relation, falling back to a default. */
 export function joinName(relation: NameJoin | null | undefined, fallback = 'Unknown'): string {
-  return relation?.full_name ?? fallback;
+    return relation?.full_name ?? fallback;
 }
 
 /** Extract `name` from a Supabase join relation (e.g. candidates table). */
 export function joinCandidateName(relation: { name: string } | null | undefined, fallback = 'Unknown'): string {
-  return relation?.name ?? fallback;
+    return relation?.name ?? fallback;
 }
+
+// ── Roadmap types ──
+
+export const MODULE_TYPES = ['training', 'exam', 'resource'] as const;
+export type ModuleType = (typeof MODULE_TYPES)[number];
+
+export const PROGRAMME_ICON_TYPES = ['seedling', 'sprout'] as const;
+export type ProgrammeIconType = (typeof PROGRAMME_ICON_TYPES)[number];
+
+export const MODULE_STATUSES = ['not_started', 'in_progress', 'completed'] as const;
+export type ModuleStatus = (typeof MODULE_STATUSES)[number];
+
+export const RESOURCE_TYPES = ['link', 'file', 'video', 'text'] as const;
+export type ResourceType = (typeof RESOURCE_TYPES)[number];
+
+export interface RoadmapProgramme {
+    id: string;
+    slug: string;
+    title: string;
+    description: string | null;
+    display_order: number;
+    icon_type: ProgrammeIconType;
+    is_active: boolean;
+    archived_at: string | null;
+    archived_by: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface RoadmapModule {
+    id: string;
+    programme_id: string;
+    title: string;
+    description: string | null;
+    learning_objectives: string | null;
+    module_type: ModuleType;
+    display_order: number;
+    is_active: boolean;
+    is_required: boolean;
+    estimated_minutes: number | null;
+    exam_paper_id: string | null;
+    icon_name: string | null;
+    icon_color: string | null;
+    archived_at: string | null;
+    archived_by: string | null;
+    created_at: string;
+    updated_at: string;
+    // Join data
+    exam_papers?: { code: string; title: string } | null;
+}
+
+export interface RoadmapResource {
+    id: string;
+    module_id: string;
+    title: string;
+    description: string | null;
+    resource_type: ResourceType;
+    content_url: string | null;
+    content_text: string | null;
+    display_order: number;
+    is_active: boolean;
+    created_at: string;
+}
+
+export interface RoadmapPrerequisite {
+    id: string;
+    module_id: string;
+    required_module_id: string;
+    created_at: string;
+}
+
+export const MODULE_TYPE_LABELS: Record<ModuleType, string> = {
+    training: 'Training',
+    exam: 'Exam',
+    resource: 'Resource',
+};
+
+export const RESOURCE_TYPE_LABELS: Record<ResourceType, string> = {
+    link: 'Link',
+    file: 'File',
+    video: 'Video',
+    text: 'Article',
+};
