@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Touchable from '@/components/Touchable';
+import Confetti, { CONFETTI_DURATION } from '@/components/Confetti';
 import ProgressSummaryCard from './ProgressSummaryCard';
 import CandidateProgressRow from './CandidateProgressRow';
 import UnlockConfirmSheet from './UnlockConfirmSheet';
@@ -53,8 +54,13 @@ function CandidateProgressView({
     const [unlockSheet, setUnlockSheet] = useState<{ programmeId: string; programmeName: string } | null>(null);
     const [isUnlocking, setIsUnlocking] = useState(false);
     const [unlockError, setUnlockError] = useState<string | null>(null);
-
     const [fetchError, setFetchError] = useState<string | null>(null);
+
+    // Confetti state
+    const [showConfetti, setShowConfetti] = useState(false);
+    const [confettiKey, setConfettiKey] = useState(0);
+    const [completionBanner, setCompletionBanner] = useState<string | null>(null);
+    const prevCompletedRef = useRef<Map<string, number>>(new Map());
 
     const loadProgress = useCallback(async () => {
         setIsLoading(true);
@@ -64,6 +70,36 @@ function CandidateProgressView({
         if (error) {
             setFetchError(error);
         } else if (data) {
+            // Check if a programme just reached 100% completion
+            const prevMap = prevCompletedRef.current;
+            for (const prog of data) {
+                const prevCount = prevMap.get(prog.id) ?? -1;
+                if (
+                    prevCount >= 0 &&
+                    prevCount < prog.totalCount &&
+                    prog.completedCount === prog.totalCount &&
+                    prog.totalCount > 0
+                ) {
+                    // Programme just completed — fire confetti!
+                    setConfettiKey((k) => k + 1);
+                    setShowConfetti(true);
+                    setCompletionBanner(`${prog.title} Complete!`);
+                    setTimeout(() => {
+                        setShowConfetti(false);
+                    }, CONFETTI_DURATION);
+                    setTimeout(() => {
+                        setCompletionBanner(null);
+                    }, 4000);
+                    break;
+                }
+            }
+            // Update prev counts
+            const newMap = new Map<string, number>();
+            for (const prog of data) {
+                newMap.set(prog.id, prog.completedCount);
+            }
+            prevCompletedRef.current = newMap;
+
             setProgrammes(data);
         }
         setIsLoading(false);
@@ -123,7 +159,16 @@ function CandidateProgressView({
         );
     }
 
-    if (programmes.length === 0) return null;
+    if (programmes.length === 0) {
+        return (
+            <View style={[styles.emptyContainer, { backgroundColor: colors.surfacePrimary }]}>
+                <Ionicons name="leaf-outline" size={32} color={colors.textTertiary} />
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                    No roadmap assigned to {candidateName}
+                </Text>
+            </View>
+        );
+    }
 
     // Summary card (default — embedded in candidate profile)
     if (!expandedView) {
@@ -148,6 +193,14 @@ function CandidateProgressView({
                         <Text style={[styles.expandedTitle, { color: colors.textPrimary }]}>
                             {candidateName}'s Progress
                         </Text>
+                    </View>
+                )}
+
+                {/* Completion celebration banner */}
+                {completionBanner && (
+                    <View style={[styles.completionBanner, { backgroundColor: colors.successLight }]}>
+                        <Ionicons name="trophy" size={16} color={colors.success} />
+                        <Text style={[styles.completionBannerText, { color: colors.success }]}>{completionBanner}</Text>
                     </View>
                 )}
 
@@ -206,6 +259,8 @@ function CandidateProgressView({
                                 <CandidateProgressRow
                                     key={module.id}
                                     module={module}
+                                    candidateId={candidateId}
+                                    reviewerId={reviewerId}
                                     canMarkComplete={canMarkComplete}
                                     isEditingNote={editingNoteId === module.id}
                                     noteText={editingNoteId === module.id ? noteText : ''}
@@ -239,6 +294,8 @@ function CandidateProgressView({
                 }}
                 colors={colors}
             />
+
+            <Confetti visible={showConfetti} confettiKey={confettiKey} />
         </>
     );
 }
@@ -261,6 +318,18 @@ const styles = StyleSheet.create({
         fontSize: 17,
         fontWeight: displayWeight('600'),
         letterSpacing: letterSpacing(-0.2),
+    },
+    completionBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 10,
+    },
+    completionBannerText: {
+        fontSize: 15,
+        fontWeight: '600',
     },
     errorBanner: {
         borderRadius: 8,
@@ -305,6 +374,16 @@ const styles = StyleSheet.create({
     unlockButtonText: {
         fontSize: 14,
         fontWeight: '500',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        padding: 20,
+        gap: 8,
+        borderRadius: 12,
+    },
+    emptyText: {
+        fontSize: 14,
+        textAlign: 'center',
     },
 });
 

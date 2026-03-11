@@ -15,6 +15,12 @@ import { fireEvent, render } from '@testing-library/react-native';
 import CandidateProgressRow from '@/components/roadmap/CandidateProgressRow';
 import type { RoadmapModuleWithProgress } from '@/types/roadmap';
 
+// ── Mock lib/roadmap (used by CandidateProgressRow for item-level operations) ──
+jest.mock('@/lib/roadmap', () => ({
+    fetchModuleItemsWithProgress: jest.fn().mockResolvedValue({ data: [], error: null }),
+    updateModuleItemProgress: jest.fn().mockResolvedValue({ error: null }),
+}));
+
 // ── Theme mock (provided by jest.setup.js globally) ──
 
 const COLORS = {
@@ -50,6 +56,7 @@ function makeModule(overrides: Partial<RoadmapModuleWithProgress> = {}): Roadmap
         updated_at: '2026-01-01T00:00:00Z',
         progress: null,
         resources: [],
+        itemSummary: null,
         isLocked: false,
         examPaper: null,
         prerequisiteIds: [],
@@ -59,6 +66,8 @@ function makeModule(overrides: Partial<RoadmapModuleWithProgress> = {}): Roadmap
 }
 
 const defaultProps = {
+    candidateId: 'cand-1',
+    reviewerId: 'reviewer-1',
     canMarkComplete: true,
     isEditingNote: false,
     noteText: '',

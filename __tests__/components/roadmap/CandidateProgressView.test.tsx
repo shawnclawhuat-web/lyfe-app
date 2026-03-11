@@ -17,7 +17,7 @@ import { render, waitFor, fireEvent, act } from '@testing-library/react-native';
 import CandidateProgressView from '@/components/roadmap/CandidateProgressView';
 import type { ProgrammeWithModules, RoadmapModuleWithProgress } from '@/types/roadmap';
 
-// ── Mock react-native-reanimated (used by UnlockConfirmSheet) ──
+// ── Mock react-native-reanimated (used by UnlockConfirmSheet + Confetti) ──
 jest.mock('react-native-reanimated', () => {
     const { View } = require('react-native');
     return {
@@ -29,9 +29,11 @@ jest.mock('react-native-reanimated', () => {
         useAnimatedStyle: jest.fn(() => ({})),
         withTiming: jest.fn((v: number) => v),
         withSpring: jest.fn((v: number) => v),
+        cancelAnimation: jest.fn(),
         Easing: {
             out: jest.fn(() => jest.fn()),
             quad: jest.fn(),
+            linear: jest.fn(),
         },
     };
 });
@@ -47,6 +49,8 @@ jest.mock('@/lib/roadmap', () => ({
     updateModuleProgress: (...args: any[]) => mockUpdateModuleProgress(...args),
     updateModuleNotes: (...args: any[]) => mockUpdateModuleNotes(...args),
     unlockProgrammeForCandidate: (...args: any[]) => mockUnlockProgrammeForCandidate(...args),
+    fetchModuleItemsWithProgress: jest.fn().mockResolvedValue({ data: [], error: null }),
+    updateModuleItemProgress: jest.fn().mockResolvedValue({ error: null }),
 }));
 
 // ── Theme mock ──
@@ -88,6 +92,7 @@ function makeModule(overrides: Partial<RoadmapModuleWithProgress> = {}): Roadmap
         updated_at: '2026-01-01T00:00:00Z',
         progress: null,
         resources: [],
+        itemSummary: null,
         isLocked: false,
         examPaper: null,
         prerequisiteIds: [],
@@ -237,18 +242,18 @@ describe('CandidateProgressView', () => {
         expect(onViewFull).toHaveBeenCalledTimes(1);
     });
 
-    it('returns null when programmes array is empty', async () => {
+    it('shows empty state when programmes array is empty', async () => {
         mockFetchCandidateRoadmap.mockResolvedValue({ data: [], error: null });
 
-        const { toJSON } = render(<CandidateProgressView {...defaultProps} />);
+        const { getByText } = render(<CandidateProgressView {...defaultProps} />);
 
         await waitFor(() => {
             expect(mockFetchCandidateRoadmap).toHaveBeenCalled();
         });
 
-        // Wait for re-render after state updates
+        // Should show empty state with candidate name
         await waitFor(() => {
-            expect(toJSON()).toBeNull();
+            expect(getByText('No roadmap assigned to Alice')).toBeTruthy();
         });
     });
 });
