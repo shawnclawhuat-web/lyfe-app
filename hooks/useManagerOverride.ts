@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Alert } from 'react-native';
+import { DEFAULT_PLEDGED_CLOSED, DEFAULT_PLEDGED_PITCHES, DEFAULT_PLEDGED_SITDOWNS } from '@/constants/ui';
 import { logRoadshowActivity, managerCheckIn, type PledgeInput } from '@/lib/events';
 import { formatCheckinTime } from '@/lib/dateTime';
 import type { EventAttendee, RoadshowConfig } from '@/types/event';
@@ -15,9 +16,9 @@ export function useManagerOverride({ eventId, userId, roadshowConfig, onOverride
     const [overrideTarget, setOverrideTarget] = useState<EventAttendee | null>(null);
     const [overrideTime, setOverrideTime] = useState('');
     const [overrideLateReason, setOverrideLateReason] = useState('');
-    const [overridePledgeSitdowns, setOverridePledgeSitdowns] = useState(5);
-    const [overridePledgePitches, setOverridePledgePitches] = useState(3);
-    const [overridePledgeClosed, setOverridePledgeClosed] = useState(1);
+    const [overridePledgeSitdowns, setOverridePledgeSitdowns] = useState(DEFAULT_PLEDGED_SITDOWNS);
+    const [overridePledgePitches, setOverridePledgePitches] = useState(DEFAULT_PLEDGED_PITCHES);
+    const [overridePledgeClosed, setOverridePledgeClosed] = useState(DEFAULT_PLEDGED_CLOSED);
     const [overridePledgeAfyc, setOverridePledgeAfyc] = useState('');
     const [overrideSubmitting, setOverrideSubmitting] = useState(false);
     const [overrideError, setOverrideError] = useState<string | null>(null);
@@ -66,33 +67,35 @@ export function useManagerOverride({ eventId, userId, roadshowConfig, onOverride
                     onPress: async () => {
                         setOverrideSubmitting(true);
                         setOverrideError(null);
-                        const pledges: PledgeInput = {
-                            sitdowns: overridePledgeSitdowns,
-                            pitches: overridePledgePitches,
-                            closed: overridePledgeClosed,
-                            afyc: Number(overridePledgeAfyc) || 0,
-                        };
-                        const { error } = await managerCheckIn(
-                            eventId!,
-                            overrideTarget.user_id,
-                            checkedInAt.toISOString(),
-                            overrideLateReason || null,
-                            pledges,
-                            userId!,
-                        );
-                        if (error) {
-                            const msg = error.includes('unique')
-                                ? `${overrideTarget.full_name} just checked in themselves.`
-                                : error;
-                            setOverrideError(msg);
+                        try {
+                            const pledges: PledgeInput = {
+                                sitdowns: overridePledgeSitdowns,
+                                pitches: overridePledgePitches,
+                                closed: overridePledgeClosed,
+                                afyc: Number(overridePledgeAfyc) || 0,
+                            };
+                            const { error } = await managerCheckIn(
+                                eventId!,
+                                overrideTarget.user_id,
+                                checkedInAt.toISOString(),
+                                overrideLateReason || null,
+                                pledges,
+                                userId!,
+                            );
+                            if (error) {
+                                const msg = error.includes('unique')
+                                    ? `${overrideTarget.full_name} just checked in themselves.`
+                                    : error;
+                                setOverrideError(msg);
+                                return;
+                            }
+                            // Log check_in activity for the agent (fire-and-forget)
+                            logRoadshowActivity(eventId!, overrideTarget.user_id, 'check_in').catch(() => {});
+                            setOverrideTarget(null);
+                            onOverrideComplete();
+                        } finally {
                             setOverrideSubmitting(false);
-                            return;
                         }
-                        // Log check_in activity for the agent (fire-and-forget)
-                        logRoadshowActivity(eventId!, overrideTarget.user_id, 'check_in').catch(() => {});
-                        setOverrideTarget(null);
-                        setOverrideSubmitting(false);
-                        onOverrideComplete();
                     },
                 },
             ],

@@ -2,7 +2,11 @@
  * Team service — Supabase queries for team members with lead stats
  */
 import type { Lead } from '@/types/lead';
+import { getRandomBytes } from 'expo-crypto';
 import { supabase } from './supabase';
+
+/** 7-day invite token expiry (milliseconds) */
+const INVITE_TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -167,37 +171,6 @@ export interface TeamPerformanceResult {
 }
 
 /**
- * Get all active agents reporting to a manager.
- */
-export async function getTeamMembers(managerId: string): Promise<{
-    data: { id: string; full_name: string; role: string; email: string | null; phone: string | null }[];
-    error: string | null;
-}> {
-    try {
-        const { data, error } = await supabase
-            .from('users')
-            .select('id, full_name, role, email, phone')
-            .eq('reports_to', managerId)
-            .eq('is_active', true)
-            .order('full_name', { ascending: true });
-
-        if (error) return { data: [], error: error.message };
-        return {
-            data: (data || []) as {
-                id: string;
-                full_name: string;
-                role: string;
-                email: string | null;
-                phone: string | null;
-            }[],
-            error: null,
-        };
-    } catch (err) {
-        return { data: [], error: err instanceof Error ? err.message : 'Unknown error fetching team members' };
-    }
-}
-
-/**
  * Get performance metrics for all agents under a manager within a date range.
  * Returns leads closed (won + lost) and activities logged per agent.
  *
@@ -300,9 +273,11 @@ export async function inviteAgent(
         if (!email || !emailRegex.test(email)) {
             return { data: null, error: 'Invalid email format' };
         }
-        // Generate a simple token
-        const token = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+        // Generate a cryptographically secure token
+        const randomBytes = getRandomBytes(24);
+        const hex = Array.from(randomBytes, (b) => b.toString(16).padStart(2, '0')).join('');
+        const token = `inv_${hex}`;
+        const expiresAt = new Date(Date.now() + INVITE_TOKEN_EXPIRY_MS).toISOString();
 
         const { data, error } = await supabase
             .from('invite_tokens')
@@ -310,7 +285,7 @@ export async function inviteAgent(
                 token,
                 created_by: managerId,
                 assigned_manager_id: managerId,
-                intended_role: 'agent' as any,
+                intended_role: 'agent',
                 expires_at: expiresAt,
             })
             .select('token')

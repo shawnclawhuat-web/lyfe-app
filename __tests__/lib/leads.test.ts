@@ -17,7 +17,6 @@ import {
     fetchRecentActivities,
     fetchManagerDashboardStats,
     assignLead,
-    getLeadsByAgent,
     updateLeadStage,
     getTeamLeadSummary,
 } from '@/lib/leads';
@@ -398,6 +397,15 @@ describe('fetchLeadStats', () => {
 
 describe('fetchRecentActivities', () => {
     it('returns activities with lead names for manager', async () => {
+        // Mock users chain (fetch agents under manager)
+        const usersChain = mockSupa.__getChain('users');
+        mockResolve(usersChain, { data: [{ id: 'agent-1' }], error: null });
+
+        // Mock leads chain (fetch team lead IDs)
+        const leadsChain = mockSupa.__getChain('leads');
+        mockResolve(leadsChain, { data: [{ id: 'lead-1' }], error: null });
+
+        // Mock lead_activities chain
         const chain = mockSupa.__getChain('lead_activities');
         mockResolve(chain, {
             data: [
@@ -409,7 +417,7 @@ describe('fetchRecentActivities', () => {
                     description: 'Test',
                     metadata: {},
                     created_at: '2026-03-08T10:00:00Z',
-                    leads: { full_name: 'John Doe', assigned_to: 'agent-1' },
+                    leads: { full_name: 'John Doe' },
                 },
             ],
             error: null,
@@ -421,6 +429,11 @@ describe('fetchRecentActivities', () => {
     });
 
     it('filters to own leads for agent', async () => {
+        // Mock leads chain (fetch agent's own lead IDs)
+        const leadsChain = mockSupa.__getChain('leads');
+        mockResolve(leadsChain, { data: [{ id: 'l1' }], error: null });
+
+        // Mock lead_activities chain (only activities for own leads returned)
         const chain = mockSupa.__getChain('lead_activities');
         mockResolve(chain, {
             data: [
@@ -432,17 +445,7 @@ describe('fetchRecentActivities', () => {
                     description: '',
                     metadata: {},
                     created_at: '2026-03-08T10:00:00Z',
-                    leads: { full_name: 'Mine', assigned_to: 'agent-1' },
-                },
-                {
-                    id: 'a2',
-                    lead_id: 'l2',
-                    user_id: 'agent-2',
-                    type: 'note',
-                    description: '',
-                    metadata: {},
-                    created_at: '2026-03-08T09:00:00Z',
-                    leads: { full_name: 'Theirs', assigned_to: 'agent-2' },
+                    leads: { full_name: 'Mine' },
                 },
             ],
             error: null,
@@ -514,37 +517,6 @@ describe('assignLead', () => {
 
         const result = await assignLead('lead-1', 'agent-2', 'mgr-1');
         expect(result.error).toBe('Update failed');
-    });
-});
-
-// ── getLeadsByAgent ──
-
-describe('getLeadsByAgent', () => {
-    it('returns leads for a specific agent', async () => {
-        const chain = mockSupa.__getChain('leads');
-        mockResolve(chain, { data: [LEAD, { ...LEAD, id: 'lead-2' }], error: null });
-
-        const result = await getLeadsByAgent('agent-1');
-        expect(result.error).toBeNull();
-        expect(result.data).toHaveLength(2);
-    });
-
-    it('returns empty array when agent has no leads', async () => {
-        const chain = mockSupa.__getChain('leads');
-        mockResolve(chain, { data: [], error: null });
-
-        const result = await getLeadsByAgent('agent-1');
-        expect(result.error).toBeNull();
-        expect(result.data).toEqual([]);
-    });
-
-    it('returns error on failure', async () => {
-        const chain = mockSupa.__getChain('leads');
-        mockResolve(chain, { data: null, error: { message: 'DB error' } });
-
-        const result = await getLeadsByAgent('agent-1');
-        expect(result.error).toBe('DB error');
-        expect(result.data).toEqual([]);
     });
 });
 

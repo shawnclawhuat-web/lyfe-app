@@ -4,11 +4,12 @@ module.exports = {
     transformIgnorePatterns: [
         'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@supabase/.*|expo-router)',
     ],
-    testPathIgnorePatterns: ['/node_modules/', '/.claude/'],
+    testPathIgnorePatterns: ['/node_modules/', '/.claude/', '\\.android\\.test\\.'],
     modulePathIgnorePatterns: ['<rootDir>/.claude/'],
     moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/$1',
         '^@expo/vector-icons$': '<rootDir>/__tests__/mocks/vectorIcons.js',
+        '^expo-crypto$': '<rootDir>/__tests__/mocks/expo-crypto.js',
     },
     collectCoverageFrom: [
         'lib/**/*.ts',

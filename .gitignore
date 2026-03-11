@@ -39,8 +39,13 @@ admin/.env.local
 # typescript
 *.tsbuildinfo
 
+# build artifacts
+*.apk
+*.aab
+
 # generated native folders
 /ios
 /android
 .mcp.json
 coverage/
+p.md
