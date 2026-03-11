@@ -47,6 +47,7 @@ jest.mock('@sentry/react-native', () => ({
     captureMessage: jest.fn(),
     setUser: jest.fn(),
     addBreadcrumb: jest.fn(),
+    mobileReplayIntegration: jest.fn(() => ({ name: 'MobileReplay' })),
 }));
 
 // Mock react-native-safe-area-context

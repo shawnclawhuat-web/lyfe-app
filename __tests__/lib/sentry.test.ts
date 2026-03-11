@@ -38,6 +38,7 @@ describe('sentry', () => {
             captureMessage: jest.fn(),
             setUser: jest.fn(),
             addBreadcrumb: jest.fn(),
+            mobileReplayIntegration: jest.fn(() => ({ name: 'MobileReplay' })),
         }));
 
         const sentryMod = require('@/lib/sentry');
