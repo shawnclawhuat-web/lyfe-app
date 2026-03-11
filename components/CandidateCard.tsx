@@ -1,3 +1,4 @@
+import { letterSpacing } from '@/constants/platform';
 import { useTheme } from '@/contexts/ThemeContext';
 import { timeAgo } from '@/lib/dateTime';
 import { CANDIDATE_STATUS_CONFIG, type RecruitmentCandidate } from '@/types/recruitment';
@@ -97,7 +98,7 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 16,
         fontWeight: '600',
-        letterSpacing: -0.2,
+        letterSpacing: letterSpacing(-0.2),
     },
     phone: {
         fontSize: 13,

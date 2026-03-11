@@ -1,3 +1,4 @@
+import { letterSpacing } from '@/constants/platform';
 import Avatar from '@/components/Avatar';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
@@ -205,7 +206,7 @@ const emptyStyles = StyleSheet.create({
         justifyContent: 'center',
         marginBottom: 16,
     },
-    title: { fontSize: 18, fontWeight: '700', marginBottom: 8, letterSpacing: -0.3 },
+    title: { fontSize: 18, fontWeight: '700', marginBottom: 8, letterSpacing: letterSpacing(-0.3) },
     subtitle: { fontSize: 15, textAlign: 'center', lineHeight: 22 },
 });
 
@@ -610,7 +611,7 @@ const styles = StyleSheet.create({
     heroStatValue: {
         fontSize: 28,
         fontWeight: '700',
-        letterSpacing: -1,
+        letterSpacing: letterSpacing(-1),
         marginBottom: 4,
     },
     heroStatLabel: {
@@ -633,7 +634,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: '700',
         marginBottom: 16,
-        letterSpacing: -0.3,
+        letterSpacing: letterSpacing(-0.3),
     },
 
     // Leaderboard
@@ -656,7 +657,7 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '600',
         marginBottom: 2,
-        letterSpacing: -0.3,
+        letterSpacing: letterSpacing(-0.3),
     },
     leaderMeta: {
         flexDirection: 'row',

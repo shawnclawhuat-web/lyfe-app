@@ -1,6 +1,7 @@
+import type { ThemeColors } from '@/types/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, TextInput, View, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, View, type ViewStyle } from 'react-native';
 
 interface FormFieldProps {
     label: string;
@@ -8,7 +9,7 @@ interface FormFieldProps {
     onChangeText: (v: string) => void;
     placeholder: string;
     error?: string;
-    colors: any;
+    colors: ThemeColors;
     icon?: string;
     required?: boolean;
     keyboardType?: 'default' | 'phone-pad' | 'email-address';
@@ -41,11 +42,11 @@ export default function FormField({
                         styles.inputRow,
                         {
                             backgroundColor: colors.surfacePrimary,
-                            borderColor: error ? '#EF4444' : colors.borderLight,
+                            borderColor: error ? colors.danger : colors.borderLight,
                         },
                     ]}
                 >
-                    <Ionicons name={icon as any} size={18} color={error ? '#EF4444' : colors.textTertiary} />
+                    <Ionicons name={icon as any} size={18} color={error ? colors.danger : colors.textTertiary} />
                     <TextInput
                         style={[styles.inputWithIcon, { color: colors.textPrimary }]}
                         value={value}
@@ -54,6 +55,7 @@ export default function FormField({
                         placeholderTextColor={colors.textTertiary}
                         keyboardType={keyboardType}
                         autoCapitalize={autoCapitalize}
+                        accessibilityLabel={label}
                     />
                 </View>
             ) : (
@@ -65,9 +67,10 @@ export default function FormField({
                     placeholderTextColor={colors.textTertiary}
                     keyboardType={keyboardType}
                     autoCapitalize={autoCapitalize}
+                    accessibilityLabel={label}
                 />
             )}
-            {error && <Text style={[styles.error, { color: '#EF4444' }]}>{error}</Text>}
+            {error && <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>}
         </View>
     );
 }
@@ -85,6 +88,6 @@ const styles = StyleSheet.create({
         minHeight: 48,
     },
     inputWithIcon: { flex: 1, fontSize: 15, padding: 0 },
-    input: { fontSize: 16 },
+    input: { fontSize: 16, ...(Platform.OS === 'android' && { minHeight: 48, paddingHorizontal: 14 }) },
     error: { fontSize: 12, marginTop: 4, fontWeight: '500' },
 });

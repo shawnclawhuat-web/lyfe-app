@@ -1,62 +1,43 @@
 import Constants from 'expo-constants';
-import Avatar from '@/components/Avatar';
-import { KAV_BEHAVIOR, letterSpacing } from '@/constants/platform';
 import ErrorBanner from '@/components/ErrorBanner';
 import LyfeLogo from '@/components/LyfeLogo';
 import ScreenHeader from '@/components/ScreenHeader';
+import AppearanceCard from '@/components/profile/AppearanceCard';
+import AssignedManagersCard from '@/components/profile/AssignedManagersCard';
+import AvatarPickerSheet, { type AvatarAction } from '@/components/profile/AvatarPickerSheet';
+import EditProfileSheet from '@/components/profile/EditProfileSheet';
+import SecurityCard from '@/components/profile/SecurityCard';
+import SettingsListCard, { type SettingsRowConfig } from '@/components/profile/SettingsListCard';
+import SignOutModal from '@/components/profile/SignOutModal';
+import UserHeroCard from '@/components/profile/UserHeroCard';
+import ViewModeCard from '@/components/profile/ViewModeCard';
 import { useAuth } from '@/contexts/AuthContext';
-import { PA_MANAGER_COLORS, ROLE_LABELS } from '@/constants/ui';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useViewMode, type ViewMode } from '@/contexts/ViewModeContext';
-import { biometricMeta, getBiometryType, type BiometryType } from '@/lib/biometrics';
+import { getBiometryType, type BiometryType } from '@/lib/biometrics';
 import { pickAndUploadAvatar, removeAvatar, takeAndUploadAvatar } from '@/lib/storage';
-import { Ionicons } from '@expo/vector-icons';
 import type { AssignedManager } from '@/lib/mockData';
 import { useTypedRouter } from '@/hooks/useTypedRouter';
 import { fetchPAManagers } from '@/lib/recruitment';
 import { useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-    Animated,
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const VIEW_MODE_OPTIONS: { value: ViewMode; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-    { value: 'agent', label: 'Agent View', icon: 'person-outline' },
-    { value: 'manager', label: 'Manager View', icon: 'shield-outline' },
-];
-
 // ── Settings Rows Config ──
-interface SettingsRow {
-    key: string;
-    icon: keyof typeof Ionicons.glyphMap;
-    label: string;
-    subtitle?: string;
-    danger?: boolean;
-}
-
-const GENERAL_SETTINGS: SettingsRow[] = [
+const GENERAL_SETTINGS: SettingsRowConfig[] = [
     { key: 'edit', icon: 'create-outline', label: 'Edit Profile', subtitle: 'Name, photo, and details' },
     { key: 'notifications', icon: 'notifications-outline', label: 'Notifications', subtitle: 'Alerts and reminders' },
     { key: 'privacy', icon: 'lock-closed-outline', label: 'Privacy', subtitle: 'Data and security' },
 ];
 
-const SUPPORT_SETTINGS: SettingsRow[] = [{ key: 'terms', icon: 'document-text-outline', label: 'Terms of Service' }];
+const SUPPORT_SETTINGS: SettingsRowConfig[] = [
+    { key: 'terms', icon: 'document-text-outline', label: 'Terms of Service' },
+];
 
 export default function ProfileScreen() {
-    const { colors, isDark, mode, setMode } = useTheme();
+    const { colors, mode, setMode } = useTheme();
     const { user, signOut, biometricsEnabled, enableBiometrics, disableBiometrics, updateAvatarUrl, updateProfile } =
         useAuth();
     const { viewMode, canToggle, setViewMode } = useViewMode();
@@ -66,6 +47,7 @@ export default function ProfileScreen() {
     const [showAvatarSheet, setShowAvatarSheet] = useState(false);
     const [avatarUploading, setAvatarUploading] = useState(false);
     const [biometryType, setBiometryType] = useState<BiometryType>('none');
+    const [error, setError] = useState<string | null>(null);
 
     // Edit profile modal
     const [showEditModal, setShowEditModal] = useState(false);
@@ -91,24 +73,6 @@ export default function ProfileScreen() {
         }, [loadManagers]),
     );
 
-    // Sheet slide-up animations (overlay appears instantly; only the sheet slides)
-    const avatarSheetY = useRef(new Animated.Value(400)).current;
-    const editSheetY = useRef(new Animated.Value(400)).current;
-
-    useEffect(() => {
-        if (showAvatarSheet) {
-            avatarSheetY.setValue(400);
-            Animated.spring(avatarSheetY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }).start();
-        }
-    }, [showAvatarSheet]);
-
-    useEffect(() => {
-        if (showEditModal) {
-            editSheetY.setValue(400);
-            Animated.spring(editSheetY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }).start();
-        }
-    }, [showEditModal]);
-
     const handleToggleBiometrics = useCallback(
         async (value: boolean) => {
             if (value) {
@@ -122,7 +86,6 @@ export default function ProfileScreen() {
         },
         [enableBiometrics, disableBiometrics],
     );
-    const [error, setError] = useState<string | null>(null);
 
     const handleSignOut = () => {
         setShowSignOutModal(true);
@@ -188,7 +151,7 @@ export default function ProfileScreen() {
     };
 
     const handleAvatarAction = useCallback(
-        async (action: 'camera' | 'library' | 'remove') => {
+        async (action: AvatarAction) => {
             setShowAvatarSheet(false);
             if (!user?.id) return;
 
@@ -215,342 +178,59 @@ export default function ProfileScreen() {
         [user?.id, updateAvatarUrl],
     );
 
-    const themeOptions: { value: 'system' | 'light' | 'dark'; label: string; icon: keyof typeof Ionicons.glyphMap }[] =
-        [
-            { value: 'system', label: 'System', icon: 'phone-portrait-outline' },
-            { value: 'light', label: 'Light', icon: 'sunny-outline' },
-            { value: 'dark', label: 'Dark', icon: 'moon-outline' },
-        ];
-
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             <ScreenHeader title="Profile" />
             {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {/* Hero User Card */}
-                <View
-                    style={[
-                        styles.card,
-                        styles.userCard,
-                        { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
-                    ]}
-                >
-                    <View style={styles.userCardRow}>
-                        {/* Avatar — tappable */}
-                        <TouchableOpacity
-                            onPress={() => setShowAvatarSheet(true)}
-                            activeOpacity={0.8}
-                            accessibilityRole="button"
-                            accessibilityLabel="Change profile photo"
-                            style={[styles.avatarOuter, { borderColor: colors.accent + '30' }]}
-                        >
-                            {avatarUploading ? (
-                                <View style={[styles.avatarCircle, { backgroundColor: colors.accentLight }]}>
-                                    <ActivityIndicator color={colors.accent} />
-                                </View>
-                            ) : (
-                                <Avatar
-                                    name={user?.full_name || '?'}
-                                    avatarUrl={user?.avatar_url}
-                                    size={66}
-                                    backgroundColor={colors.accentLight}
-                                    textColor={colors.accent}
-                                />
-                            )}
-                            <View style={[styles.avatarEditBadge, { backgroundColor: colors.accent }]}>
-                                <Ionicons name="camera" size={10} color="#FFFFFF" />
-                            </View>
-                        </TouchableOpacity>
+                <UserHeroCard
+                    colors={colors}
+                    fullName={user?.full_name}
+                    role={user?.role}
+                    phone={user?.phone}
+                    email={user?.email}
+                    avatarUrl={user?.avatar_url}
+                    avatarUploading={avatarUploading}
+                    onAvatarPress={() => setShowAvatarSheet(true)}
+                />
 
-                        {/* User Info */}
-                        <View style={styles.userInfo}>
-                            <Text style={[styles.userName, { color: colors.textPrimary }]} numberOfLines={1}>
-                                {user?.full_name || 'Unknown User'}
-                            </Text>
-                            <View style={[styles.roleBadge, { backgroundColor: colors.accentLight }]}>
-                                <Text style={[styles.roleText, { color: colors.accent }]}>
-                                    {ROLE_LABELS[user?.role || 'agent']}
-                                </Text>
-                            </View>
-                        </View>
-                    </View>
+                {/* Assigned Managers -- PA only */}
+                {user?.role === 'pa' && <AssignedManagersCard colors={colors} managers={managers} />}
 
-                    {/* Contact Info — inline in user card */}
-                    <View style={[styles.contactDivider, { backgroundColor: colors.border }]} />
-                    <View style={styles.contactSection}>
-                        {user?.phone && (
-                            <View style={styles.contactRow}>
-                                <Ionicons name="call-outline" size={16} color={colors.textTertiary} />
-                                <Text style={[styles.contactText, { color: colors.textSecondary }]}>{user.phone}</Text>
-                            </View>
-                        )}
-                        {user?.email && (
-                            <View style={styles.contactRow}>
-                                <Ionicons name="mail-outline" size={16} color={colors.textTertiary} />
-                                <Text style={[styles.contactText, { color: colors.textSecondary }]}>{user.email}</Text>
-                            </View>
-                        )}
-                    </View>
-                </View>
-
-                {/* Assigned Managers — PA only */}
-                {user?.role === 'pa' && (
-                    <View
-                        style={[
-                            styles.card,
-                            { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
-                        ]}
-                    >
-                        <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>ASSIGNED MANAGERS</Text>
-                        {managers.length === 0 ? (
-                            <View style={styles.mgrEmptyRow}>
-                                <Ionicons name="person-outline" size={16} color={colors.textTertiary} />
-                                <Text style={[styles.mgrEmptyText, { color: colors.textTertiary }]}>
-                                    No managers assigned yet
-                                </Text>
-                            </View>
-                        ) : (
-                            managers.map((mgr, index) => {
-                                const sortedIds = [...managers]
-                                    .sort((a, b) => a.id.localeCompare(b.id))
-                                    .map((m) => m.id);
-                                const color = PA_MANAGER_COLORS[sortedIds.indexOf(mgr.id) % PA_MANAGER_COLORS.length];
-                                return (
-                                    <React.Fragment key={mgr.id}>
-                                        <View style={styles.settingsRow}>
-                                            <View style={[styles.mgrAvatar, { backgroundColor: color + '18' }]}>
-                                                <Text style={[styles.mgrAvatarText, { color }]}>
-                                                    {mgr.full_name
-                                                        .split(' ')
-                                                        .map((n) => n[0])
-                                                        .join('')}
-                                                </Text>
-                                            </View>
-                                            <View style={styles.settingsTextCol}>
-                                                <Text style={[styles.settingsLabel, { color: colors.textPrimary }]}>
-                                                    {mgr.full_name}
-                                                </Text>
-                                                <Text style={[styles.settingsSubtitle, { color: colors.textTertiary }]}>
-                                                    Manager
-                                                </Text>
-                                            </View>
-                                        </View>
-                                        {index < managers.length - 1 && (
-                                            <View style={[styles.rowDivider, { backgroundColor: colors.border }]} />
-                                        )}
-                                    </React.Fragment>
-                                );
-                            })
-                        )}
-                    </View>
-                )}
-
-                {/* View Mode Toggle — T2/T3 only */}
+                {/* View Mode Toggle -- T2/T3 only */}
                 {canToggle && (
-                    <View
-                        style={[
-                            styles.card,
-                            { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
-                        ]}
-                    >
-                        <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>VIEW MODE</Text>
-                        <View style={[styles.segmentContainer, { backgroundColor: colors.inputBackground }]}>
-                            {VIEW_MODE_OPTIONS.map((option) => {
-                                const isActive = viewMode === option.value;
-                                return (
-                                    <TouchableOpacity
-                                        key={option.value}
-                                        style={[
-                                            styles.segmentOption,
-                                            isActive && {
-                                                backgroundColor: colors.cardBackground,
-                                                shadowColor: '#000',
-                                                shadowOffset: { width: 0, height: 1 },
-                                                shadowOpacity: 0.1,
-                                                shadowRadius: 2,
-                                                elevation: 2,
-                                            },
-                                        ]}
-                                        onPress={() => handleViewModeChange(option.value)}
-                                        activeOpacity={0.7}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={`Switch to ${option.label}`}
-                                        accessibilityState={{ selected: isActive }}
-                                    >
-                                        <Ionicons
-                                            name={option.icon}
-                                            size={18}
-                                            color={isActive ? colors.accent : colors.textSecondary}
-                                        />
-                                        <Text
-                                            style={[
-                                                styles.segmentLabel,
-                                                {
-                                                    color: isActive ? colors.accent : colors.textSecondary,
-                                                    fontWeight: isActive ? '600' : '400',
-                                                },
-                                            ]}
-                                        >
-                                            {option.label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
-                        <Text style={[styles.viewModeHint, { color: colors.textTertiary }]}>
-                            {viewMode === 'agent' ? 'Manage your leads and clients' : 'Manage your team and candidates'}
-                        </Text>
-                    </View>
+                    <ViewModeCard colors={colors} viewMode={viewMode} onViewModeChange={handleViewModeChange} />
                 )}
 
-                {/* Security — Biometrics */}
+                {/* Security -- Biometrics */}
                 {biometryType !== 'none' && (
-                    <View
-                        style={[
-                            styles.card,
-                            { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
-                        ]}
-                    >
-                        <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>SECURITY</Text>
-                        <View style={styles.settingsRow}>
-                            <View style={[styles.settingsIconCircle, { backgroundColor: colors.accentLight }]}>
-                                <Ionicons
-                                    name={biometricMeta(biometryType).icon as any}
-                                    size={18}
-                                    color={colors.accent}
-                                />
-                            </View>
-                            <View style={styles.settingsTextCol}>
-                                <Text style={[styles.settingsLabel, { color: colors.textPrimary }]}>
-                                    {biometricMeta(biometryType).label}
-                                </Text>
-                                <Text style={[styles.settingsSubtitle, { color: colors.textTertiary }]}>
-                                    Sign in without OTP
-                                </Text>
-                            </View>
-                            <Switch
-                                value={biometricsEnabled}
-                                onValueChange={handleToggleBiometrics}
-                                trackColor={{ false: colors.border, true: colors.accent }}
-                                thumbColor="#FFFFFF"
-                                accessibilityLabel={`${biometricMeta(biometryType).label} sign-in`}
-                            />
-                        </View>
-                    </View>
+                    <SecurityCard
+                        colors={colors}
+                        biometryType={biometryType}
+                        enabled={biometricsEnabled}
+                        onToggle={handleToggleBiometrics}
+                    />
                 )}
 
                 {/* General Settings */}
-                <View
-                    style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}
-                >
-                    <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>GENERAL</Text>
-                    {GENERAL_SETTINGS.map((row, index) => (
-                        <React.Fragment key={row.key}>
-                            <TouchableOpacity
-                                style={styles.settingsRow}
-                                onPress={() => handleSettingsPress(row.key)}
-                                activeOpacity={0.6}
-                                accessibilityRole="button"
-                                accessibilityLabel={row.label}
-                            >
-                                <View style={[styles.settingsIconCircle, { backgroundColor: colors.accentLight }]}>
-                                    <Ionicons name={row.icon} size={18} color={colors.accent} />
-                                </View>
-                                <View style={styles.settingsTextCol}>
-                                    <Text style={[styles.settingsLabel, { color: colors.textPrimary }]}>
-                                        {row.label}
-                                    </Text>
-                                    {row.subtitle && (
-                                        <Text style={[styles.settingsSubtitle, { color: colors.textTertiary }]}>
-                                            {row.subtitle}
-                                        </Text>
-                                    )}
-                                </View>
-                                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-                            </TouchableOpacity>
-                            {index < GENERAL_SETTINGS.length - 1 && (
-                                <View style={[styles.rowDivider, { backgroundColor: colors.border }]} />
-                            )}
-                        </React.Fragment>
-                    ))}
-                </View>
+                <SettingsListCard
+                    colors={colors}
+                    title="GENERAL"
+                    rows={GENERAL_SETTINGS}
+                    onPress={handleSettingsPress}
+                />
 
                 {/* Appearance */}
-                <View
-                    style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}
-                >
-                    <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>APPEARANCE</Text>
-                    <View style={styles.themeRow}>
-                        {themeOptions.map((option) => {
-                            const isActive = mode === option.value;
-                            return (
-                                <TouchableOpacity
-                                    key={option.value}
-                                    style={[
-                                        styles.themeOption,
-                                        {
-                                            backgroundColor: isActive ? colors.accentLight : colors.inputBackground,
-                                            borderColor: isActive ? colors.accent : colors.border,
-                                        },
-                                    ]}
-                                    onPress={() => setMode(option.value)}
-                                    activeOpacity={0.7}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={`Set theme to ${option.label}`}
-                                    accessibilityState={{ selected: isActive }}
-                                >
-                                    <Ionicons
-                                        name={option.icon}
-                                        size={20}
-                                        color={isActive ? colors.accent : colors.textSecondary}
-                                    />
-                                    <Text
-                                        style={[
-                                            styles.themeLabel,
-                                            {
-                                                color: isActive ? colors.accent : colors.textSecondary,
-                                                fontWeight: isActive ? '600' : '400',
-                                            },
-                                        ]}
-                                    >
-                                        {option.label}
-                                    </Text>
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </View>
-                </View>
+                <AppearanceCard colors={colors} mode={mode} onModeChange={setMode} />
 
                 {/* Support Settings */}
-                <View
-                    style={[styles.card, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}
-                >
-                    <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>SUPPORT</Text>
-                    {SUPPORT_SETTINGS.map((row, index) => (
-                        <React.Fragment key={row.key}>
-                            <TouchableOpacity
-                                style={styles.settingsRow}
-                                onPress={() => handleSettingsPress(row.key)}
-                                activeOpacity={0.6}
-                                accessibilityRole="button"
-                                accessibilityLabel={row.label}
-                            >
-                                <View style={[styles.settingsIconCircle, { backgroundColor: colors.accentLight }]}>
-                                    <Ionicons name={row.icon} size={18} color={colors.accent} />
-                                </View>
-                                <View style={styles.settingsTextCol}>
-                                    <Text style={[styles.settingsLabel, { color: colors.textPrimary }]}>
-                                        {row.label}
-                                    </Text>
-                                </View>
-                                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-                            </TouchableOpacity>
-                            {index < SUPPORT_SETTINGS.length - 1 && (
-                                <View style={[styles.rowDivider, { backgroundColor: colors.border }]} />
-                            )}
-                        </React.Fragment>
-                    ))}
-                </View>
+                <SettingsListCard
+                    colors={colors}
+                    title="SUPPORT"
+                    rows={SUPPORT_SETTINGS}
+                    onPress={handleSettingsPress}
+                />
 
                 {/* App Info */}
                 <View
@@ -580,188 +260,35 @@ export default function ProfileScreen() {
             </ScrollView>
 
             {/* Edit Profile Modal */}
-            <Modal
+            <EditProfileSheet
                 visible={showEditModal}
-                transparent
-                animationType="none"
-                onRequestClose={() => setShowEditModal(false)}
-                accessibilityViewIsModal
-            >
-                <KeyboardAvoidingView behavior={KAV_BEHAVIOR} style={{ flex: 1 }}>
-                    <TouchableOpacity
-                        style={styles.sheetOverlay}
-                        activeOpacity={1}
-                        onPress={() => setShowEditModal(false)}
-                    >
-                        <Animated.View
-                            style={[
-                                styles.sheet,
-                                { backgroundColor: colors.cardBackground, transform: [{ translateY: editSheetY }] },
-                            ]}
-                        >
-                            <View style={[styles.sheetHandle, { backgroundColor: colors.divider }]} />
-                            <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>Edit Profile</Text>
-
-                            <Text style={[styles.editLabel, { color: colors.textTertiary }]}>FULL NAME</Text>
-                            <View
-                                style={[
-                                    styles.editInputWrap,
-                                    { backgroundColor: colors.inputBackground, borderColor: colors.border },
-                                ]}
-                            >
-                                <TextInput
-                                    style={[styles.editInput, { color: colors.textPrimary }]}
-                                    value={editName}
-                                    onChangeText={setEditName}
-                                    placeholder="Your full name"
-                                    placeholderTextColor={colors.textTertiary}
-                                    returnKeyType="next"
-                                    autoCapitalize="words"
-                                />
-                            </View>
-
-                            <Text style={[styles.editLabel, { color: colors.textTertiary, marginTop: 16 }]}>
-                                EMAIL (OPTIONAL)
-                            </Text>
-                            <View
-                                style={[
-                                    styles.editInputWrap,
-                                    { backgroundColor: colors.inputBackground, borderColor: colors.border },
-                                ]}
-                            >
-                                <TextInput
-                                    style={[styles.editInput, { color: colors.textPrimary }]}
-                                    value={editEmail}
-                                    onChangeText={setEditEmail}
-                                    placeholder="your@email.com"
-                                    placeholderTextColor={colors.textTertiary}
-                                    keyboardType="email-address"
-                                    autoCapitalize="none"
-                                    returnKeyType="done"
-                                    onSubmitEditing={handleSaveProfile}
-                                />
-                            </View>
-
-                            {editError && (
-                                <Text style={[styles.editErrorText, { color: colors.danger }]}>{editError}</Text>
-                            )}
-
-                            <TouchableOpacity
-                                style={[
-                                    styles.editSaveBtn,
-                                    { backgroundColor: colors.accent, opacity: editSaving ? 0.7 : 1 },
-                                ]}
-                                onPress={handleSaveProfile}
-                                disabled={editSaving}
-                                activeOpacity={0.8}
-                            >
-                                <Text style={styles.editSaveBtnText}>{editSaving ? 'Saving…' : 'Save Changes'}</Text>
-                            </TouchableOpacity>
-                        </Animated.View>
-                    </TouchableOpacity>
-                </KeyboardAvoidingView>
-            </Modal>
+                colors={colors}
+                name={editName}
+                email={editEmail}
+                saving={editSaving}
+                error={editError}
+                onNameChange={setEditName}
+                onEmailChange={setEditEmail}
+                onSave={handleSaveProfile}
+                onClose={() => setShowEditModal(false)}
+            />
 
             {/* Avatar Picker Sheet */}
-            <Modal
+            <AvatarPickerSheet
                 visible={showAvatarSheet}
-                transparent
-                animationType="none"
-                onRequestClose={() => setShowAvatarSheet(false)}
-                accessibilityViewIsModal
-            >
-                <TouchableOpacity
-                    style={styles.sheetOverlay}
-                    activeOpacity={1}
-                    onPress={() => setShowAvatarSheet(false)}
-                >
-                    <Animated.View
-                        style={[
-                            styles.sheet,
-                            { backgroundColor: colors.cardBackground, transform: [{ translateY: avatarSheetY }] },
-                        ]}
-                    >
-                        <View style={[styles.sheetHandle, { backgroundColor: colors.divider }]} />
-                        <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>Profile Photo</Text>
-
-                        <TouchableOpacity
-                            style={styles.sheetRow}
-                            onPress={() => handleAvatarAction('camera')}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[styles.sheetIconCircle, { backgroundColor: colors.accentLight }]}>
-                                <Ionicons name="camera-outline" size={20} color={colors.accent} />
-                            </View>
-                            <Text style={[styles.sheetRowText, { color: colors.textPrimary }]}>Take Photo</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.sheetRow}
-                            onPress={() => handleAvatarAction('library')}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[styles.sheetIconCircle, { backgroundColor: colors.accentLight }]}>
-                                <Ionicons name="image-outline" size={20} color={colors.accent} />
-                            </View>
-                            <Text style={[styles.sheetRowText, { color: colors.textPrimary }]}>
-                                Choose from Library
-                            </Text>
-                        </TouchableOpacity>
-
-                        {user?.avatar_url && (
-                            <TouchableOpacity
-                                style={styles.sheetRow}
-                                onPress={() => handleAvatarAction('remove')}
-                                activeOpacity={0.7}
-                            >
-                                <View style={[styles.sheetIconCircle, { backgroundColor: colors.dangerLight }]}>
-                                    <Ionicons name="trash-outline" size={20} color={colors.danger} />
-                                </View>
-                                <Text style={[styles.sheetRowText, { color: colors.danger }]}>Remove Photo</Text>
-                            </TouchableOpacity>
-                        )}
-                    </Animated.View>
-                </TouchableOpacity>
-            </Modal>
+                colors={colors}
+                hasAvatar={!!user?.avatar_url}
+                onAction={handleAvatarAction}
+                onClose={() => setShowAvatarSheet(false)}
+            />
 
             {/* Sign Out Confirmation Modal */}
-            <Modal
+            <SignOutModal
                 visible={showSignOutModal}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setShowSignOutModal(false)}
-                accessibilityViewIsModal
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
-                        <View style={[styles.modalIconCircle, { backgroundColor: colors.dangerLight }]}>
-                            <Ionicons name="log-out-outline" size={28} color={colors.danger} />
-                        </View>
-                        <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Sign Out</Text>
-                        <Text style={[styles.modalMessage, { color: colors.textSecondary }]}>
-                            Are you sure you want to sign out of your account?
-                        </Text>
-                        <View style={styles.modalActions}>
-                            <TouchableOpacity
-                                style={[styles.modalBtn, { backgroundColor: colors.surfaceSecondary }]}
-                                onPress={() => setShowSignOutModal(false)}
-                                accessibilityRole="button"
-                                accessibilityLabel="Cancel sign out"
-                            >
-                                <Text style={[styles.modalBtnText, { color: colors.textPrimary }]}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.modalBtn, { backgroundColor: colors.danger }]}
-                                onPress={confirmSignOut}
-                                accessibilityRole="button"
-                                accessibilityLabel="Confirm sign out"
-                            >
-                                <Text style={[styles.modalBtnText, { color: colors.textInverse }]}>Sign Out</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
+                colors={colors}
+                onCancel={() => setShowSignOutModal(false)}
+                onConfirm={confirmSignOut}
+            />
         </SafeAreaView>
     );
 }
@@ -780,162 +307,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.04,
         shadowRadius: 12,
         elevation: 2,
-    },
-
-    // ── Hero User Card ──
-    userCard: {
-        padding: 20,
-    },
-    userCardRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 16,
-    },
-    avatarOuter: {
-        width: 76,
-        height: 76,
-        borderRadius: 38,
-        borderWidth: 2.5,
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-    },
-    avatarCircle: {
-        width: 66,
-        height: 66,
-        borderRadius: 33,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    avatarEditBadge: {
-        position: 'absolute',
-        bottom: 0,
-        right: 0,
-        width: 22,
-        height: 22,
-        borderRadius: 11,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: '#FFFFFF',
-    },
-    userInfo: {
-        flex: 1,
-        gap: 8,
-    },
-    userName: {
-        fontSize: 22,
-        fontWeight: '800',
-        letterSpacing: letterSpacing(-0.3),
-    },
-    roleBadge: {
-        alignSelf: 'flex-start',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    roleText: {
-        fontSize: 12,
-        fontWeight: '700',
-        letterSpacing: 0.3,
-    },
-    contactDivider: {
-        height: StyleSheet.hairlineWidth,
-        marginTop: 16,
-        marginBottom: 12,
-    },
-    contactSection: {
-        gap: 8,
-    },
-    contactRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-    },
-    contactText: {
-        fontSize: 14,
-    },
-
-    // ── Section Labels ──
-    sectionLabel: {
-        fontSize: 12,
-        fontWeight: '700',
-        letterSpacing: 0.8,
-        marginBottom: 12,
-    },
-
-    // ── View Mode Segment ──
-    segmentContainer: {
-        flexDirection: 'row',
-        borderRadius: 10,
-        padding: 3,
-        gap: 2,
-    },
-    segmentOption: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        paddingVertical: 10,
-        borderRadius: 8,
-    },
-    segmentLabel: {
-        fontSize: 13,
-    },
-    viewModeHint: {
-        fontSize: 12,
-        marginTop: 10,
-        textAlign: 'center',
-    },
-
-    // ── Settings Rows ──
-    settingsRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-        gap: 12,
-    },
-    settingsIconCircle: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    settingsTextCol: {
-        flex: 1,
-    },
-    settingsLabel: {
-        fontSize: 15,
-        fontWeight: '500',
-    },
-    settingsSubtitle: {
-        fontSize: 12,
-        marginTop: 1,
-    },
-    rowDivider: {
-        height: StyleSheet.hairlineWidth,
-        marginLeft: 48,
-    },
-
-    // ── Theme Selector ──
-    themeRow: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    themeOption: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        paddingVertical: 12,
-        borderRadius: 12,
-        borderWidth: 1.5,
-    },
-    themeLabel: {
-        fontSize: 13,
     },
 
     // ── App Info ──
@@ -961,155 +332,6 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
     },
     signOutText: {
-        fontSize: 15,
-        fontWeight: '600',
-    },
-
-    // ── Edit Profile ──
-    editLabel: {
-        fontSize: 11,
-        fontWeight: '700',
-        letterSpacing: 0.6,
-        marginBottom: 6,
-        paddingHorizontal: 4,
-    },
-    editInputWrap: {
-        borderRadius: 12,
-        borderWidth: 1,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-    },
-    editInput: {
-        fontSize: 16,
-        padding: 0,
-    },
-    editErrorText: {
-        fontSize: 13,
-        marginTop: 8,
-        paddingHorizontal: 4,
-    },
-    editSaveBtn: {
-        marginTop: 24,
-        paddingVertical: 15,
-        borderRadius: 14,
-        alignItems: 'center',
-    },
-    editSaveBtnText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-
-    // ── Avatar Sheet ──
-    sheetOverlay: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0,0,0,0.4)',
-    },
-    sheet: {
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        paddingHorizontal: 20,
-        paddingTop: 12,
-        paddingBottom: 40,
-        gap: 4,
-    },
-    sheetHandle: {
-        width: 36,
-        height: 4,
-        borderRadius: 2,
-        alignSelf: 'center',
-        marginBottom: 16,
-        opacity: 0.5,
-    },
-    sheetTitle: {
-        fontSize: 17,
-        fontWeight: '700',
-        marginBottom: 12,
-        paddingHorizontal: 4,
-    },
-    sheetRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 14,
-        paddingVertical: 12,
-        paddingHorizontal: 4,
-    },
-    sheetIconCircle: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    sheetRowText: {
-        fontSize: 16,
-        fontWeight: '500',
-    },
-
-    // ── Assigned Managers ──
-    mgrAvatar: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    mgrAvatarText: { fontSize: 13, fontWeight: '700' },
-    mgrEmptyRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        paddingVertical: 4,
-    },
-    mgrEmptyText: { fontSize: 14 },
-
-    // ── Modal ──
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 32,
-    },
-    modalContent: {
-        width: '100%',
-        maxWidth: 340,
-        borderRadius: 20,
-        padding: 28,
-        alignItems: 'center',
-    },
-    modalIconCircle: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 16,
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        marginBottom: 8,
-    },
-    modalMessage: {
-        fontSize: 14,
-        marginBottom: 24,
-        textAlign: 'center',
-        lineHeight: 20,
-    },
-    modalActions: {
-        flexDirection: 'row',
-        gap: 12,
-        width: '100%',
-    },
-    modalBtn: {
-        flex: 1,
-        paddingVertical: 14,
-        borderRadius: 12,
-        alignItems: 'center',
-    },
-    modalBtnText: {
         fontSize: 15,
         fontWeight: '600',
     },

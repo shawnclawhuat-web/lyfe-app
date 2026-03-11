@@ -10,7 +10,9 @@ import { deleteEvent, logRoadshowActivity } from '@/lib/events';
 import { formatCreatedAt, formatDateLong, formatTime, getRoadshowStatus } from '@/lib/dateTime';
 import type { AttendeeRole, EventAttendee } from '@/types/event';
 import { useViewMode } from '@/contexts/ViewModeContext';
-import { EVENT_TYPE_COLORS, EVENT_TYPE_LABELS } from '@/types/event';
+import { letterSpacing } from '@/constants/platform';
+import { EVENT_TYPE_CONFIG } from '@/constants/displayConfigs';
+import { EVENT_TYPE_LABELS } from '@/types/event';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -267,7 +269,7 @@ export default function EventDetailScreen() {
         );
     }
 
-    const typeColor = EVENT_TYPE_COLORS[event.event_type];
+    const typeColor = EVENT_TYPE_CONFIG[event.event_type].color;
     const canEdit =
         !!user &&
         (user.id === event.created_by ||
@@ -376,11 +378,11 @@ export default function EventDetailScreen() {
                             </Text>
                         </View>
                         {isLive && (
-                            <View style={[styles.livePill, { backgroundColor: '#22C55E18' }]}>
+                            <View style={[styles.livePill, { backgroundColor: colors.statusLive + '18' }]}>
                                 <Animated.View
-                                    style={[styles.liveDot, { backgroundColor: '#22C55E', opacity: liveAnim }]}
+                                    style={[styles.liveDot, { backgroundColor: colors.statusLive, opacity: liveAnim }]}
                                 />
-                                <Text style={[styles.liveText, { color: '#22C55E' }]}>LIVE</Text>
+                                <Text style={[styles.liveText, { color: colors.statusLive }]}>LIVE</Text>
                             </View>
                         )}
                     </View>
@@ -558,7 +560,7 @@ const styles = StyleSheet.create({
     },
     typeDot: { width: 6, height: 6, borderRadius: 3 },
     typePillText: { fontSize: 12, fontWeight: '700' },
-    heroTitle: { fontSize: 22, fontWeight: '800', letterSpacing: -0.4, lineHeight: 28 },
+    heroTitle: { fontSize: 22, fontWeight: '800', letterSpacing: letterSpacing(-0.4), lineHeight: 28 },
     metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     metaText: { fontSize: 14, flex: 1 },
     card: { borderRadius: 16, padding: 16, gap: 12 },

@@ -1,5 +1,11 @@
+import ActivityEntry from '@/components/candidates/ActivityEntry';
+import ContactOutcomeSheet from '@/components/candidates/ContactOutcomeSheet';
+import { AddDocumentSheet, DocumentList } from '@/components/candidates/DocumentSection';
+import InterviewSchedulerSheet from '@/components/candidates/InterviewSchedulerSheet';
 import InterviewCard from '@/components/InterviewCard';
 import LoadingState from '@/components/LoadingState';
+import ProgressSummaryCard from '@/components/roadmap/ProgressSummaryCard';
+import UnlockConfirmSheet from '@/components/roadmap/UnlockConfirmSheet';
 import ScreenHeader from '@/components/ScreenHeader';
 import StatusStepper from '@/components/StatusStepper';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,23 +14,22 @@ import { useContactOutcome } from '@/hooks/useContactOutcome';
 import { useDocumentManager } from '@/hooks/useDocumentManager';
 import { useInterviewScheduler } from '@/hooks/useInterviewScheduler';
 import { addCandidateActivity, fetchCandidate } from '@/lib/recruitment';
+import { fetchCandidateRoadmap, unlockProgrammeForCandidate } from '@/lib/roadmap';
 import { timeAgo } from '@/lib/dateTime';
 import {
     CANDIDATE_STATUS_CONFIG,
-    DOCUMENT_LABELS,
     type CandidateActivity,
     type Interview,
     type RecruitmentCandidate,
 } from '@/types/recruitment';
+import type { ProgrammeWithModules } from '@/types/roadmap';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     Alert,
     KeyboardAvoidingView,
     Modal,
-    Platform,
-    Pressable,
     ScrollView,
     Share,
     StyleSheet,
@@ -34,20 +39,16 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ERROR_BG, ERROR_TEXT } from '@/constants/ui';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { KAV_BEHAVIOR, letterSpacing } from '@/constants/platform';
 import { formatCreatedAt } from '@/lib/dateTime';
 import { WebView } from 'react-native-webview';
-import WheelPicker, { WHEEL_ITEM_H } from '@/components/WheelPicker';
 let Clipboard: typeof import('expo-clipboard') | null = null;
 try {
     Clipboard = require('expo-clipboard');
 } catch (e) {
     if (__DEV__) console.warn('expo-clipboard not available:', e);
 }
-
-const HOURS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
-const MINUTES = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
-const AMPM = ['AM', 'PM'];
 
 // ── Main Screen ──
 
@@ -67,6 +68,14 @@ export default function CandidateDetailScreen() {
     // Note sheet
     const [showNoteSheet, setShowNoteSheet] = useState(false);
     const [noteSheetText, setNoteSheetText] = useState('');
+
+    // ── Roadmap ──
+    const role = user?.role ?? '';
+    const canMarkComplete = role === 'admin' || role === 'pa' || role === 'manager' || role === 'director';
+    const [programmes, setProgrammes] = useState<ProgrammeWithModules[]>([]);
+    const [showUnlockSheet, setShowUnlockSheet] = useState(false);
+    const [isUnlocking, setIsUnlocking] = useState(false);
+    const [unlockError, setUnlockError] = useState<string | null>(null);
 
     // ── Document Manager Hook ──
     const docManager = useDocumentManager({ candidateId: candidateId || '' });
@@ -178,6 +187,41 @@ export default function CandidateDetailScreen() {
         handleSubmitSchedule,
     } = scheduler;
 
+    // ── Bottom-sheet spring animations ──
+    const confirmSheetY = useSharedValue(400);
+    const noteSheetY = useSharedValue(400);
+    const scheduleSheetY = useSharedValue(400);
+    const addDocSheetY = useSharedValue(400);
+
+    useEffect(() => {
+        confirmSheetY.value = showConfirmSheet
+            ? withSpring(0, { damping: 22, stiffness: 220 })
+            : withSpring(400, { damping: 22, stiffness: 220 });
+    }, [showConfirmSheet, confirmSheetY]);
+
+    useEffect(() => {
+        noteSheetY.value = showNoteSheet
+            ? withSpring(0, { damping: 22, stiffness: 220 })
+            : withSpring(400, { damping: 22, stiffness: 220 });
+    }, [showNoteSheet, noteSheetY]);
+
+    useEffect(() => {
+        scheduleSheetY.value = showScheduleSheet
+            ? withSpring(0, { damping: 22, stiffness: 220 })
+            : withSpring(400, { damping: 22, stiffness: 220 });
+    }, [showScheduleSheet, scheduleSheetY]);
+
+    useEffect(() => {
+        addDocSheetY.value = showAddDoc
+            ? withSpring(0, { damping: 22, stiffness: 220 })
+            : withSpring(400, { damping: 22, stiffness: 220 });
+    }, [showAddDoc, addDocSheetY]);
+
+    const confirmSheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: confirmSheetY.value }] }));
+    const noteSheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: noteSheetY.value }] }));
+    const scheduleSheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: scheduleSheetY.value }] }));
+    const addDocSheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: addDocSheetY.value }] }));
+
     const loadCandidate = useCallback(async () => {
         if (!candidateId) return;
         setError(null);
@@ -201,6 +245,33 @@ export default function CandidateDetailScreen() {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [candidateId]);
+
+    // Load roadmap summary (only relevant for PA/manager/director)
+    const loadRoadmap = useCallback(async () => {
+        if (!candidateId || !canMarkComplete) return;
+        const { data } = await fetchCandidateRoadmap(candidateId);
+        if (data) setProgrammes(data);
+    }, [candidateId, canMarkComplete]);
+
+    useEffect(() => {
+        loadRoadmap();
+    }, [loadRoadmap]);
+
+    const handleUnlockConfirm = useCallback(async () => {
+        if (!canMarkComplete || !user?.id || !candidateId) return;
+        const sproutProgramme = programmes.find((p) => p.slug === 'sproutlyfe');
+        if (!sproutProgramme) return;
+        setIsUnlocking(true);
+        setUnlockError(null);
+        const { error: unlockErr } = await unlockProgrammeForCandidate(candidateId, sproutProgramme.id, user.id);
+        setIsUnlocking(false);
+        if (unlockErr) {
+            setUnlockError(unlockErr);
+        } else {
+            setShowUnlockSheet(false);
+            await loadRoadmap();
+        }
+    }, [user?.id, candidateId, programmes, loadRoadmap]);
 
     if (isLoading) {
         return (
@@ -254,20 +325,6 @@ export default function CandidateDetailScreen() {
         }
         setNoteSheetText('');
         setShowNoteSheet(false);
-    };
-
-    // ── Schedule sheet helpers (used in JSX) ──
-
-    const addDays = (date: Date, days: number) => {
-        const d = new Date(date);
-        d.setDate(d.getDate() + days);
-        return d;
-    };
-    const formatScheduleDate = (date: Date) =>
-        date.toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-    const isToday = (date: Date) => {
-        const now = new Date();
-        return date.toDateString() === now.toDateString();
     };
 
     return (
@@ -395,56 +452,14 @@ export default function CandidateDetailScreen() {
                         )}
                     </View>
 
-                    {documents.length === 0 ? (
-                        <View style={docStyles.emptyState}>
-                            <Ionicons name="folder-open-outline" size={28} color={colors.textTertiary} />
-                            <Text style={[docStyles.emptyText, { color: colors.textTertiary }]}>No documents yet</Text>
-                        </View>
-                    ) : (
-                        documents.map((doc) => (
-                            <View key={doc.id} style={[docStyles.docRow, { backgroundColor: colors.surfacePrimary }]}>
-                                <View style={[docStyles.labelChip, { backgroundColor: colors.accentLight }]}>
-                                    <Text style={[docStyles.labelChipText, { color: colors.accent }]} numberOfLines={1}>
-                                        {doc.label}
-                                    </Text>
-                                </View>
-                                <Text
-                                    style={[docStyles.docFileName, { color: colors.textSecondary }]}
-                                    numberOfLines={1}
-                                >
-                                    {doc.file_name}
-                                </Text>
-                                <TouchableOpacity
-                                    style={[docStyles.viewBtn, { backgroundColor: colors.accent }]}
-                                    onPress={() => handleViewDocument(doc)}
-                                    activeOpacity={0.8}
-                                >
-                                    <Ionicons name="eye-outline" size={14} color="#FFFFFF" />
-                                    <Text style={docStyles.viewBtnText}>View</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    onPress={() => handleDeleteDocument(doc)}
-                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                    style={{ marginLeft: 6 }}
-                                >
-                                    <Ionicons name="trash-outline" size={16} color={colors.textTertiary} />
-                                </TouchableOpacity>
-                            </View>
-                        ))
-                    )}
-
-                    <TouchableOpacity
-                        style={[
-                            docStyles.addBtn,
-                            { borderColor: colors.accent, opacity: !hasDocumentPicker ? 0.4 : 1 },
-                        ]}
-                        onPress={openAddDocSheet}
-                        activeOpacity={0.7}
-                        disabled={!hasDocumentPicker}
-                    >
-                        <Ionicons name="add-circle-outline" size={16} color={colors.accent} />
-                        <Text style={[docStyles.addBtnText, { color: colors.accent }]}>Add Document</Text>
-                    </TouchableOpacity>
+                    <DocumentList
+                        documents={documents}
+                        hasDocumentPicker={hasDocumentPicker}
+                        colors={colors}
+                        onViewDocument={handleViewDocument}
+                        onDeleteDocument={handleDeleteDocument}
+                        onAddDocument={openAddDocSheet}
+                    />
                 </View>
 
                 {/* Contact History */}
@@ -479,6 +494,48 @@ export default function CandidateDetailScreen() {
                     <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Pipeline Progress</Text>
                     <StatusStepper currentStatus={candidate.status} colors={colors} />
                 </View>
+
+                {/* Development Roadmap — PA / Manager / Director only */}
+                {canMarkComplete && programmes.length > 0 && (
+                    <View
+                        style={[
+                            styles.card,
+                            {
+                                backgroundColor: colors.cardBackground,
+                                borderColor: colors.cardBorder,
+                                padding: 0,
+                                overflow: 'hidden',
+                            },
+                        ]}
+                    >
+                        <ProgressSummaryCard
+                            programmes={programmes}
+                            onViewFull={() => router.push(`/(tabs)/candidates/progress/${candidateId}` as any)}
+                            colors={colors}
+                        />
+                        {/* Unlock SproutLYFE button — shown when SproutLYFE is locked and not yet manually unlocked */}
+                        {programmes.some((p) => p.slug === 'sproutlyfe' && p.isLocked) && (
+                            <View style={[styles.unlockRow, { borderTopColor: colors.border }]}>
+                                {unlockError && (
+                                    <Text style={[styles.unlockError, { color: colors.danger }]}>{unlockError}</Text>
+                                )}
+                                <TouchableOpacity
+                                    style={[styles.unlockBtn, { borderColor: colors.accent }]}
+                                    onPress={() => {
+                                        setUnlockError(null);
+                                        setShowUnlockSheet(true);
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <Ionicons name="lock-open-outline" size={15} color={colors.accent} />
+                                    <Text style={[styles.unlockBtnText, { color: colors.accent }]}>
+                                        Unlock SproutLYFE
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
+                )}
 
                 {/* Notes */}
                 {candidate.notes && (
@@ -520,209 +577,37 @@ export default function CandidateDetailScreen() {
                 </View>
             </ScrollView>
             {/* ── 2-Step Contact Confirm Sheet ── */}
-            <Modal
+            <ContactOutcomeSheet
                 visible={showConfirmSheet}
-                transparent
-                animationType="slide"
-                onRequestClose={confirmStep === 'outcome' ? handleDismissSheet : () => handleSaveActivity(true)}
-            >
-                <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                    <TouchableOpacity
-                        style={sheetStyles.overlay}
-                        activeOpacity={1}
-                        onPress={confirmStep === 'outcome' ? handleDismissSheet : () => handleSaveActivity(true)}
-                    >
-                        <View
-                            style={[sheetStyles.sheet, { backgroundColor: colors.cardBackground }]}
-                            onStartShouldSetResponder={() => true}
-                        >
-                            {/* Drag handle */}
-                            <View style={[sheetStyles.handle, { backgroundColor: colors.border }]} />
-
-                            {confirmStep === 'outcome' ? (
-                                /* ── Step 1: Outcome selection ── */
-                                <>
-                                    <View
-                                        style={[
-                                            sheetStyles.iconWrap,
-                                            {
-                                                backgroundColor: pendingType === 'whatsapp' ? '#D1FAE5' : '#DCFCE7',
-                                            },
-                                        ]}
-                                    >
-                                        <Ionicons
-                                            name={pendingType === 'whatsapp' ? 'logo-whatsapp' : 'call'}
-                                            size={30}
-                                            color={pendingType === 'whatsapp' ? '#25D366' : '#16A34A'}
-                                        />
-                                    </View>
-
-                                    <Text style={[sheetStyles.title, { color: colors.textPrimary }]}>
-                                        {pendingType === 'whatsapp' ? 'Did you message them?' : 'How did the call go?'}
-                                    </Text>
-                                    <Text style={[sheetStyles.subtitle, { color: colors.textSecondary }]}>
-                                        {candidate.name} · {candidate.phone}
-                                    </Text>
-
-                                    {pendingType === 'call' ? (
-                                        <>
-                                            <TouchableOpacity
-                                                style={[sheetStyles.primaryBtn, { backgroundColor: colors.accent }]}
-                                                onPress={() => handleOutcomeSelect('reached')}
-                                                activeOpacity={0.85}
-                                            >
-                                                <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />
-                                                <Text style={sheetStyles.primaryBtnText}>Connected</Text>
-                                            </TouchableOpacity>
-                                            <TouchableOpacity
-                                                style={[
-                                                    sheetStyles.secondaryBtn,
-                                                    {
-                                                        borderColor: colors.border,
-                                                        backgroundColor: colors.surfacePrimary,
-                                                    },
-                                                ]}
-                                                onPress={() => handleOutcomeSelect('no_answer')}
-                                                activeOpacity={0.85}
-                                            >
-                                                <Ionicons
-                                                    name="close-circle-outline"
-                                                    size={20}
-                                                    color={colors.textSecondary}
-                                                />
-                                                <Text
-                                                    style={[
-                                                        sheetStyles.secondaryBtnText,
-                                                        { color: colors.textSecondary },
-                                                    ]}
-                                                >
-                                                    No answer
-                                                </Text>
-                                            </TouchableOpacity>
-                                        </>
-                                    ) : (
-                                        <TouchableOpacity
-                                            style={[sheetStyles.primaryBtn, { backgroundColor: '#25D366' }]}
-                                            onPress={() => handleOutcomeSelect('sent')}
-                                            activeOpacity={0.85}
-                                        >
-                                            <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />
-                                            <Text style={sheetStyles.primaryBtnText}>Yes, sent</Text>
-                                        </TouchableOpacity>
-                                    )}
-
-                                    <TouchableOpacity
-                                        onPress={handleDismissSheet}
-                                        style={sheetStyles.skipRow}
-                                        hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
-                                    >
-                                        <Text style={[sheetStyles.skipText, { color: colors.textTertiary }]}>
-                                            Don't log this
-                                        </Text>
-                                    </TouchableOpacity>
-                                </>
-                            ) : (
-                                /* ── Step 2: Optional note ── */
-                                <>
-                                    {/* Outcome recap pill */}
-                                    <View
-                                        style={[
-                                            sheetStyles.outcomePill,
-                                            {
-                                                backgroundColor:
-                                                    selectedOutcome === 'no_answer' ? colors.surfacePrimary : '#DCFCE7',
-                                            },
-                                        ]}
-                                    >
-                                        <Ionicons
-                                            name={selectedOutcome === 'no_answer' ? 'close-circle' : 'checkmark-circle'}
-                                            size={14}
-                                            color={selectedOutcome === 'no_answer' ? colors.textTertiary : '#16A34A'}
-                                        />
-                                        <Text
-                                            style={[
-                                                sheetStyles.outcomePillText,
-                                                {
-                                                    color:
-                                                        selectedOutcome === 'no_answer'
-                                                            ? colors.textSecondary
-                                                            : '#16A34A',
-                                                },
-                                            ]}
-                                        >
-                                            {selectedOutcome === 'reached'
-                                                ? 'Connected'
-                                                : selectedOutcome === 'no_answer'
-                                                  ? 'No answer'
-                                                  : 'Sent'}
-                                        </Text>
-                                    </View>
-
-                                    <Text style={[sheetStyles.noteLabel, { color: colors.textPrimary }]}>
-                                        Add a note{'  '}
-                                        <Text style={[sheetStyles.noteLabelOptional, { color: colors.textTertiary }]}>
-                                            optional
-                                        </Text>
-                                    </Text>
-
-                                    <TextInput
-                                        style={[
-                                            sheetStyles.noteInput,
-                                            {
-                                                color: colors.textPrimary,
-                                                backgroundColor: colors.surfacePrimary,
-                                            },
-                                        ]}
-                                        placeholder="e.g. Very interested, wants to start soon..."
-                                        placeholderTextColor={colors.textTertiary}
-                                        value={noteText}
-                                        onChangeText={setNoteText}
-                                        multiline
-                                        numberOfLines={3}
-                                        textAlignVertical="top"
-                                        autoFocus
-                                    />
-
-                                    <TouchableOpacity
-                                        style={[sheetStyles.primaryBtn, { backgroundColor: colors.accent }]}
-                                        onPress={() => handleSaveActivity(false)}
-                                        activeOpacity={0.85}
-                                    >
-                                        <Ionicons name="checkmark" size={18} color="#FFFFFF" />
-                                        <Text style={sheetStyles.primaryBtnText}>Save & Log</Text>
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity
-                                        onPress={() => handleSaveActivity(true)}
-                                        style={sheetStyles.skipRow}
-                                        hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}
-                                    >
-                                        <Text style={[sheetStyles.skipText, { color: colors.textTertiary }]}>
-                                            Skip note
-                                        </Text>
-                                    </TouchableOpacity>
-                                </>
-                            )}
-                        </View>
-                    </TouchableOpacity>
-                </KeyboardAvoidingView>
-            </Modal>
+                colors={colors}
+                animatedStyle={confirmSheetStyle}
+                pendingType={pendingType}
+                confirmStep={confirmStep}
+                selectedOutcome={selectedOutcome}
+                noteText={noteText}
+                candidateName={candidate.name}
+                candidatePhone={candidate.phone}
+                onNoteTextChange={setNoteText}
+                onOutcomeSelect={handleOutcomeSelect}
+                onSaveActivity={handleSaveActivity}
+                onDismiss={handleDismissSheet}
+            />
 
             {/* Note Sheet */}
             <Modal
                 visible={showNoteSheet}
                 transparent
-                animationType="slide"
+                animationType="none"
                 onRequestClose={() => setShowNoteSheet(false)}
             >
-                <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                <KeyboardAvoidingView style={{ flex: 1 }} behavior={KAV_BEHAVIOR}>
                     <TouchableOpacity
                         style={sheetStyles.overlay}
                         activeOpacity={1}
                         onPress={() => setShowNoteSheet(false)}
                     >
-                        <View
-                            style={[sheetStyles.sheet, { backgroundColor: colors.cardBackground }]}
+                        <Animated.View
+                            style={[sheetStyles.sheet, { backgroundColor: colors.cardBackground }, noteSheetStyle]}
                             onStartShouldSetResponder={() => true}
                         >
                             <View style={[sheetStyles.handle, { backgroundColor: colors.border }]} />
@@ -753,408 +638,88 @@ export default function CandidateDetailScreen() {
                                 activeOpacity={0.85}
                                 disabled={!noteSheetText.trim()}
                             >
-                                <Ionicons name="checkmark" size={18} color="#FFFFFF" />
-                                <Text style={sheetStyles.primaryBtnText}>Save Note</Text>
+                                <Ionicons name="checkmark" size={18} color={colors.textInverse} />
+                                <Text style={[sheetStyles.primaryBtnText, { color: colors.textInverse }]}>
+                                    Save Note
+                                </Text>
                             </TouchableOpacity>
-                        </View>
+                        </Animated.View>
                     </TouchableOpacity>
                 </KeyboardAvoidingView>
             </Modal>
 
             {/* Schedule Interview Sheet */}
-            <Modal visible={showScheduleSheet} transparent animationType="slide" onRequestClose={dismissScheduleSheet}>
-                <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                    <View style={sheetStyles.overlay}>
-                        {/* Backdrop — tapping outside dismisses */}
-                        <Pressable style={StyleSheet.absoluteFill} onPress={dismissScheduleSheet} />
-
-                        {/* Sheet content — isolated from backdrop taps */}
-                        <View style={[schedStyles.sheet, { backgroundColor: colors.cardBackground }]}>
-                            <View style={[sheetStyles.handle, { backgroundColor: colors.border }]} />
-                            <Text style={[sheetStyles.sheetTitle, { color: colors.textPrimary }]}>
-                                {editingInterview
-                                    ? `Edit Interview · Round ${editingInterview.round_number}`
-                                    : `Schedule Interview · Round ${(candidate?.interviews.length ?? 0) + 1}`}
-                            </Text>
-
-                            <ScrollView
-                                style={{ width: '100%' }}
-                                keyboardShouldPersistTaps="handled"
-                                showsVerticalScrollIndicator={false}
-                            >
-                                {scheduleError && (
-                                    <View style={[schedStyles.errorRow, { backgroundColor: ERROR_BG }]}>
-                                        <Ionicons name="alert-circle" size={14} color={ERROR_TEXT} />
-                                        <Text style={schedStyles.errorText}>{scheduleError}</Text>
-                                    </View>
-                                )}
-
-                                {/* Date row */}
-                                <Text style={[schedStyles.fieldLabel, { color: colors.textTertiary }]}>Date</Text>
-                                <View style={[schedStyles.row, { backgroundColor: colors.surfacePrimary }]}>
-                                    <TouchableOpacity
-                                        onPress={() => setScheduleDate((d) => addDays(d, -1))}
-                                        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                                    >
-                                        <Ionicons name="chevron-back" size={22} color={colors.textSecondary} />
-                                    </TouchableOpacity>
-                                    <Text
-                                        style={[
-                                            schedStyles.rowValue,
-                                            { color: colors.textPrimary, flex: 1, textAlign: 'center' },
-                                        ]}
-                                    >
-                                        {formatScheduleDate(scheduleDate)}
-                                    </Text>
-                                    <TouchableOpacity
-                                        onPress={() => setScheduleDate((d) => addDays(d, 1))}
-                                        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                                    >
-                                        <Ionicons name="chevron-forward" size={22} color={colors.textSecondary} />
-                                    </TouchableOpacity>
-                                </View>
-                                {!isToday(scheduleDate) && (
-                                    <TouchableOpacity
-                                        onPress={() => setScheduleDate(new Date())}
-                                        style={schedStyles.todayBtn}
-                                    >
-                                        <Text style={[schedStyles.todayBtnText, { color: colors.accent }]}>
-                                            Jump to today
-                                        </Text>
-                                    </TouchableOpacity>
-                                )}
-
-                                {/* Time wheel picker */}
-                                <Text style={[schedStyles.fieldLabel, { color: colors.textTertiary }]}>Time</Text>
-                                <View style={[schedStyles.wheelContainer, { backgroundColor: colors.surfacePrimary }]}>
-                                    <WheelPicker
-                                        key={`hour-${editingInterview?.id ?? 'new'}`}
-                                        items={HOURS}
-                                        selectedIndex={Math.max(0, HOURS.indexOf(scheduleHour.toString()))}
-                                        onChange={(idx) => setScheduleHour(parseInt(HOURS[idx]))}
-                                        colors={colors}
-                                        width={80}
-                                    />
-                                    <Text style={[schedStyles.wheelColon, { color: colors.textPrimary }]}>:</Text>
-                                    <WheelPicker
-                                        key={`min-${editingInterview?.id ?? 'new'}`}
-                                        items={MINUTES}
-                                        selectedIndex={Math.max(
-                                            0,
-                                            MINUTES.indexOf(scheduleMinute.toString().padStart(2, '0')),
-                                        )}
-                                        onChange={(idx) => setScheduleMinute(parseInt(MINUTES[idx]))}
-                                        colors={colors}
-                                        width={72}
-                                    />
-                                    <View style={[schedStyles.wheelVertDivider, { backgroundColor: colors.border }]} />
-                                    <WheelPicker
-                                        key={`ampm-${editingInterview?.id ?? 'new'}`}
-                                        items={AMPM}
-                                        selectedIndex={scheduleAmPm === 'AM' ? 0 : 1}
-                                        onChange={(idx) => setScheduleAmPm(AMPM[idx] as 'AM' | 'PM')}
-                                        colors={colors}
-                                        width={64}
-                                    />
-                                </View>
-
-                                {/* Type toggle */}
-                                <Text style={[schedStyles.fieldLabel, { color: colors.textTertiary }]}>Format</Text>
-                                <View style={schedStyles.typeToggle}>
-                                    <TouchableOpacity
-                                        style={[
-                                            schedStyles.typeBtn,
-                                            {
-                                                backgroundColor:
-                                                    scheduleType === 'zoom' ? colors.accent : colors.surfacePrimary,
-                                            },
-                                        ]}
-                                        onPress={() => setScheduleType('zoom')}
-                                    >
-                                        <Ionicons
-                                            name="videocam-outline"
-                                            size={16}
-                                            color={scheduleType === 'zoom' ? '#FFF' : colors.textSecondary}
-                                        />
-                                        <Text
-                                            style={[
-                                                schedStyles.typeBtnText,
-                                                { color: scheduleType === 'zoom' ? '#FFF' : colors.textSecondary },
-                                            ]}
-                                        >
-                                            Zoom
-                                        </Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={[
-                                            schedStyles.typeBtn,
-                                            {
-                                                backgroundColor:
-                                                    scheduleType === 'in_person'
-                                                        ? colors.accent
-                                                        : colors.surfacePrimary,
-                                            },
-                                        ]}
-                                        onPress={() => setScheduleType('in_person')}
-                                    >
-                                        <Ionicons
-                                            name="business-outline"
-                                            size={16}
-                                            color={scheduleType === 'in_person' ? '#FFF' : colors.textSecondary}
-                                        />
-                                        <Text
-                                            style={[
-                                                schedStyles.typeBtnText,
-                                                { color: scheduleType === 'in_person' ? '#FFF' : colors.textSecondary },
-                                            ]}
-                                        >
-                                            In-person
-                                        </Text>
-                                    </TouchableOpacity>
-                                </View>
-
-                                {/* Link or location */}
-                                {scheduleType === 'zoom' ? (
-                                    <TextInput
-                                        style={[
-                                            schedStyles.input,
-                                            { color: colors.textPrimary, backgroundColor: colors.surfacePrimary },
-                                        ]}
-                                        placeholder="Zoom link (optional)"
-                                        placeholderTextColor={colors.textTertiary}
-                                        value={scheduleLink}
-                                        onChangeText={setScheduleLink}
-                                        autoCapitalize="none"
-                                        keyboardType="url"
-                                    />
-                                ) : (
-                                    <TextInput
-                                        style={[
-                                            schedStyles.input,
-                                            { color: colors.textPrimary, backgroundColor: colors.surfacePrimary },
-                                        ]}
-                                        placeholder="Location (optional)"
-                                        placeholderTextColor={colors.textTertiary}
-                                        value={scheduleLocation}
-                                        onChangeText={setScheduleLocation}
-                                    />
-                                )}
-
-                                {/* Notes */}
-                                <TextInput
-                                    style={[
-                                        schedStyles.input,
-                                        {
-                                            color: colors.textPrimary,
-                                            backgroundColor: colors.surfacePrimary,
-                                            minHeight: 56,
-                                        },
-                                    ]}
-                                    placeholder="Notes (optional)"
-                                    placeholderTextColor={colors.textTertiary}
-                                    value={scheduleNotes}
-                                    onChangeText={setScheduleNotes}
-                                    multiline
-                                    textAlignVertical="top"
-                                />
-
-                                {/* Status — edit mode only */}
-                                {editingInterview && (
-                                    <>
-                                        <Text style={[schedStyles.fieldLabel, { color: colors.textTertiary }]}>
-                                            Status
-                                        </Text>
-                                        <View style={[schedStyles.typeToggle, { flexWrap: 'wrap' }]}>
-                                            {(['scheduled', 'completed', 'rescheduled', 'cancelled'] as const).map(
-                                                (s) => (
-                                                    <TouchableOpacity
-                                                        key={s}
-                                                        style={[
-                                                            schedStyles.typeBtn,
-                                                            {
-                                                                backgroundColor:
-                                                                    scheduleStatus === s
-                                                                        ? colors.accent
-                                                                        : colors.surfacePrimary,
-                                                                flex: undefined,
-                                                                paddingHorizontal: 14,
-                                                            },
-                                                        ]}
-                                                        onPress={() => setScheduleStatus(s)}
-                                                    >
-                                                        <Text
-                                                            style={[
-                                                                schedStyles.typeBtnText,
-                                                                {
-                                                                    color:
-                                                                        scheduleStatus === s
-                                                                            ? '#FFF'
-                                                                            : colors.textSecondary,
-                                                                    fontSize: 13,
-                                                                },
-                                                            ]}
-                                                        >
-                                                            {s.charAt(0).toUpperCase() + s.slice(1)}
-                                                        </Text>
-                                                    </TouchableOpacity>
-                                                ),
-                                            )}
-                                        </View>
-                                    </>
-                                )}
-
-                                <TouchableOpacity
-                                    style={[
-                                        sheetStyles.primaryBtn,
-                                        { backgroundColor: '#EAB308', opacity: isScheduling ? 0.6 : 1 },
-                                    ]}
-                                    onPress={handleSubmitSchedule}
-                                    activeOpacity={0.85}
-                                    disabled={isScheduling}
-                                >
-                                    <Ionicons name="calendar-outline" size={18} color="#FFFFFF" />
-                                    <Text style={sheetStyles.primaryBtnText}>
-                                        {isScheduling
-                                            ? 'Saving…'
-                                            : editingInterview
-                                              ? 'Save Changes'
-                                              : 'Confirm Schedule'}
-                                    </Text>
-                                </TouchableOpacity>
-
-                                <View style={{ height: 8 }} />
-                            </ScrollView>
-                        </View>
-                    </View>
-                </KeyboardAvoidingView>
-            </Modal>
+            <InterviewSchedulerSheet
+                visible={showScheduleSheet}
+                colors={colors}
+                animatedStyle={scheduleSheetStyle}
+                editingInterview={editingInterview}
+                candidateInterviewCount={candidate?.interviews.length ?? 0}
+                scheduleDate={scheduleDate}
+                scheduleHour={scheduleHour}
+                scheduleMinute={scheduleMinute}
+                scheduleAmPm={scheduleAmPm}
+                scheduleType={scheduleType}
+                scheduleLink={scheduleLink}
+                scheduleLocation={scheduleLocation}
+                scheduleNotes={scheduleNotes}
+                scheduleStatus={scheduleStatus}
+                scheduleError={scheduleError}
+                isScheduling={isScheduling}
+                onDateChange={setScheduleDate}
+                onHourChange={setScheduleHour}
+                onMinuteChange={setScheduleMinute}
+                onAmPmChange={setScheduleAmPm}
+                onTypeChange={setScheduleType}
+                onLinkChange={setScheduleLink}
+                onLocationChange={setScheduleLocation}
+                onNotesChange={setScheduleNotes}
+                onStatusChange={setScheduleStatus}
+                onSubmit={handleSubmitSchedule}
+                onDismiss={dismissScheduleSheet}
+            />
 
             {/* Add Document Sheet */}
-            <Modal visible={showAddDoc} transparent animationType="slide" onRequestClose={() => setShowAddDoc(false)}>
-                <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                    <TouchableOpacity
-                        style={sheetStyles.overlay}
-                        activeOpacity={1}
-                        onPress={() => setShowAddDoc(false)}
-                    >
-                        <View
-                            style={[docStyles.addSheet, { backgroundColor: colors.cardBackground }]}
-                            onStartShouldSetResponder={() => true}
-                        >
-                            <View style={[sheetStyles.handle, { backgroundColor: colors.border }]} />
-                            <Text style={[sheetStyles.sheetTitle, { color: colors.textPrimary }]}>
-                                {addDocStep === 'uploading' ? 'Uploading…' : 'Add Document'}
-                            </Text>
-
-                            {addDocError && (
-                                <View style={[schedStyles.errorRow, { backgroundColor: ERROR_BG }]}>
-                                    <Ionicons name="alert-circle" size={14} color={ERROR_TEXT} />
-                                    <Text style={schedStyles.errorText}>{addDocError}</Text>
-                                </View>
-                            )}
-
-                            {addDocStep === 'uploading' ? (
-                                <View style={{ alignItems: 'center', paddingVertical: 24 }}>
-                                    <Ionicons name="cloud-upload-outline" size={40} color={colors.accent} />
-                                    <Text style={[{ color: colors.textSecondary, marginTop: 12, fontSize: 14 }]}>
-                                        Uploading PDF…
-                                    </Text>
-                                </View>
-                            ) : (
-                                <>
-                                    <Text style={[docStyles.pickerHint, { color: colors.textTertiary }]}>
-                                        Select a document type, then pick a PDF
-                                    </Text>
-                                    <View style={docStyles.labelGrid}>
-                                        {DOCUMENT_LABELS.map((lbl) => (
-                                            <TouchableOpacity
-                                                key={lbl}
-                                                style={[
-                                                    docStyles.labelPill,
-                                                    {
-                                                        backgroundColor:
-                                                            addDocLabel === lbl ? colors.accent : colors.surfacePrimary,
-                                                    },
-                                                ]}
-                                                onPress={() => handleSelectLabel(lbl)}
-                                                activeOpacity={0.75}
-                                            >
-                                                <Text
-                                                    style={[
-                                                        docStyles.labelPillText,
-                                                        {
-                                                            color:
-                                                                addDocLabel === lbl ? '#FFFFFF' : colors.textSecondary,
-                                                        },
-                                                    ]}
-                                                >
-                                                    {lbl}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-
-                                    {addDocLabel === 'Other' && (
-                                        <>
-                                            <TextInput
-                                                style={[
-                                                    schedStyles.input,
-                                                    {
-                                                        color: colors.textPrimary,
-                                                        backgroundColor: colors.surfacePrimary,
-                                                        width: '100%',
-                                                    },
-                                                ]}
-                                                placeholder="Document name (e.g. BCP Certificate)"
-                                                placeholderTextColor={colors.textTertiary}
-                                                value={addDocCustomLabel}
-                                                onChangeText={setAddDocCustomLabel}
-                                                autoFocus
-                                            />
-                                            <TouchableOpacity
-                                                style={[
-                                                    sheetStyles.primaryBtn,
-                                                    {
-                                                        backgroundColor: colors.accent,
-                                                        opacity: addDocCustomLabel.trim() ? 1 : 0.4,
-                                                    },
-                                                ]}
-                                                onPress={() => pickAndUploadDocument(addDocCustomLabel.trim())}
-                                                disabled={!addDocCustomLabel.trim()}
-                                                activeOpacity={0.85}
-                                            >
-                                                <Ionicons name="cloud-upload-outline" size={18} color="#FFFFFF" />
-                                                <Text style={sheetStyles.primaryBtnText}>Pick PDF</Text>
-                                            </TouchableOpacity>
-                                        </>
-                                    )}
-                                </>
-                            )}
-                        </View>
-                    </TouchableOpacity>
-                </KeyboardAvoidingView>
-            </Modal>
+            <AddDocumentSheet
+                visible={showAddDoc}
+                colors={colors}
+                animatedStyle={addDocSheetStyle}
+                addDocStep={addDocStep}
+                addDocLabel={addDocLabel}
+                addDocCustomLabel={addDocCustomLabel}
+                addDocError={addDocError}
+                onClose={() => setShowAddDoc(false)}
+                onSelectLabel={handleSelectLabel}
+                onCustomLabelChange={setAddDocCustomLabel}
+                onPickAndUpload={pickAndUploadDocument}
+            />
 
             {/* PDF Viewer Modal */}
             <Modal visible={showPdf} animationType="slide" onRequestClose={() => setShowPdf(false)}>
-                <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
+                <SafeAreaView style={{ flex: 1, backgroundColor: colors.textPrimary }}>
                     <View
                         style={{
                             flexDirection: 'row',
                             alignItems: 'center',
                             paddingHorizontal: 12,
                             paddingVertical: 8,
-                            backgroundColor: '#1C1C1E',
+                            backgroundColor: colors.surfacePrimary,
                         }}
                     >
                         <TouchableOpacity
                             onPress={() => setShowPdf(false)}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                            <Ionicons name="chevron-down" size={24} color="#FFFFFF" />
+                            <Ionicons name="chevron-down" size={24} color={colors.textInverse} />
                         </TouchableOpacity>
                         <Text
-                            style={{ flex: 1, color: '#FFFFFF', fontSize: 15, fontWeight: '600', textAlign: 'center' }}
+                            style={{
+                                flex: 1,
+                                color: colors.textInverse,
+                                fontSize: 15,
+                                fontWeight: '600',
+                                textAlign: 'center',
+                            }}
                             numberOfLines={1}
                         >
                             {pdfTitle}
@@ -1164,6 +729,17 @@ export default function CandidateDetailScreen() {
                     {pdfUrl && <WebView source={{ uri: pdfUrl }} style={{ flex: 1 }} originWhitelist={['*']} />}
                 </SafeAreaView>
             </Modal>
+
+            {/* Unlock SproutLYFE Confirmation Sheet */}
+            <UnlockConfirmSheet
+                visible={showUnlockSheet}
+                candidateName={candidate?.name ?? ''}
+                programmeName="SproutLYFE"
+                isUnlocking={isUnlocking}
+                onConfirm={handleUnlockConfirm}
+                onCancel={() => setShowUnlockSheet(false)}
+                colors={colors}
+            />
         </SafeAreaView>
     );
 }
@@ -1225,7 +801,7 @@ const styles = StyleSheet.create({
     },
     avatarText: { fontSize: 22, fontWeight: '800' },
     profileInfo: { flex: 1 },
-    profileName: { fontSize: 20, fontWeight: '800', letterSpacing: -0.3 },
+    profileName: { fontSize: 20, fontWeight: '800', letterSpacing: letterSpacing(-0.3) },
     statusBadge: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -1307,255 +883,32 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     notFoundText: { fontSize: 16, fontWeight: '600' },
-});
-
-// ── Stepper Styles ──
-
-const stepperStyles = StyleSheet.create({
-    container: { gap: 0 },
-    stepRow: { flexDirection: 'row', alignItems: 'flex-start' },
-    dotCol: { width: 24, alignItems: 'center' },
-    dot: {
-        width: 18,
-        height: 18,
-        borderRadius: 9,
-        borderWidth: 2,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    activeDotInner: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-    },
-    line: {
-        width: 2,
-        height: 18,
-    },
-    label: { fontSize: 13, marginLeft: 10, marginTop: 1 },
-});
-
-// ── Interview Styles ──
-
-const interviewStyles = StyleSheet.create({
-    card: {
-        borderRadius: 10,
-        borderWidth: 0.5,
+    unlockRow: {
+        borderTopWidth: StyleSheet.hairlineWidth,
         padding: 12,
-        marginBottom: 8,
+        gap: 8,
     },
-    headerRow: {
+    unlockError: {
+        fontSize: 13,
+        textAlign: 'center',
+    },
+    unlockBtn: {
         flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-    },
-    roundBadge: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    roundText: { fontSize: 11, fontWeight: '700' },
-    dateText: { fontSize: 14, fontWeight: '600' },
-    typeText: { fontSize: 12, marginTop: 1 },
-    statusPill: {
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 8,
-    },
-    statusText: { fontSize: 11, fontWeight: '600' },
-    detailText: { flex: 1, fontSize: 12 },
-    detailRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
         gap: 6,
-        padding: 10,
-        borderRadius: 8,
-        marginBottom: 10,
-    },
-    errorText: { flex: 1, fontSize: 12, color: ERROR_TEXT },
-    fileRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        borderRadius: 10,
-        padding: 12,
-        marginBottom: 10,
-    },
-    fileIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    fileName: { fontSize: 14, fontWeight: '600' },
-    fileMeta: { fontSize: 12, marginTop: 1 },
-    viewBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: 12,
-        paddingVertical: 7,
-        borderRadius: 8,
-    },
-    viewBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
-    uploadBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        paddingVertical: 11,
-        borderRadius: 10,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderStyle: 'dashed',
-    },
-    uploadBtnText: { fontSize: 14, fontWeight: '600' },
-});
-
-const docStyles = StyleSheet.create({
-    emptyState: { alignItems: 'center', paddingVertical: 20, gap: 6 },
-    emptyText: { fontSize: 13 },
-    docRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        marginBottom: 8,
-        gap: 8,
-    },
-    labelChip: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-        maxWidth: 90,
-    },
-    labelChipText: { fontSize: 12, fontWeight: '700' },
-    docFileName: { flex: 1, fontSize: 13 },
-    viewBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 8,
-    },
-    viewBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
-    addBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        paddingVertical: 11,
-        borderRadius: 10,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderStyle: 'dashed',
-        marginTop: 4,
-    },
-    addBtnText: { fontSize: 14, fontWeight: '600' },
-    // Add doc sheet
-    addSheet: {
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        paddingHorizontal: 20,
-        paddingBottom: 40,
-        paddingTop: 12,
-        alignItems: 'center',
-    },
-    pickerHint: { fontSize: 13, marginBottom: 16, textAlign: 'center' },
-    labelGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 10,
-        justifyContent: 'center',
-        marginBottom: 16,
-        width: '100%',
-    },
-    labelPill: {
-        paddingHorizontal: 16,
         paddingVertical: 10,
-        borderRadius: 20,
+        paddingHorizontal: 16,
+        borderRadius: 10,
+        borderWidth: 1,
     },
-    labelPillText: { fontSize: 14, fontWeight: '600' },
+    unlockBtnText: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
 });
 
-// ── Activity Entry ──
-
-function ActivityEntry({ entry, isLast, colors }: { entry: CandidateActivity; isLast: boolean; colors: any }) {
-    const isNote = entry.type === 'note';
-    const isPositive = entry.outcome === 'reached' || entry.outcome === 'sent';
-    const dotColor = isNote ? '#6B7280' : isPositive ? '#16A34A' : colors.textTertiary;
-    const iconName = isNote ? 'create-outline' : entry.type === 'whatsapp' ? 'logo-whatsapp' : 'call';
-    const iconColor = isNote ? '#6B7280' : entry.type === 'whatsapp' ? '#25D366' : dotColor;
-    const outcomeLabel =
-        entry.outcome === 'reached'
-            ? 'Connected'
-            : entry.outcome === 'no_answer'
-              ? 'No answer'
-              : entry.outcome === 'sent'
-                ? 'Sent'
-                : '';
-    const typeLabel = isNote ? 'Note' : entry.type === 'whatsapp' ? 'WhatsApp' : 'Call';
-
-    return (
-        <View style={entryStyles.row}>
-            <View style={entryStyles.timelineCol}>
-                <View style={[entryStyles.dot, { backgroundColor: iconColor + '20' }]}>
-                    <Ionicons name={iconName as any} size={13} color={iconColor} />
-                </View>
-                {!isLast && <View style={[entryStyles.line, { backgroundColor: colors.border }]} />}
-            </View>
-            <View style={[entryStyles.content, { paddingBottom: isLast ? 0 : 16 }]}>
-                <Text style={[entryStyles.title, { color: colors.textPrimary }]}>
-                    {typeLabel}
-                    {outcomeLabel ? (
-                        <>
-                            {'  '}
-                            <Text style={[entryStyles.outcome, { color: dotColor }]}>{outcomeLabel}</Text>
-                        </>
-                    ) : null}
-                </Text>
-                {entry.note ? (
-                    <View style={[entryStyles.noteBox, { backgroundColor: colors.surfacePrimary }]}>
-                        <Text style={[entryStyles.noteText, { color: colors.textSecondary }]}>{entry.note}</Text>
-                    </View>
-                ) : null}
-                <Text style={[entryStyles.meta, { color: colors.textTertiary }]}>
-                    {entry.actor_name ? `${entry.actor_name} · ` : ''}
-                    {timeAgo(entry.created_at)}
-                </Text>
-            </View>
-        </View>
-    );
-}
-
-const entryStyles = StyleSheet.create({
-    row: { flexDirection: 'row' },
-    timelineCol: { width: 32, alignItems: 'center' },
-    dot: {
-        width: 26,
-        height: 26,
-        borderRadius: 13,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    line: { width: 2, flex: 1, marginTop: 4 },
-    content: { flex: 1, marginLeft: 8, paddingTop: 3 },
-    title: { fontSize: 14, fontWeight: '600' },
-    outcome: { fontSize: 14, fontWeight: '600' },
-    noteBox: {
-        marginTop: 6,
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 7,
-    },
-    noteText: { fontSize: 13, lineHeight: 18 },
-    meta: { fontSize: 11, marginTop: 5 },
-});
-
-// ── 2-Step Sheet Styles ──
+// ── Note Sheet Styles (used by the remaining inline Note Sheet) ──
 
 const sheetStyles = StyleSheet.create({
     overlay: {
@@ -1577,32 +930,12 @@ const sheetStyles = StyleSheet.create({
         borderRadius: 2,
         marginBottom: 24,
     },
-    iconWrap: {
-        width: 60,
-        height: 60,
-        borderRadius: 18,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 16,
-    },
-    title: {
-        fontSize: 19,
-        fontWeight: '700',
-        textAlign: 'center',
-        letterSpacing: -0.3,
-        marginBottom: 6,
-    },
     sheetTitle: {
         fontSize: 18,
         fontWeight: '700',
         textAlign: 'center',
-        letterSpacing: -0.3,
+        letterSpacing: letterSpacing(-0.3),
         marginBottom: 20,
-    },
-    subtitle: {
-        fontSize: 14,
-        textAlign: 'center',
-        marginBottom: 28,
     },
     primaryBtn: {
         width: '100%',
@@ -1616,44 +949,9 @@ const sheetStyles = StyleSheet.create({
         minHeight: 52,
     },
     primaryBtnText: {
-        color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '700',
     },
-    secondaryBtn: {
-        width: '100%',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        paddingVertical: 15,
-        borderRadius: 14,
-        borderWidth: 1,
-        marginBottom: 10,
-        minHeight: 52,
-    },
-    secondaryBtnText: { fontSize: 16, fontWeight: '600' },
-    skipRow: { paddingVertical: 8, marginTop: 4 },
-    skipText: { fontSize: 14, fontWeight: '500' },
-    // Step 2
-    outcomePill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
-        alignSelf: 'flex-start',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 20,
-        marginBottom: 20,
-    },
-    outcomePillText: { fontSize: 13, fontWeight: '600' },
-    noteLabel: {
-        alignSelf: 'flex-start',
-        fontSize: 16,
-        fontWeight: '700',
-        marginBottom: 10,
-    },
-    noteLabelOptional: { fontSize: 13, fontWeight: '400' },
     noteInput: {
         width: '100%',
         borderRadius: 12,
@@ -1666,14 +964,6 @@ const sheetStyles = StyleSheet.create({
 });
 
 const schedStyles = StyleSheet.create({
-    sheet: {
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        paddingHorizontal: 20,
-        paddingTop: 12,
-        maxHeight: '92%',
-        alignItems: 'center',
-    },
     iconWrap: {
         width: 52,
         height: 52,
@@ -1682,79 +972,4 @@ const schedStyles = StyleSheet.create({
         justifyContent: 'center',
         marginBottom: 12,
     },
-    fieldLabel: {
-        fontSize: 12,
-        fontWeight: '600',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-        marginBottom: 6,
-        alignSelf: 'flex-start',
-    },
-    row: {
-        width: '100%',
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderRadius: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 14,
-        marginBottom: 16,
-    },
-    rowValue: { fontSize: 15, fontWeight: '600' },
-    wheelContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: 16,
-        marginBottom: 16,
-        width: '100%',
-        paddingVertical: 4,
-        overflow: 'hidden',
-    },
-    wheelColon: {
-        fontSize: 26,
-        fontWeight: '300',
-        marginHorizontal: 2,
-        marginBottom: 2,
-    },
-    wheelVertDivider: {
-        width: StyleSheet.hairlineWidth,
-        height: 40,
-        marginHorizontal: 8,
-    },
-    typeToggle: {
-        width: '100%',
-        flexDirection: 'row',
-        gap: 10,
-        marginBottom: 16,
-    },
-    typeBtn: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        paddingVertical: 12,
-        borderRadius: 12,
-    },
-    typeBtnText: { fontSize: 14, fontWeight: '600' },
-    input: {
-        width: '100%',
-        borderRadius: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        fontSize: 15,
-        marginBottom: 16,
-    },
-    todayBtn: { alignSelf: 'flex-start', marginBottom: 10, marginTop: -10, paddingLeft: 2 },
-    todayBtnText: { fontSize: 13, fontWeight: '600' },
-    errorRow: {
-        width: '100%',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        padding: 10,
-        borderRadius: 10,
-        marginBottom: 12,
-    },
-    errorText: { fontSize: 13, color: ERROR_TEXT, flex: 1 },
 });

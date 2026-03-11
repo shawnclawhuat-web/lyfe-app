@@ -1,4 +1,5 @@
 import Avatar from '@/components/Avatar';
+import { type ActivityCounts, CASE_CLOSED_COLOR } from '@/components/events/roadshowShared';
 import { getAvatarColor, ROADSHOW_PINK } from '@/constants/ui';
 import { formatCheckinTime } from '@/lib/dateTime';
 import type { RoadshowAttendance, RoadshowConfig } from '@/types/event';
@@ -6,13 +7,6 @@ import type { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-
-interface ActivityCounts {
-    sitdowns: number;
-    pitches: number;
-    closed: number;
-    afyc: number;
-}
 
 export interface RoadshowPastProps {
     colors: typeof Colors.light;
@@ -118,7 +112,10 @@ function RoadshowPastInner({ colors, roadshowConfig, attendance, activityCounts,
                                 {counts.closed}/{att.pledged_closed}
                             </Text>
                             <Text
-                                style={[styles.pastCellAfyc, { color: exceededAfyc ? '#F59E0B' : colors.textPrimary }]}
+                                style={[
+                                    styles.pastCellAfyc,
+                                    { color: exceededAfyc ? CASE_CLOSED_COLOR : colors.textPrimary },
+                                ]}
                             >
                                 ${counts.afyc.toLocaleString()}
                             </Text>
@@ -139,7 +136,7 @@ function RoadshowPastInner({ colors, roadshowConfig, attendance, activityCounts,
                         <Text style={[styles.pastCellNum, { color: colors.textPrimary, fontWeight: '700' }]}>
                             {boothTotals.closed}/{boothTotals.pledgedClosed}
                         </Text>
-                        <Text style={[styles.pastCellAfyc, { color: '#F59E0B', fontWeight: '700' }]}>
+                        <Text style={[styles.pastCellAfyc, { color: CASE_CLOSED_COLOR, fontWeight: '700' }]}>
                             ${boothTotals.afyc.toLocaleString()}
                         </Text>
                     </View>

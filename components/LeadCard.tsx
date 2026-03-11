@@ -1,4 +1,5 @@
 import StatusBadge from '@/components/StatusBadge';
+import { letterSpacing } from '@/constants/platform';
 import { useTheme } from '@/contexts/ThemeContext';
 import { timeAgo } from '@/lib/dateTime';
 import { PRODUCT_LABELS, type Lead } from '@/types/lead';
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
     },
     avatarText: { fontSize: 15, fontWeight: '600' },
     nameCol: { flex: 1 },
-    name: { fontSize: 16, fontWeight: '600', letterSpacing: -0.2 },
+    name: { fontSize: 16, fontWeight: '600', letterSpacing: letterSpacing(-0.2) },
     phone: { fontSize: 13, marginTop: 1 },
     bottomRow: {
         flexDirection: 'row',

@@ -1,4 +1,5 @@
 import WheelPicker, { WHEEL_ITEM_H } from '@/components/WheelPicker';
+import { MODAL_ANIM_SHEET, MODAL_STATUS_BAR_TRANSLUCENT } from '@/constants/platform';
 import { PICKER_AMPM, PICKER_HOURS, PICKER_MINUTES, TIME_PICKER_VISIBLE } from '@/constants/ui';
 import { useTheme } from '@/contexts/ThemeContext';
 import React from 'react';
@@ -54,7 +55,13 @@ export default function TimePickerModal({
     const onAmPm = isStart ? onStartAmPmChange : onEndAmPmChange;
 
     return (
-        <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+        <Modal
+            visible={visible}
+            transparent
+            animationType={MODAL_ANIM_SHEET}
+            statusBarTranslucent={MODAL_STATUS_BAR_TRANSLUCENT}
+            onRequestClose={onClose}
+        >
             <View style={styles.timeModalOverlay}>
                 <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={onClose} />
                 <View style={[styles.timeModalSheet, { backgroundColor: colors.cardBackground }]}>
@@ -88,10 +95,7 @@ export default function TimePickerModal({
                             },
                         ]}
                     >
-                        <View
-                            pointerEvents="none"
-                            style={[styles.timePickerBand, { borderColor: colors.border }]}
-                        />
+                        <View pointerEvents="none" style={[styles.timePickerBand, { borderColor: colors.border }]} />
                         <View key={mode} style={styles.timePickerWheels}>
                             <WheelPicker
                                 items={PICKER_HOURS}

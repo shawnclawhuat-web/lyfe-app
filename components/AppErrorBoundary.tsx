@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Sentry } from '@/lib/sentry';
+import { Colors } from '@/constants/Colors';
 
 interface Props {
     children: React.ReactNode;
@@ -45,7 +46,7 @@ export default class AppErrorBoundary extends React.Component<Props, State> {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F2F2F7',
+        backgroundColor: Colors.light.background,
         justifyContent: 'center',
         alignItems: 'center',
         padding: 24,
@@ -53,23 +54,23 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 20,
         fontWeight: '600',
-        color: '#000000',
+        color: Colors.light.textPrimary,
         marginBottom: 8,
     },
     subtitle: {
         fontSize: 15,
-        color: '#8E8E93',
+        color: Colors.light.textTertiary,
         textAlign: 'center',
         marginBottom: 24,
     },
     button: {
-        backgroundColor: '#FF7600',
+        backgroundColor: Colors.light.accent,
         paddingHorizontal: 24,
         paddingVertical: 12,
         borderRadius: 8,
     },
     buttonText: {
-        color: '#FFFFFF',
+        color: Colors.light.textInverse,
         fontSize: 16,
         fontWeight: '600',
     },

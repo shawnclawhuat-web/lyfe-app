@@ -1,3 +1,4 @@
+import { letterSpacing } from '@/constants/platform';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -63,9 +64,7 @@ export default function ScreenHeader({
             {/* Banner */}
             {banner && (
                 <View style={[styles.banner, { backgroundColor: colors.accentLight }]}>
-                    {banner.icon && (
-                        <Ionicons name={banner.icon as any} size={14} color={colors.accent} />
-                    )}
+                    {banner.icon && <Ionicons name={banner.icon as any} size={14} color={colors.accent} />}
                     <Text style={[styles.bannerText, { color: colors.accent }]} numberOfLines={2}>
                         {banner.text}
                     </Text>
@@ -84,9 +83,7 @@ export default function ScreenHeader({
                         accessibilityLabel={backLabel ? `Back to ${backLabel}` : 'Go back'}
                     >
                         <Ionicons name="chevron-back" size={22} color={colors.accent} />
-                        {backLabel && (
-                            <Text style={[styles.backLabel, { color: colors.accent }]}>{backLabel}</Text>
-                        )}
+                        {backLabel && <Text style={[styles.backLabel, { color: colors.accent }]}>{backLabel}</Text>}
                     </TouchableOpacity>
                 ) : (
                     <View style={styles.leftSpacer} />
@@ -96,10 +93,7 @@ export default function ScreenHeader({
                 <View style={[styles.titleContainer, !showBack && styles.titleContainerLeft]}>
                     {titleElement || (
                         <Text
-                            style={[
-                                showBack ? styles.detailTitle : styles.title,
-                                { color: colors.textPrimary },
-                            ]}
+                            style={[showBack ? styles.detailTitle : styles.title, { color: colors.textPrimary }]}
                             numberOfLines={1}
                         >
                             {title}
@@ -174,12 +168,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 18,
         fontWeight: '700',
-        letterSpacing: -0.3,
+        letterSpacing: letterSpacing(-0.3),
     },
     detailTitle: {
         fontSize: 17,
         fontWeight: '600',
-        letterSpacing: -0.2,
+        letterSpacing: letterSpacing(-0.2),
     },
     subtitle: {
         fontSize: 13,

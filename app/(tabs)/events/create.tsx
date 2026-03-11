@@ -8,6 +8,7 @@ import RoadshowSettingsForm from '@/components/events/RoadshowSettingsForm';
 import TimePickerModal from '@/components/events/TimePickerModal';
 import TimeRowCard from '@/components/events/TimeRowCard';
 import { ERROR_BG, ERROR_TEXT } from '@/constants/ui';
+import { KAV_BEHAVIOR } from '@/constants/platform';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useEventForm } from '@/hooks/useEventForm';
 import { dateDiffDays, isValidDate } from '@/lib/dateTime';
@@ -15,7 +16,6 @@ import React from 'react';
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -150,9 +150,9 @@ export default function CreateEventScreen() {
                         style={[styles.saveBtn, { backgroundColor: colors.accent, opacity: submitting ? 0.6 : 1 }]}
                     >
                         {submitting ? (
-                            <ActivityIndicator size="small" color="#FFFFFF" />
+                            <ActivityIndicator size="small" color={colors.textInverse} />
                         ) : (
-                            <Text style={styles.saveBtnText}>
+                            <Text style={[styles.saveBtnText, { color: colors.textInverse }]}>
                                 {isEditing
                                     ? 'Save'
                                     : eventType === 'roadshow' &&
@@ -169,7 +169,7 @@ export default function CreateEventScreen() {
                 }
             />
 
-            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior={KAV_BEHAVIOR}>
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                     {/* Title */}
                     <View style={styles.field}>
@@ -369,6 +369,6 @@ const styles = StyleSheet.create({
     textArea: { minHeight: 96, paddingTop: 12 },
     errorText: { fontSize: 12, marginTop: 4 },
     saveBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 },
-    saveBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
+    saveBtnText: { fontWeight: '700', fontSize: 14 },
     submitError: { borderRadius: 10, padding: 12, marginBottom: 8 },
 });

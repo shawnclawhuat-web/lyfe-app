@@ -1,4 +1,5 @@
 import Avatar from '@/components/Avatar';
+import { KAV_BEHAVIOR, MODAL_ANIM_SHEET, MODAL_STATUS_BAR_TRANSLUCENT } from '@/constants/platform';
 import { ATTENDEE_ROLES, getAvatarColor } from '@/constants/ui';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { SelectedAttendee } from '@/hooks/useAttendeePicker';
@@ -11,7 +12,6 @@ import {
     FlatList,
     KeyboardAvoidingView,
     Modal,
-    Platform,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -69,7 +69,13 @@ export default function AttendeePickerModal({
     const { colors } = useTheme();
 
     return (
-        <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+        <Modal
+            visible={visible}
+            animationType={MODAL_ANIM_SHEET}
+            statusBarTranslucent={MODAL_STATUS_BAR_TRANSLUCENT}
+            presentationStyle="pageSheet"
+            onRequestClose={onClose}
+        >
             <SafeAreaView style={[styles.pickerScreen, { backgroundColor: colors.background }]}>
                 <View style={[styles.pickerSheetHeader, { borderBottomColor: colors.border }]}>
                     <Text style={[styles.pickerSheetTitle, { color: colors.textPrimary }]}>Add Attendees</Text>
@@ -213,9 +219,7 @@ function TeamTab({
                                         {item.role.charAt(0).toUpperCase() + item.role.slice(1)}
                                     </Text>
                                 </View>
-                                {isSelected && (
-                                    <Ionicons name="checkmark-circle" size={22} color={colors.accent} />
-                                )}
+                                {isSelected && <Ionicons name="checkmark-circle" size={22} color={colors.accent} />}
                             </TouchableOpacity>
                         );
                     }}
@@ -249,7 +253,7 @@ function ExternalTab({
     onRemoveExternal,
 }: ExternalTabProps) {
     return (
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={KAV_BEHAVIOR}>
             <ScrollView contentContainerStyle={styles.externalTab}>
                 <Text style={[styles.externalHint, { color: colors.textTertiary }]}>
                     Add guests not in the system — clients, prospects, or external partners.

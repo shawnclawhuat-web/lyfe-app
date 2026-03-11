@@ -14,6 +14,7 @@ export default function CandidatesLayout() {
         >
             <Stack.Screen name="index" />
             <Stack.Screen name="[candidateId]" />
+            <Stack.Screen name="progress/[candidateId]" options={{ presentation: 'card' }} />
         </Stack>
     );
 }

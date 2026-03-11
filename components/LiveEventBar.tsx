@@ -1,3 +1,4 @@
+import { TAB_BAR_HEIGHT } from '@/constants/platform';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { formatTime, isEventLive } from '@/lib/dateTime';
@@ -12,7 +13,6 @@ import { AccessibilityInfo, Animated, PanResponder, StyleSheet, Text, TouchableO
 const BAR_H = 64;
 const BAR_MARGIN_H = 16;
 const BAR_MARGIN_BOTTOM = 8;
-const TAB_BAR_H = 72;
 const SLIDE_INTERVAL = 5000;
 const FADE_DURATION = 400;
 const RECHECK_INTERVAL = 60000;
@@ -287,7 +287,7 @@ export default memo(function LiveEventBar() {
 const styles = StyleSheet.create({
     wrapper: {
         position: 'absolute',
-        bottom: TAB_BAR_H + BAR_MARGIN_BOTTOM,
+        bottom: TAB_BAR_HEIGHT + BAR_MARGIN_BOTTOM,
         left: BAR_MARGIN_H,
         right: BAR_MARGIN_H,
         zIndex: 100,

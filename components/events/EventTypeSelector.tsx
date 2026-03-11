@@ -1,6 +1,6 @@
 import { useTheme } from '@/contexts/ThemeContext';
 import type { EventType } from '@/types/event';
-import { EVENT_TYPE_COLORS, EVENT_TYPE_LABELS } from '@/types/event';
+import { EVENT_TYPE_CONFIG } from '@/constants/displayConfigs';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -21,7 +21,7 @@ export default function EventTypeSelector({ eventType, onSelect, disabled }: Eve
             <View style={styles.typeRow}>
                 {EVENT_TYPES.map((t) => {
                     const isActive = eventType === t;
-                    const color = EVENT_TYPE_COLORS[t];
+                    const color = EVENT_TYPE_CONFIG[t].color;
                     return (
                         <TouchableOpacity
                             key={t}
@@ -37,7 +37,7 @@ export default function EventTypeSelector({ eventType, onSelect, disabled }: Eve
                             activeOpacity={disabled ? 1 : 0.7}
                         >
                             <Text style={[styles.typeChipText, { color: isActive ? color : colors.textSecondary }]}>
-                                {EVENT_TYPE_LABELS[t]}
+                                {EVENT_TYPE_CONFIG[t].label}
                             </Text>
                         </TouchableOpacity>
                     );

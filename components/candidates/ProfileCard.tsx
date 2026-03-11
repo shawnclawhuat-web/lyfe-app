@@ -1,3 +1,4 @@
+import { letterSpacing } from '@/constants/platform';
 import { CANDIDATE_STATUS_CONFIG, type CandidateStatusConfig } from '@/types/recruitment';
 import type { RecruitmentCandidate } from '@/types/recruitment';
 import { Ionicons } from '@expo/vector-icons';
@@ -103,7 +104,7 @@ const styles = StyleSheet.create({
     },
     avatarText: { fontSize: 22, fontWeight: '800' },
     profileInfo: { flex: 1 },
-    profileName: { fontSize: 20, fontWeight: '800', letterSpacing: -0.3 },
+    profileName: { fontSize: 20, fontWeight: '800', letterSpacing: letterSpacing(-0.3) },
     statusBadge: {
         flexDirection: 'row',
         alignItems: 'center',

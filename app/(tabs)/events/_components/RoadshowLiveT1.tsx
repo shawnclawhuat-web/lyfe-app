@@ -1,7 +1,9 @@
 import ProgressRing from '@/components/events/ProgressRing';
+import { type ActivityCounts, PITCH_COLOR, CASE_CLOSED_COLOR } from '@/components/events/roadshowShared';
 import WheelPicker from '@/components/WheelPicker';
 import { formatCheckinTime, formatTime } from '@/lib/dateTime';
 import { ERROR_BG, ERROR_TEXT, PICKER_HOURS, PICKER_MINUTES, PICKER_AMPM, ROADSHOW_PINK } from '@/constants/ui';
+import { KAV_BEHAVIOR, letterSpacing } from '@/constants/platform';
 import type { RoadshowActivity, RoadshowAttendance, RoadshowConfig } from '@/types/event';
 import type { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +12,6 @@ import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Modal,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -20,18 +21,11 @@ import {
 } from 'react-native';
 import { SafeAreaView, type EdgeInsets } from 'react-native-safe-area-context';
 
-interface MyCounts {
-    sitdowns: number;
-    pitches: number;
-    closed: number;
-    afyc: number;
-}
-
 export interface RoadshowLiveT1Props {
     colors: typeof Colors.light;
     attendance: RoadshowAttendance[];
     myAttendance: RoadshowAttendance | null;
-    myCounts: MyCounts;
+    myCounts: ActivityCounts;
     roadshowConfig: RoadshowConfig | null;
     activities: RoadshowActivity[];
     isCurrentlyLate: boolean;
@@ -199,7 +193,7 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                     onPress={handleOpenCheckin}
                     accessibilityLabel={isCurrentlyLate ? 'Mark Attendance Late' : 'Check In Now'}
                 >
-                    <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />
+                    <Ionicons name="checkmark-circle-outline" size={20} color={colors.textInverse} />
                     <Text style={styles.checkinBtnText}>
                         {isCurrentlyLate ? 'Mark Attendance (Late)' : 'Check In Now'}
                     </Text>
@@ -229,21 +223,21 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                 <ProgressRing
                     actual={myCounts.sitdowns}
                     pledged={myAttendance?.pledged_sitdowns ?? 0}
-                    color="#6366F1"
+                    color={colors.managerColor}
                     label="Sitdowns"
                     accessLabel={`Sitdowns: ${myCounts.sitdowns} of ${myAttendance?.pledged_sitdowns ?? 0}`}
                 />
                 <ProgressRing
                     actual={myCounts.pitches}
                     pledged={myAttendance?.pledged_pitches ?? 0}
-                    color="#E67700"
+                    color={PITCH_COLOR}
                     label="Pitches"
                     accessLabel={`Pitches: ${myCounts.pitches} of ${myAttendance?.pledged_pitches ?? 0}`}
                 />
                 <ProgressRing
                     actual={myCounts.closed}
                     pledged={myAttendance?.pledged_closed ?? 0}
-                    color="#F59E0B"
+                    color={CASE_CLOSED_COLOR}
                     label="Closed"
                     accessLabel={`Cases Closed: ${myCounts.closed} of ${myAttendance?.pledged_closed ?? 0}`}
                 />
@@ -269,7 +263,7 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                                 styles.afycFill,
                                 {
                                     width: `${Math.min(100, (myCounts.afyc / (myAttendance?.pledged_afyc ?? 1)) * 100)}%` as any,
-                                    backgroundColor: '#F59E0B',
+                                    backgroundColor: CASE_CLOSED_COLOR,
                                 },
                             ]}
                         />
@@ -294,7 +288,10 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                 </View>
                 <View style={[styles.stickyRow, hasDeparted && { opacity: 0.35 }]}>
                     <TouchableOpacity
-                        style={[styles.logBtnLg, { backgroundColor: '#6366F118', borderColor: '#6366F1' }]}
+                        style={[
+                            styles.logBtnLg,
+                            { backgroundColor: colors.managerColor + '18', borderColor: colors.managerColor },
+                        ]}
                         onPress={() => {
                             initLogTime();
                             setConfirmActivity('sitdown');
@@ -303,14 +300,14 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                         activeOpacity={0.7}
                         accessibilityLabel={`Log Sitdown, current count ${myCounts.sitdowns}`}
                     >
-                        <Ionicons name="people-outline" size={26} color="#6366F1" />
-                        <Text style={[styles.logBtnLgLabel, { color: '#6366F1' }]}>Sitdown</Text>
-                        <View style={[styles.logBtnBadge, { backgroundColor: '#6366F1' }]}>
+                        <Ionicons name="people-outline" size={26} color={colors.managerColor} />
+                        <Text style={[styles.logBtnLgLabel, { color: colors.managerColor }]}>Sitdown</Text>
+                        <View style={[styles.logBtnBadge, { backgroundColor: colors.managerColor }]}>
                             <Text style={styles.logBtnBadgeText}>{myCounts.sitdowns}</Text>
                         </View>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.logBtnLg, { backgroundColor: '#E6770018', borderColor: '#E67700' }]}
+                        style={[styles.logBtnLg, { backgroundColor: PITCH_COLOR + '18', borderColor: PITCH_COLOR }]}
                         onPress={() => {
                             initLogTime();
                             setConfirmActivity('pitch');
@@ -319,15 +316,18 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                         activeOpacity={0.7}
                         accessibilityLabel={`Log Pitch, current count ${myCounts.pitches}`}
                     >
-                        <Ionicons name="megaphone-outline" size={26} color="#E67700" />
-                        <Text style={[styles.logBtnLgLabel, { color: '#E67700' }]}>Pitch</Text>
-                        <View style={[styles.logBtnBadge, { backgroundColor: '#E67700' }]}>
+                        <Ionicons name="megaphone-outline" size={26} color={PITCH_COLOR} />
+                        <Text style={[styles.logBtnLgLabel, { color: PITCH_COLOR }]}>Pitch</Text>
+                        <View style={[styles.logBtnBadge, { backgroundColor: PITCH_COLOR }]}>
                             <Text style={styles.logBtnBadgeText}>{myCounts.pitches}</Text>
                         </View>
                     </TouchableOpacity>
                 </View>
                 <TouchableOpacity
-                    style={[styles.caseClosedBtn, { backgroundColor: '#F59E0B', opacity: hasDeparted ? 0.35 : 1 }]}
+                    style={[
+                        styles.caseClosedBtn,
+                        { backgroundColor: CASE_CLOSED_COLOR, opacity: hasDeparted ? 0.35 : 1 },
+                    ]}
                     onPress={() => {
                         setAfycInput('');
                         initLogTime();
@@ -337,7 +337,7 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                     activeOpacity={0.75}
                     accessibilityLabel={`Log Case Closed, current count ${myCounts.closed}`}
                 >
-                    <Ionicons name="checkmark-circle-outline" size={22} color="#FFFFFF" />
+                    <Ionicons name="checkmark-circle-outline" size={22} color={colors.textInverse} />
                     <Text style={styles.caseClosedText}>Case Closed</Text>
                     <View style={[styles.logBtnBadge, { backgroundColor: 'rgba(0,0,0,0.2)' }]}>
                         <Text style={styles.logBtnBadgeText}>{myCounts.closed}</Text>
@@ -395,7 +395,7 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                 onRequestClose={() => setShowPledgeSheet(false)}
             >
                 <SafeAreaView style={[styles.sheetContainer, { backgroundColor: colors.background }]}>
-                    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                    <KeyboardAvoidingView style={{ flex: 1 }} behavior={KAV_BEHAVIOR}>
                         <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
                             <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>
                                 Your Pledge for Today
@@ -473,10 +473,10 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                                 disabled={checkingIn}
                             >
                                 {checkingIn ? (
-                                    <ActivityIndicator size="small" color="#FFFFFF" />
+                                    <ActivityIndicator size="small" color={colors.textInverse} />
                                 ) : (
                                     <>
-                                        <Ionicons name="checkmark" size={20} color="#FFFFFF" />
+                                        <Ionicons name="checkmark" size={20} color={colors.textInverse} />
                                         <Text style={styles.checkinBtnText}>Confirm &amp; Pledge</Text>
                                     </>
                                 )}
@@ -499,13 +499,13 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                             ? {
                                   label: 'Sitdown',
                                   icon: 'people-outline' as const,
-                                  color: '#6366F1',
+                                  color: colors.managerColor,
                                   count: myCounts.sitdowns,
                               }
                             : {
                                   label: 'Pitch',
                                   icon: 'megaphone-outline' as const,
-                                  color: '#E67700',
+                                  color: PITCH_COLOR,
                                   count: myCounts.pitches,
                               };
                     return (
@@ -584,7 +584,7 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                 onRequestClose={() => setShowAfycSheet(false)}
             >
                 <SafeAreaView style={[styles.sheetContainer, { backgroundColor: colors.background }]}>
-                    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                    <KeyboardAvoidingView style={{ flex: 1 }} behavior={KAV_BEHAVIOR}>
                         <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
                             <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>Log Case Closed</Text>
                             <TouchableOpacity
@@ -651,7 +651,7 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                                 style={[
                                     styles.checkinBtn,
                                     {
-                                        backgroundColor: '#F59E0B',
+                                        backgroundColor: CASE_CLOSED_COLOR,
                                         marginTop: 12,
                                         opacity: loggingActivity ? 0.6 : 1,
                                     },
@@ -660,10 +660,10 @@ function RoadshowLiveT1Inner(props: RoadshowLiveT1Props) {
                                 disabled={loggingActivity}
                             >
                                 {loggingActivity ? (
-                                    <ActivityIndicator size="small" color="#FFFFFF" />
+                                    <ActivityIndicator size="small" color={colors.textInverse} />
                                 ) : (
                                     <>
-                                        <Ionicons name="checkmark" size={20} color="#FFFFFF" />
+                                        <Ionicons name="checkmark" size={20} color={colors.textInverse} />
                                         <Text style={styles.checkinBtnText}>Log Case Closed</Text>
                                     </>
                                 )}
@@ -834,7 +834,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginBottom: 2,
     },
-    confirmTitle: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
+    confirmTitle: { fontSize: 22, fontWeight: '700', letterSpacing: letterSpacing(-0.3) },
     confirmSubtitle: { fontSize: 14 },
     confirmBtn: {
         width: '100%',

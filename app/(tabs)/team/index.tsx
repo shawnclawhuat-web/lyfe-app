@@ -7,6 +7,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { canInviteAgents, type UserRole } from '@/constants/Roles';
 import { fetchTeamMembers, inviteAgent, type TeamMember } from '@/lib/team';
 import { useFilteredList } from '@/hooks/useFilteredList';
+import { letterSpacing } from '@/constants/platform';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -295,14 +296,20 @@ export default function TeamScreen() {
                                     accessibilityState={{ selected: isActive }}
                                 >
                                     <Text
-                                        style={[styles.filterText, { color: isActive ? '#FFF' : colors.textSecondary }]}
+                                        style={[
+                                            styles.filterText,
+                                            { color: isActive ? colors.textInverse : colors.textSecondary },
+                                        ]}
                                     >
                                         {f.label}
                                     </Text>
                                     <Text
                                         style={[
                                             styles.filterCount,
-                                            { color: isActive ? 'rgba(255,255,255,0.8)' : colors.textTertiary },
+                                            {
+                                                color: isActive ? colors.textInverse : colors.textTertiary,
+                                                opacity: isActive ? 0.8 : 1,
+                                            },
                                         ]}
                                     >
                                         {count}
@@ -386,7 +393,7 @@ export default function TeamScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="Invite agent"
                 >
-                    <Ionicons name="person-add" size={24} color="#FFFFFF" />
+                    <Ionicons name="person-add" size={24} color={colors.textInverse} />
                 </TouchableOpacity>
             )}
 
@@ -485,7 +492,7 @@ const styles = StyleSheet.create({
     heroValue: {
         fontSize: 22,
         fontWeight: '800',
-        letterSpacing: -0.3,
+        letterSpacing: letterSpacing(-0.3),
     },
     heroLabel: {
         fontSize: 11,
@@ -571,7 +578,7 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 16,
         fontWeight: '700',
-        letterSpacing: -0.2,
+        letterSpacing: letterSpacing(-0.2),
     },
     metaRow: {
         flexDirection: 'row',

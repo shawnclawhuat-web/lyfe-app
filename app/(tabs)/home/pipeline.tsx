@@ -1,3 +1,4 @@
+import { letterSpacing } from '@/constants/platform';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -122,7 +123,7 @@ const emptyStyles = StyleSheet.create({
         justifyContent: 'center',
         marginBottom: 16,
     },
-    title: { fontSize: 18, fontWeight: '700', marginBottom: 8, letterSpacing: -0.3 },
+    title: { fontSize: 18, fontWeight: '700', marginBottom: 8, letterSpacing: letterSpacing(-0.3) },
     subtitle: { fontSize: 15, textAlign: 'center', lineHeight: 22 },
 });
 
@@ -246,9 +247,9 @@ const cardStyles = StyleSheet.create({
         justifyContent: 'center',
     },
     labelWrap: { flex: 1 },
-    label: { fontSize: 15, fontWeight: '600', letterSpacing: -0.3 },
+    label: { fontSize: 15, fontWeight: '600', letterSpacing: letterSpacing(-0.3) },
     count: { fontSize: 11, fontWeight: '500', marginTop: 2 },
-    bigCount: { fontSize: 28, fontWeight: '700', letterSpacing: -1 },
+    bigCount: { fontSize: 28, fontWeight: '700', letterSpacing: letterSpacing(-1) },
     barTrack: {
         height: 24,
         borderRadius: 12,

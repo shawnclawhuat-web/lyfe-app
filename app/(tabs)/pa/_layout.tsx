@@ -17,6 +17,7 @@ export default function PaLayout() {
             <Stack.Screen name="event/[eventId]" options={{ presentation: 'card' }} />
             <Stack.Screen name="event/create" options={{ presentation: 'modal' }} />
             <Stack.Screen name="add-candidate" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="candidate/progress/[candidateId]" options={{ presentation: 'card' }} />
         </Stack>
     );
 }

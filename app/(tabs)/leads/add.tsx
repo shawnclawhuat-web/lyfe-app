@@ -1,5 +1,6 @@
 import ErrorBanner from '@/components/ErrorBanner';
 import FormField from '@/components/FormField';
+import { KAV_BEHAVIOR } from '@/constants/platform';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { createLead, type CreateLeadInput } from '@/lib/leads';
@@ -11,7 +12,6 @@ import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Modal,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -132,11 +132,7 @@ export default function AddLeadScreen() {
                 </TouchableOpacity>
             </View>
 
-            <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={100}
-            >
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior={KAV_BEHAVIOR} keyboardVerticalOffset={100}>
                 <ScrollView
                     style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}

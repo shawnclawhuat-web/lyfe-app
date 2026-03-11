@@ -1,9 +1,15 @@
 import EmptyState from '@/components/EmptyState';
 import ErrorBanner from '@/components/ErrorBanner';
 import LeadActivityItem from '@/components/LeadActivityItem';
+import ContactConfirmModal from '@/components/leads/ContactConfirmModal';
+import NoteInput from '@/components/leads/NoteInput';
+import QuickAction from '@/components/leads/QuickAction';
+import ReassignModal from '@/components/leads/ReassignModal';
+import StatusPicker from '@/components/leads/StatusPicker';
 import LoadingState from '@/components/LoadingState';
 import ScreenHeader from '@/components/ScreenHeader';
 import StatusBadge from '@/components/StatusBadge';
+import { KAV_BEHAVIOR, letterSpacing } from '@/constants/platform';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useViewMode } from '@/contexts/ViewModeContext';
@@ -17,14 +23,7 @@ import {
     updateLeadStatus,
 } from '@/lib/leads';
 import type { Lead } from '@/types/lead';
-import {
-    LEAD_STATUSES,
-    PRODUCT_LABELS,
-    SOURCE_LABELS,
-    STATUS_CONFIG,
-    type LeadActivity,
-    type LeadStatus,
-} from '@/types/lead';
+import { PRODUCT_LABELS, SOURCE_LABELS, type LeadActivity, type LeadStatus } from '@/types/lead';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -32,12 +31,9 @@ import {
     AppState,
     KeyboardAvoidingView,
     Linking,
-    Modal,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
@@ -293,11 +289,7 @@ export default function LeadDetailScreen() {
 
             {error && <ErrorBanner message={error} onRetry={loadData} onDismiss={() => setError(null)} />}
 
-            <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={100}
-            >
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior={KAV_BEHAVIOR} keyboardVerticalOffset={100}>
                 <ScrollView
                     style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
@@ -413,105 +405,27 @@ export default function LeadDetailScreen() {
 
                     {/* Status Picker */}
                     {!isManagerView && showStatusPicker && (
-                        <View
-                            style={[
-                                styles.card,
-                                { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
-                            ]}
-                        >
-                            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Change Status</Text>
-                            <View style={styles.statusGrid}>
-                                {LEAD_STATUSES.map((s) => {
-                                    const cfg = STATUS_CONFIG[s];
-                                    const isActive = s === currentStatus;
-                                    return (
-                                        <TouchableOpacity
-                                            key={s}
-                                            style={[
-                                                styles.statusOption,
-                                                {
-                                                    backgroundColor: isActive ? cfg.bgColor : colors.surfacePrimary,
-                                                    borderColor: isActive ? cfg.color : colors.borderLight,
-                                                    borderWidth: isActive ? 1.5 : 0.5,
-                                                    opacity: isUpdatingStatus ? 0.5 : 1,
-                                                },
-                                            ]}
-                                            onPress={() => handleChangeStatus(s)}
-                                            disabled={isUpdatingStatus}
-                                        >
-                                            <Ionicons
-                                                name={cfg.icon as any}
-                                                size={16}
-                                                color={isActive ? cfg.color : colors.textTertiary}
-                                            />
-                                            <Text
-                                                style={[
-                                                    styles.statusOptionText,
-                                                    { color: isActive ? cfg.color : colors.textSecondary },
-                                                ]}
-                                            >
-                                                {cfg.label}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                            </View>
-                        </View>
+                        <StatusPicker
+                            currentStatus={currentStatus}
+                            isUpdating={isUpdatingStatus}
+                            colors={colors}
+                            onChangeStatus={handleChangeStatus}
+                        />
                     )}
 
                     {/* Add Note Input */}
                     {!isManagerView && showNoteInput && (
-                        <View
-                            style={[
-                                styles.card,
-                                { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
-                            ]}
-                        >
-                            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Add Note</Text>
-                            <TextInput
-                                style={[
-                                    styles.noteInput,
-                                    {
-                                        color: colors.textPrimary,
-                                        borderColor: colors.borderLight,
-                                        backgroundColor: colors.surfacePrimary,
-                                    },
-                                ]}
-                                placeholder="Write a note..."
-                                placeholderTextColor={colors.textTertiary}
-                                value={noteText}
-                                onChangeText={setNoteText}
-                                multiline
-                                numberOfLines={3}
-                                textAlignVertical="top"
-                            />
-                            <View style={styles.noteActions}>
-                                <TouchableOpacity
-                                    style={[styles.noteCancel, { borderColor: colors.borderLight }]}
-                                    onPress={() => {
-                                        setShowNoteInput(false);
-                                        setNoteText('');
-                                    }}
-                                >
-                                    <Text style={[styles.noteCancelText, { color: colors.textSecondary }]}>Cancel</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.noteSave,
-                                        {
-                                            backgroundColor: colors.accent,
-                                            opacity: noteText.trim() && !isSavingNote ? 1 : 0.4,
-                                        },
-                                    ]}
-                                    onPress={handleAddNote}
-                                    disabled={!noteText.trim() || isSavingNote}
-                                >
-                                    <Text style={[styles.noteSaveText, { color: colors.textInverse }]}>
-                                        {isSavingNote ? 'Saving...' : 'Save Note'}
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
+                        <NoteInput
+                            noteText={noteText}
+                            onChangeText={setNoteText}
+                            isSaving={isSavingNote}
+                            colors={colors}
+                            onSave={handleAddNote}
+                            onCancel={() => {
+                                setShowNoteInput(false);
+                                setNoteText('');
+                            }}
+                        />
                     )}
 
                     {/* Activity Timeline */}
@@ -544,156 +458,24 @@ export default function LeadDetailScreen() {
             </KeyboardAvoidingView>
 
             {/* Contact Confirm Modal */}
-            <Modal
+            <ContactConfirmModal
                 visible={showContactConfirm}
-                transparent
-                animationType="fade"
-                onRequestClose={() => handleContactConfirm('skip')}
-            >
-                <View style={styles.confirmOverlay}>
-                    <View style={[styles.confirmSheet, { backgroundColor: colors.cardBackground }]}>
-                        {pendingContact?.type === 'call' ? (
-                            <>
-                                <View style={[styles.confirmIconWrap, { backgroundColor: '#DCFCE7' }]}>
-                                    <Ionicons name="call" size={26} color="#16A34A" />
-                                </View>
-                                <Text style={[styles.confirmTitle, { color: colors.textPrimary }]}>
-                                    How did the call go?
-                                </Text>
-                                <Text style={[styles.confirmSubtitle, { color: colors.textSecondary }]}>
-                                    With {lead.full_name}
-                                </Text>
-                                <TouchableOpacity
-                                    style={[styles.confirmBtn, { backgroundColor: '#16A34A' }]}
-                                    onPress={() => handleContactConfirm('reached')}
-                                >
-                                    <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
-                                    <Text style={styles.confirmBtnText}>Reached them</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.confirmBtn,
-                                        {
-                                            backgroundColor: colors.surfacePrimary,
-                                            borderWidth: 0.5,
-                                            borderColor: colors.borderLight,
-                                        },
-                                    ]}
-                                    onPress={() => handleContactConfirm('no_answer')}
-                                >
-                                    <Ionicons name="close-circle-outline" size={18} color={colors.textSecondary} />
-                                    <Text style={[styles.confirmBtnText, { color: colors.textSecondary }]}>
-                                        No answer
-                                    </Text>
-                                </TouchableOpacity>
-                            </>
-                        ) : (
-                            <>
-                                <View style={[styles.confirmIconWrap, { backgroundColor: '#D1FAE5' }]}>
-                                    <Ionicons name="logo-whatsapp" size={26} color="#25D366" />
-                                </View>
-                                <Text style={[styles.confirmTitle, { color: colors.textPrimary }]}>
-                                    Did you send the message?
-                                </Text>
-                                <Text style={[styles.confirmSubtitle, { color: colors.textSecondary }]}>
-                                    To {lead.full_name}
-                                </Text>
-                                <TouchableOpacity
-                                    style={[styles.confirmBtn, { backgroundColor: '#25D366' }]}
-                                    onPress={() => handleContactConfirm('sent')}
-                                >
-                                    <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
-                                    <Text style={styles.confirmBtnText}>Yes, sent</Text>
-                                </TouchableOpacity>
-                            </>
-                        )}
-                        <TouchableOpacity onPress={() => handleContactConfirm('skip')}>
-                            <Text style={[styles.confirmSkip, { color: colors.textTertiary }]}>Skip — don't log</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
+                contactType={pendingContact?.type ?? null}
+                leadName={lead.full_name}
+                colors={colors}
+                onConfirm={handleContactConfirm}
+            />
 
             {/* Reassign Modal */}
-            <Modal
+            <ReassignModal
                 visible={showReassignModal}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setShowReassignModal(false)}
-            >
-                <TouchableOpacity
-                    style={[styles.modalOverlay]}
-                    activeOpacity={1}
-                    onPress={() => setShowReassignModal(false)}
-                >
-                    <View style={[styles.reassignSheet, { backgroundColor: colors.cardBackground }]}>
-                        <Text style={[styles.reassignTitle, { color: colors.textPrimary }]}>Reassign Lead</Text>
-                        <Text style={[styles.reassignSubtitle, { color: colors.textSecondary }]}>
-                            Select an agent to reassign {lead.full_name} to
-                        </Text>
-                        {reassignAgents.length === 0 ? (
-                            <Text style={[styles.reassignEmpty, { color: colors.textTertiary }]}>
-                                No agents available
-                            </Text>
-                        ) : (
-                            reassignAgents.map((agent) => (
-                                <TouchableOpacity
-                                    key={agent.id}
-                                    style={[styles.agentRow, { borderColor: colors.borderLight }]}
-                                    onPress={() => handleReassign(agent)}
-                                >
-                                    <View style={[styles.agentAvatar, { backgroundColor: colors.accentLight }]}>
-                                        <Text style={[styles.agentAvatarText, { color: colors.accent }]}>
-                                            {agent.full_name.charAt(0).toUpperCase()}
-                                        </Text>
-                                    </View>
-                                    <Text style={[styles.agentName, { color: colors.textPrimary }]}>
-                                        {agent.full_name}
-                                    </Text>
-                                    <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-                                </TouchableOpacity>
-                            ))
-                        )}
-                        <TouchableOpacity
-                            style={[styles.reassignCancel, { borderColor: colors.borderLight }]}
-                            onPress={() => setShowReassignModal(false)}
-                        >
-                            <Text style={[styles.reassignCancelText, { color: colors.textSecondary }]}>Cancel</Text>
-                        </TouchableOpacity>
-                    </View>
-                </TouchableOpacity>
-            </Modal>
+                leadName={lead.full_name}
+                agents={reassignAgents}
+                colors={colors}
+                onSelect={handleReassign}
+                onClose={() => setShowReassignModal(false)}
+            />
         </SafeAreaView>
-    );
-}
-
-// ── QuickAction Button ──
-function QuickAction({
-    icon,
-    label,
-    color,
-    bgColor,
-    onPress,
-    disabled,
-}: {
-    icon: string;
-    label: string;
-    color: string;
-    bgColor: string;
-    onPress: () => void;
-    disabled?: boolean;
-}) {
-    return (
-        <TouchableOpacity
-            style={[styles.quickAction, { opacity: disabled ? 0.4 : 1 }]}
-            onPress={onPress}
-            disabled={disabled}
-        >
-            <View style={[styles.quickActionIcon, { backgroundColor: bgColor }]}>
-                <Ionicons name={icon as any} size={20} color={color} />
-            </View>
-            <Text style={[styles.quickActionLabel, { color }]}>{label}</Text>
-        </TouchableOpacity>
     );
 }
 
@@ -721,7 +503,7 @@ const styles = StyleSheet.create({
     },
     avatarText: { fontSize: 22, fontWeight: '800' },
     leadInfo: { flex: 1 },
-    leadName: { fontSize: 20, fontWeight: '800', letterSpacing: -0.3 },
+    leadName: { fontSize: 20, fontWeight: '800', letterSpacing: letterSpacing(-0.3) },
     contactSection: {
         marginTop: 14,
         paddingTop: 14,
@@ -756,59 +538,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         justifyContent: 'space-around',
     },
-    quickAction: {
-        alignItems: 'center',
-        gap: 4,
-    },
-    quickActionIcon: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    quickActionLabel: { fontSize: 11, fontWeight: '600' },
     sectionTitle: { fontSize: 15, fontWeight: '700', marginBottom: 12 },
-    statusGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-    },
-    statusOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-    },
-    statusOptionText: { fontSize: 13, fontWeight: '600' },
-    noteInput: {
-        borderWidth: 0.5,
-        borderRadius: 10,
-        padding: 12,
-        fontSize: 14,
-        minHeight: 80,
-    },
-    noteActions: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        gap: 8,
-        marginTop: 10,
-    },
-    noteCancel: {
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 8,
-        borderWidth: 0.5,
-    },
-    noteCancelText: { fontSize: 13, fontWeight: '600' },
-    noteSave: {
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 8,
-    },
-    noteSaveText: { fontSize: 13, fontWeight: '700' },
     timelineHeader: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -823,80 +553,4 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     notFoundText: { fontSize: 16, fontWeight: '600' },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.45)',
-        justifyContent: 'flex-end',
-    },
-    reassignSheet: {
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        padding: 24,
-        paddingBottom: 40,
-        gap: 0,
-    },
-    reassignTitle: { fontSize: 17, fontWeight: '700', marginBottom: 4 },
-    reassignSubtitle: { fontSize: 13, marginBottom: 20 },
-    reassignEmpty: { fontSize: 14, textAlign: 'center', paddingVertical: 12 },
-    agentRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        paddingVertical: 12,
-        borderBottomWidth: 0.5,
-    },
-    agentAvatar: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    agentAvatarText: { fontSize: 15, fontWeight: '700' },
-    agentName: { flex: 1, fontSize: 15, fontWeight: '600' },
-    reassignCancel: {
-        marginTop: 16,
-        paddingVertical: 12,
-        borderRadius: 10,
-        borderWidth: 0.5,
-        alignItems: 'center',
-    },
-    reassignCancelText: { fontSize: 15, fontWeight: '600' },
-    confirmOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.45)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 32,
-    },
-    confirmSheet: {
-        width: '100%',
-        maxWidth: 340,
-        borderRadius: 20,
-        padding: 24,
-        alignItems: 'center',
-        gap: 0,
-    },
-    confirmIconWrap: {
-        width: 56,
-        height: 56,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 14,
-    },
-    confirmTitle: { fontSize: 17, fontWeight: '700', textAlign: 'center', marginBottom: 4 },
-    confirmSubtitle: { fontSize: 13, textAlign: 'center', marginBottom: 20 },
-    confirmBtn: {
-        width: '100%',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        paddingVertical: 13,
-        borderRadius: 12,
-        marginBottom: 10,
-    },
-    confirmBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
-    confirmSkip: { fontSize: 13, marginTop: 4, fontWeight: '500' },
 });

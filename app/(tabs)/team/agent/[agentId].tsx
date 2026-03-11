@@ -4,6 +4,7 @@ import ScreenHeader from '@/components/ScreenHeader';
 import { useTheme } from '@/contexts/ThemeContext';
 import { fetchTeamMember, type TeamMember } from '@/lib/team';
 import { LEAD_STATUSES, STATUS_CONFIG, type Lead, type LeadStatus } from '@/types/lead';
+import { letterSpacing } from '@/constants/platform';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -358,7 +359,7 @@ const styles = StyleSheet.create({
     profileName: {
         fontSize: 22,
         fontWeight: '800',
-        letterSpacing: -0.3,
+        letterSpacing: letterSpacing(-0.3),
     },
     profileMeta: {
         flexDirection: 'row',
@@ -412,7 +413,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 18,
         fontWeight: '700',
-        letterSpacing: -0.2,
+        letterSpacing: letterSpacing(-0.2),
         marginBottom: 10,
     },
 
@@ -438,12 +439,12 @@ const styles = StyleSheet.create({
     statValue: {
         fontSize: 24,
         fontWeight: '800',
-        letterSpacing: -0.3,
+        letterSpacing: letterSpacing(-0.3),
     },
     statValueWhite: {
         fontSize: 24,
         fontWeight: '800',
-        letterSpacing: -0.3,
+        letterSpacing: letterSpacing(-0.3),
     },
     statLabel: {
         fontSize: 12,

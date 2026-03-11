@@ -1,4 +1,5 @@
 import Avatar from '@/components/Avatar';
+import { CASE_CLOSED_COLOR } from '@/components/events/roadshowShared';
 import { activityLabel, activityTypeColor, getAvatarColor, ROADSHOW_PINK } from '@/constants/ui';
 import { formatCheckinTime } from '@/lib/dateTime';
 import type { EventAttendee, RoadshowActivity } from '@/types/event';
@@ -52,7 +53,9 @@ function RoadshowLeaderboardInner({ colors, leaderboard, userId }: RoadshowLeade
                         <Text style={[styles.lbNum, { color: colors.textPrimary }]}>{agent.sitdowns}</Text>
                         <Text style={[styles.lbNum, { color: colors.textPrimary }]}>{agent.pitches}</Text>
                         <Text style={[styles.lbNum, { color: colors.textPrimary }]}>{agent.closed}</Text>
-                        <Text style={[styles.lbAfyc, { color: agent.afyc > 0 ? '#F59E0B' : colors.textTertiary }]}>
+                        <Text
+                            style={[styles.lbAfyc, { color: agent.afyc > 0 ? CASE_CLOSED_COLOR : colors.textTertiary }]}
+                        >
                             ${agent.afyc >= 1000 ? `${(agent.afyc / 1000).toFixed(1)}k` : agent.afyc}
                         </Text>
                     </View>

@@ -1,13 +1,14 @@
 import { INTERVIEW_STATUS_COLORS } from '@/constants/ui';
 import { formatDateTime } from '@/lib/dateTime';
 import type { Interview } from '@/types/recruitment';
+import type { ThemeColors } from '@/types/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface InterviewCardProps {
     interview: Interview;
-    colors: any;
+    colors: ThemeColors;
     onEdit: () => void;
     onDelete: () => void;
 }

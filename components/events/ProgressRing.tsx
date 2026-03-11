@@ -1,3 +1,4 @@
+import { displayWeight } from '@/constants/platform';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 
@@ -32,17 +33,18 @@ export default function ProgressRing({ actual, pledged, color, label, accessLabe
                 </View>
             )}
             <Text style={styles.ringLabel}>{label}</Text>
-            {noPledge
-                ? <Text style={styles.ringTarget}>No target</Text>
-                : <Text style={styles.ringTarget}>of {pledged}</Text>
-            }
+            {noPledge ? (
+                <Text style={styles.ringTarget}>No target</Text>
+            ) : (
+                <Text style={styles.ringTarget}>of {pledged}</Text>
+            )}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     ringContainer: { alignItems: 'center', gap: 4, flexShrink: 1, minWidth: 80 },
-    ringActual: { fontSize: 28, fontWeight: '800' },
+    ringActual: { fontSize: 28, fontWeight: displayWeight('800') },
     ringTrack: { height: 6, borderRadius: 3, overflow: 'hidden', borderWidth: 0 },
     ringFill: { height: 6, borderRadius: 3 },
     ringLabel: { fontSize: 11, color: '#8E8E93', fontWeight: '600' },

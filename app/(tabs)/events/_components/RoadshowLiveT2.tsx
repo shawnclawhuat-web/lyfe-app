@@ -1,6 +1,14 @@
 import Avatar from '@/components/Avatar';
 import ProgressRing from '@/components/events/ProgressRing';
+import {
+    type ActivityCounts,
+    type BoothTotals,
+    PITCH_COLOR,
+    CASE_CLOSED_COLOR,
+} from '@/components/events/roadshowShared';
+import { ACTIVITY_TYPE_CONFIG } from '@/constants/displayConfigs';
 import { ERROR_BG, ERROR_TEXT, getAvatarColor, ROADSHOW_PINK } from '@/constants/ui';
+import { KAV_BEHAVIOR } from '@/constants/platform';
 import { formatCheckinTime } from '@/lib/dateTime';
 import type { AgencyEvent, EventAttendee, RoadshowAttendance, RoadshowConfig } from '@/types/event';
 import type { Colors } from '@/constants/Colors';
@@ -10,7 +18,6 @@ import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Modal,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -19,24 +26,6 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-interface ActivityCounts {
-    sitdowns: number;
-    pitches: number;
-    closed: number;
-    afyc: number;
-}
-
-interface BoothTotals {
-    sitdowns: number;
-    pitches: number;
-    closed: number;
-    afyc: number;
-    pledgedSitdowns: number;
-    pledgedPitches: number;
-    pledgedClosed: number;
-    pledgedAfyc: number;
-}
 
 export interface RoadshowLiveT2Props {
     colors: typeof Colors.light;
@@ -111,21 +100,21 @@ function RoadshowLiveT2Inner(props: RoadshowLiveT2Props) {
                     <ProgressRing
                         actual={boothTotals.sitdowns}
                         pledged={boothTotals.pledgedSitdowns}
-                        color="#6366F1"
+                        color={colors.managerColor}
                         label="Sitdowns"
                         accessLabel={`Booth sitdowns: ${boothTotals.sitdowns} of ${boothTotals.pledgedSitdowns}`}
                     />
                     <ProgressRing
                         actual={boothTotals.pitches}
                         pledged={boothTotals.pledgedPitches}
-                        color="#E67700"
+                        color={ACTIVITY_TYPE_CONFIG.pitch.color}
                         label="Pitches"
                         accessLabel={`Booth pitches: ${boothTotals.pitches} of ${boothTotals.pledgedPitches}`}
                     />
                     <ProgressRing
                         actual={boothTotals.closed}
                         pledged={boothTotals.pledgedClosed}
-                        color="#F59E0B"
+                        color={ACTIVITY_TYPE_CONFIG.case_closed.color}
                         label="Closed"
                         accessLabel={`Booth cases: ${boothTotals.closed} of ${boothTotals.pledgedClosed}`}
                     />
@@ -150,7 +139,7 @@ function RoadshowLiveT2Inner(props: RoadshowLiveT2Props) {
                                     styles.afycFill,
                                     {
                                         width: `${Math.min(100, (boothTotals.afyc / boothTotals.pledgedAfyc) * 100)}%` as any,
-                                        backgroundColor: '#F59E0B',
+                                        backgroundColor: CASE_CLOSED_COLOR,
                                     },
                                 ]}
                             />
@@ -291,7 +280,7 @@ function RoadshowLiveT2Inner(props: RoadshowLiveT2Props) {
                                                                 color:
                                                                     counts.sitdowns >= att.pledged_sitdowns &&
                                                                     att.pledged_sitdowns > 0
-                                                                        ? '#E67700'
+                                                                        ? PITCH_COLOR
                                                                         : colors.textPrimary,
                                                             },
                                                         ]}
@@ -308,7 +297,7 @@ function RoadshowLiveT2Inner(props: RoadshowLiveT2Props) {
                                                                 color:
                                                                     counts.pitches >= att.pledged_pitches &&
                                                                     att.pledged_pitches > 0
-                                                                        ? '#E67700'
+                                                                        ? PITCH_COLOR
                                                                         : colors.textPrimary,
                                                             },
                                                         ]}
@@ -325,7 +314,7 @@ function RoadshowLiveT2Inner(props: RoadshowLiveT2Props) {
                                                                 color:
                                                                     counts.closed >= att.pledged_closed &&
                                                                     att.pledged_closed > 0
-                                                                        ? '#E67700'
+                                                                        ? PITCH_COLOR
                                                                         : colors.textPrimary,
                                                             },
                                                         ]}
@@ -342,7 +331,7 @@ function RoadshowLiveT2Inner(props: RoadshowLiveT2Props) {
                                                                 color:
                                                                     counts.afyc >= att.pledged_afyc &&
                                                                     att.pledged_afyc > 0
-                                                                        ? '#F59E0B'
+                                                                        ? CASE_CLOSED_COLOR
                                                                         : colors.textPrimary,
                                                             },
                                                         ]}
@@ -377,7 +366,7 @@ function RoadshowLiveT2Inner(props: RoadshowLiveT2Props) {
                 onRequestClose={() => setOverrideTarget(null)}
             >
                 <SafeAreaView style={[styles.sheetContainer, { backgroundColor: colors.background }]}>
-                    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                    <KeyboardAvoidingView style={{ flex: 1 }} behavior={KAV_BEHAVIOR}>
                         <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
                             <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>
                                 Check in for {overrideTarget?.full_name}
@@ -501,10 +490,14 @@ function RoadshowLiveT2Inner(props: RoadshowLiveT2Props) {
                                 disabled={overrideSubmitting}
                             >
                                 {overrideSubmitting ? (
-                                    <ActivityIndicator size="small" color="#FFFFFF" />
+                                    <ActivityIndicator size="small" color={colors.textInverse} />
                                 ) : (
                                     <>
-                                        <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />
+                                        <Ionicons
+                                            name="checkmark-circle-outline"
+                                            size={20}
+                                            color={colors.textInverse}
+                                        />
                                         <Text style={styles.checkinBtnText}>Confirm Override Check-in</Text>
                                     </>
                                 )}

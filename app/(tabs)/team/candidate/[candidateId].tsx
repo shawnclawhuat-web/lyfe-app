@@ -1,6 +1,8 @@
 import LoadingState from '@/components/LoadingState';
+import { KAV_BEHAVIOR, letterSpacing } from '@/constants/platform';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/types/theme';
 import { addCandidateActivity, fetchCandidate, syncAgentToMKTR, updateCandidateStatus } from '@/lib/recruitment';
 import { CANDIDATE_STATUS_CONFIG, type CandidateStatus, type RecruitmentCandidate } from '@/types/recruitment';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,7 +14,6 @@ import {
     KeyboardAvoidingView,
     Linking,
     Modal,
-    Platform,
     ScrollView,
     Share,
     StyleSheet,
@@ -307,7 +308,7 @@ export default function CandidateDetailScreen() {
                 animationType="none"
                 onRequestClose={() => setShowNoteModal(false)}
             >
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+                <KeyboardAvoidingView behavior={KAV_BEHAVIOR} style={{ flex: 1 }}>
                     <TouchableOpacity
                         style={styles.modalOverlay}
                         activeOpacity={1}
@@ -365,7 +366,7 @@ function StatusStepper({
     onStepPress,
 }: {
     currentStatus: CandidateStatus;
-    colors: any;
+    colors: ThemeColors;
     onStepPress: (status: CandidateStatus) => void;
 }) {
     const steps: CandidateStatus[] = [
@@ -430,7 +431,7 @@ function StatusStepper({
     );
 }
 
-function ContactRow({ icon, value, colors }: { icon: string; value: string; colors: any }) {
+function ContactRow({ icon, value, colors }: { icon: string; value: string; colors: ThemeColors }) {
     return (
         <View style={styles.contactRow}>
             <Ionicons name={icon as any} size={16} color={colors.textTertiary} />
@@ -475,7 +476,7 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     avatarText: { fontSize: 26, fontWeight: '600' },
-    profileName: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3, marginBottom: 6 },
+    profileName: { fontSize: 22, fontWeight: '700', letterSpacing: letterSpacing(-0.3), marginBottom: 6 },
     statusBadge: {
         paddingHorizontal: 12,
         paddingVertical: 4,

@@ -1,3 +1,5 @@
+import { letterSpacing } from '@/constants/platform';
+import type { ThemeColors } from '@/types/theme';
 import React, { useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -7,7 +9,7 @@ interface WheelPickerProps {
     items: string[];
     selectedIndex: number;
     onChange: (index: number) => void;
-    colors: any;
+    colors: ThemeColors;
     width?: number;
     /** Show the per-column hairline selection indicator. Default true. */
     showIndicator?: boolean;
@@ -16,8 +18,13 @@ interface WheelPickerProps {
 }
 
 export default function WheelPicker({
-    items, selectedIndex, onChange, colors,
-    width = 80, showIndicator = true, visibleItems = 5,
+    items,
+    selectedIndex,
+    onChange,
+    colors,
+    width = 80,
+    showIndicator = true,
+    visibleItems = 5,
 }: WheelPickerProps) {
     const scrollRef = useRef<ScrollView>(null);
     const padding = WHEEL_ITEM_H * Math.floor(visibleItems / 2);
@@ -40,17 +47,19 @@ export default function WheelPicker({
 
     const centerIdx = scrollY / WHEEL_ITEM_H;
 
-    const itemStyles = useMemo(() =>
-        items.map((_, i) => {
-            const dist = Math.abs(centerIdx - i);
-            const isSelected = dist < 0.5;
-            return {
-                opacity: Math.max(0.15, 1 - dist * 0.45),
-                fontSize: isSelected ? 22 : 16,
-                fontWeight: (isSelected ? '700' : '400') as '700' | '400',
-                color: isSelected ? colors.accent : colors.textPrimary,
-            };
-        }), [centerIdx, items.length, colors.accent, colors.textPrimary]
+    const itemStyles = useMemo(
+        () =>
+            items.map((_, i) => {
+                const dist = Math.abs(centerIdx - i);
+                const isSelected = dist < 0.5;
+                return {
+                    opacity: Math.max(0.15, 1 - dist * 0.45),
+                    fontSize: isSelected ? 22 : 16,
+                    fontWeight: (isSelected ? '700' : '400') as '700' | '400',
+                    color: isSelected ? colors.accent : colors.textPrimary,
+                };
+            }),
+        [centerIdx, items.length, colors.accent, colors.textPrimary],
     );
 
     return (
@@ -75,7 +84,7 @@ export default function WheelPicker({
                 showsVerticalScrollIndicator={false}
                 snapToInterval={WHEEL_ITEM_H}
                 decelerationRate="fast"
-                onScroll={e => setScrollY(e.nativeEvent.contentOffset.y)}
+                onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
                 scrollEventThrottle={16}
                 onMomentumScrollEnd={handleEnd}
                 onScrollEndDrag={handleEnd}
@@ -83,13 +92,15 @@ export default function WheelPicker({
             >
                 {items.map((item, i) => (
                     <View key={i} style={{ height: WHEEL_ITEM_H, alignItems: 'center', justifyContent: 'center' }}>
-                        <Text style={{
-                            fontSize: itemStyles[i].fontSize,
-                            fontWeight: itemStyles[i].fontWeight,
-                            opacity: itemStyles[i].opacity,
-                            color: itemStyles[i].color,
-                            letterSpacing: -0.3,
-                        }}>
+                        <Text
+                            style={{
+                                fontSize: itemStyles[i].fontSize,
+                                fontWeight: itemStyles[i].fontWeight,
+                                opacity: itemStyles[i].opacity,
+                                color: itemStyles[i].color,
+                                letterSpacing: letterSpacing(-0.3),
+                            }}
+                        >
                             {item}
                         </Text>
                     </View>

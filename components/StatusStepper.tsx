@@ -1,11 +1,12 @@
 import { CANDIDATE_STATUS_CONFIG, type CandidateStatus } from '@/types/recruitment';
+import type { ThemeColors } from '@/types/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 interface StatusStepperProps {
     currentStatus: CandidateStatus;
-    colors: any;
+    colors: ThemeColors;
 }
 
 export default function StatusStepper({ currentStatus, colors }: StatusStepperProps) {

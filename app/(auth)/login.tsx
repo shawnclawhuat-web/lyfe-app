@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { biometricMeta, getBiometryType, type BiometryType } from '@/lib/biometrics';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '@/constants/Colors';
 import { letterSpacing } from '@/constants/platform';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -21,12 +22,12 @@ import {
     View,
 } from 'react-native';
 
-const OVERLAY_TEXT = '#FFFFFF';
+const OVERLAY_TEXT = Colors.light.textInverse;
 const OVERLAY_TEXT_MUTED = 'rgba(255,255,255,0.8)';
 const OVERLAY_TEXT_SUBTLE = 'rgba(255,255,255,0.6)';
 const OVERLAY_TINT = 'rgba(255,255,255,0.18)';
 const OVERLAY_BORDER = 'rgba(255,255,255,0.35)';
-const BRAND_ORANGE = '#FF7600';
+const BRAND_ORANGE = Colors.light.accent;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -547,7 +548,7 @@ const styles = StyleSheet.create({
 
     /* Buttons */
     primaryButton: { height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-    whiteButton: { backgroundColor: '#FFFFFF' },
+    whiteButton: { backgroundColor: Colors.light.surfacePrimary },
     buttonText: { fontSize: 16, fontWeight: '600', letterSpacing: 0.3 },
     biometricButton: {
         height: 56,
@@ -556,7 +557,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 10,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: Colors.light.surfacePrimary,
     },
     ghostButton: {
         height: 52,
@@ -566,7 +567,7 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
         borderColor: 'rgba(255,255,255,0.4)',
     },
-    ghostButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
+    ghostButtonText: { color: Colors.light.textInverse, fontSize: 15, fontWeight: '600' },
 
     /* Divider */
     dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 20, gap: 12 },

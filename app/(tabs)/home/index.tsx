@@ -1,6 +1,8 @@
 import { displayWeight, letterSpacing } from '@/constants/platform';
 import Avatar from '@/components/Avatar';
 import ErrorBanner from '@/components/ErrorBanner';
+import QuickActionBtn from '@/components/home/QuickActionBtn';
+import StatCardSmall from '@/components/home/StatCardSmall';
 import LyfeLogo from '@/components/LyfeLogo';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,14 +29,14 @@ import { formatDateShort, formatTime, timeAgo } from '@/lib/dateTime';
 import { MOCK_AGENT_STATS, MOCK_LEAD_PIPELINE, MOCK_MANAGER_ACTIVITIES, MOCK_MANAGER_STATS } from '@/lib/mockData';
 import { fetchUpcomingEvents } from '@/lib/events';
 import { fetchPAManagerIds, fetchPACandidateCount, fetchPAInterviewCount } from '@/lib/recruitment';
-import { EVENT_TYPE_COLORS, type AgencyEvent } from '@/types/event';
+import { EVENT_TYPE_CONFIG } from '@/constants/displayConfigs';
+import type { AgencyEvent } from '@/types/event';
 import { STATUS_CONFIG, type LeadActivity, type LeadActivityType } from '@/types/lead';
 import { useTypedRouter } from '@/hooks/useTypedRouter';
 import { Ionicons } from '@expo/vector-icons';
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 function getGreeting(): string {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -246,7 +248,9 @@ export default function HomeScreen() {
                             <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
                             {unreadCount > 0 && (
                                 <View style={[styles.badge, { backgroundColor: colors.danger }]}>
-                                    <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                                    <Text style={[styles.badgeText, { color: colors.textInverse }]}>
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </Text>
                                 </View>
                             )}
                         </TouchableOpacity>
@@ -287,7 +291,7 @@ export default function HomeScreen() {
                                     styles.viewModeBtn,
                                     viewMode === 'agent' && {
                                         backgroundColor: colors.cardBackground,
-                                        shadowColor: '#000',
+                                        shadowColor: colors.textPrimary,
                                         shadowOffset: { width: 0, height: 1 },
                                         shadowOpacity: 0.1,
                                         shadowRadius: 2,
@@ -322,7 +326,7 @@ export default function HomeScreen() {
                                     styles.viewModeBtn,
                                     viewMode === 'manager' && {
                                         backgroundColor: colors.cardBackground,
-                                        shadowColor: '#000',
+                                        shadowColor: colors.textPrimary,
                                         shadowOffset: { width: 0, height: 1 },
                                         shadowOpacity: 0.1,
                                         shadowRadius: 2,
@@ -638,7 +642,7 @@ export default function HomeScreen() {
                             </Text>
                         ) : (
                             paStats.events.map((event) => {
-                                const typeColor = EVENT_TYPE_COLORS[event.event_type] ?? colors.accent;
+                                const typeColor = EVENT_TYPE_CONFIG[event.event_type].color ?? colors.accent;
                                 return (
                                     <TouchableOpacity
                                         key={event.id}
@@ -689,7 +693,7 @@ export default function HomeScreen() {
                             </Text>
                         ) : (
                             agentEvents.map((event) => {
-                                const typeColor = EVENT_TYPE_COLORS[event.event_type] ?? colors.accent;
+                                const typeColor = EVENT_TYPE_CONFIG[event.event_type].color ?? colors.accent;
                                 return (
                                     <TouchableOpacity
                                         key={event.id}
@@ -856,8 +860,12 @@ export default function HomeScreen() {
                             accessibilityRole="button"
                             accessibilityLabel={`Enable ${biometricMeta(biometryType).label}`}
                         >
-                            <Ionicons name={biometricMeta(biometryType).icon as any} size={20} color="#FFFFFF" />
-                            <Text style={styles.biometricEnableBtnText}>
+                            <Ionicons
+                                name={biometricMeta(biometryType).icon as any}
+                                size={20}
+                                color={colors.textInverse}
+                            />
+                            <Text style={[styles.biometricEnableBtnText, { color: colors.textInverse }]}>
                                 Enable {biometricMeta(biometryType).label}
                             </Text>
                         </TouchableOpacity>
@@ -876,72 +884,6 @@ export default function HomeScreen() {
         </SafeAreaView>
     );
 }
-
-// ── Sub-Components ──
-
-const StatCardSmall = memo(function StatCardSmall({
-    label,
-    value,
-    colors,
-}: {
-    label: string;
-    value: string;
-    colors: any;
-}) {
-    return (
-        <View
-            style={[styles.statCardSmall, { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary }]}
-        >
-            <Text style={[styles.statValueSmall, { color: colors.textPrimary }]}>{value}</Text>
-            <Text style={[styles.statLabelSmall, { color: colors.textTertiary }]}>{label}</Text>
-        </View>
-    );
-});
-
-const QuickActionBtn = memo(function QuickActionBtn({
-    icon,
-    label,
-    colors,
-    onPress,
-}: {
-    icon: string;
-    label: string;
-    colors: any;
-    onPress: () => void;
-}) {
-    const scale = useSharedValue(1);
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: scale.value }],
-    }));
-    const onPressIn = () => {
-        scale.value = withSpring(0.97, { damping: 15 });
-    };
-    const onPressOut = () => {
-        scale.value = withSpring(1, { damping: 15 });
-    };
-
-    return (
-        <TouchableOpacity
-            style={[
-                styles.quickActionSurface,
-                { backgroundColor: colors.cardBackground, shadowColor: colors.textPrimary },
-            ]}
-            onPress={onPress}
-            onPressIn={onPressIn}
-            onPressOut={onPressOut}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={label}
-        >
-            <Animated.View style={[styles.quickActionInner, animatedStyle]}>
-                <View style={[styles.quickActionIconWrapper, { backgroundColor: colors.accentLight }]}>
-                    <Ionicons name={icon as any} size={22} color={colors.accent} />
-                </View>
-                <Text style={[styles.quickActionLabel, { color: colors.textPrimary }]}>{label}</Text>
-            </Animated.View>
-        </TouchableOpacity>
-    );
-});
 
 // ── Styles ──
 const styles = StyleSheet.create({
@@ -998,7 +940,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
     },
     badgeText: {
-        color: '#FFFFFF',
         fontSize: 10,
         fontWeight: '700',
         lineHeight: 12,
@@ -1066,19 +1007,6 @@ const styles = StyleSheet.create({
         flex: 1,
         gap: 12,
     },
-    statCardSmall: {
-        flex: 1,
-        borderRadius: 16,
-        padding: 16,
-        justifyContent: 'center',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.03,
-        shadowRadius: 8,
-        elevation: 1,
-    },
-    statValueSmall: { fontSize: 22, fontWeight: '700', marginBottom: 2 },
-    statLabelSmall: { fontSize: 13, fontWeight: '500' },
-
     // Quick Actions
     quickActionsSection: {
         marginTop: 4,
@@ -1087,32 +1015,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 12,
-    },
-    quickActionSurface: {
-        flex: 1,
-        minWidth: '45%',
-        borderRadius: 16,
-        alignItems: 'center',
-        paddingVertical: 14,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.02,
-        shadowRadius: 6,
-        elevation: 1,
-    },
-    quickActionIconWrapper: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 8,
-    },
-    quickActionInner: {
-        alignItems: 'center',
-    },
-    quickActionLabel: {
-        fontSize: 12,
-        fontWeight: '600',
     },
 
     // Pipeline
@@ -1225,7 +1127,6 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     biometricEnableBtnText: {
-        color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '600',
     },

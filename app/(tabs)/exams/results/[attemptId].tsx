@@ -3,6 +3,7 @@ import MathRenderer from '@/components/MathRenderer';
 import { useTheme } from '@/contexts/ThemeContext';
 import { fetchExamResult } from '@/lib/exams';
 import type { ExamQuestion } from '@/types/exam';
+import { displayWeight, letterSpacing } from '@/constants/platform';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -379,7 +380,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 16,
     },
-    scorePercentage: { fontSize: 56, fontWeight: '800', letterSpacing: -2 },
+    scorePercentage: { fontSize: 56, fontWeight: displayWeight('800'), letterSpacing: letterSpacing(-2) },
     scoreLabel: { fontSize: 16, fontWeight: '600', marginTop: -4 },
     resultBadge: {
         flexDirection: 'row',

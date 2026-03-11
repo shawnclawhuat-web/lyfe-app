@@ -1,4 +1,5 @@
 import LiveEventBar from '@/components/LiveEventBar';
+import { TAB_BAR_HEIGHT, TAB_BAR_PADDING_BOTTOM, TAB_BAR_PADDING_TOP } from '@/constants/platform';
 import { getVisibleTabs, type UserRole } from '@/constants/Roles';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -6,12 +7,13 @@ import { useViewMode } from '@/contexts/ViewModeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TAB_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
     home: 'home-outline',
     leads: 'people-outline',
-    exams: 'school-outline',
+    roadmap: 'map-outline',
     candidates: 'document-text-outline',
     team: 'briefcase-outline',
     events: 'calendar-outline',
@@ -23,7 +25,7 @@ const TAB_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 const TAB_ICONS_FOCUSED: Record<string, keyof typeof Ionicons.glyphMap> = {
     home: 'home',
     leads: 'people',
-    exams: 'school',
+    roadmap: 'map',
     candidates: 'document-text',
     team: 'briefcase',
     events: 'calendar',
@@ -35,7 +37,7 @@ const TAB_ICONS_FOCUSED: Record<string, keyof typeof Ionicons.glyphMap> = {
 const TAB_LABELS: Record<string, string> = {
     home: 'Home',
     leads: 'Leads',
-    exams: 'Exams',
+    roadmap: 'Roadmap',
     candidates: 'Candidates',
     team: 'Team',
     events: 'Events',
@@ -51,6 +53,11 @@ export default function TabLayout() {
 
     const role: UserRole = user?.role || 'agent';
     const visibleTabs = getVisibleTabs(role, viewMode);
+    const insets = useSafeAreaInsets();
+
+    // On Android, add the navigation bar inset so the tab bar sits above
+    // the system 3-button / gesture nav bar. iOS values are untouched.
+    const navBarInset = Platform.OS === 'android' ? insets.bottom : 0;
 
     return (
         <View style={{ flex: 1 }}>
@@ -64,9 +71,9 @@ export default function TabLayout() {
                         borderTopColor: colors.tabBarBorder,
                         borderTopWidth: 0.5,
                         elevation: 0,
-                        paddingBottom: 20,
-                        paddingTop: 6,
-                        height: 72,
+                        paddingBottom: TAB_BAR_PADDING_BOTTOM + navBarInset,
+                        paddingTop: TAB_BAR_PADDING_TOP,
+                        height: TAB_BAR_HEIGHT + navBarInset,
                     },
                     tabBarLabelStyle: {
                         fontSize: 11,
@@ -104,13 +111,13 @@ export default function TabLayout() {
                     }}
                 />
                 <Tabs.Screen
-                    name="exams"
+                    name="roadmap"
                     options={{
-                        title: TAB_LABELS.exams,
-                        href: visibleTabs.includes('exams') ? undefined : null,
+                        title: TAB_LABELS.roadmap,
+                        href: visibleTabs.includes('roadmap') ? undefined : null,
                         tabBarIcon: ({ focused, color, size }) => (
                             <Ionicons
-                                name={focused ? TAB_ICONS_FOCUSED.exams : TAB_ICONS.exams}
+                                name={focused ? TAB_ICONS_FOCUSED.roadmap : TAB_ICONS.roadmap}
                                 size={size}
                                 color={color}
                             />
@@ -183,6 +190,8 @@ export default function TabLayout() {
                         ),
                     }}
                 />
+                {/* Exams screens kept accessible for roadmap exam modules, but hidden from tab bar */}
+                <Tabs.Screen name="exams" options={{ href: null }} />
                 <Tabs.Screen
                     name="profile"
                     options={{

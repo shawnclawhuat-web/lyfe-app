@@ -1,4 +1,6 @@
+import { MODAL_STATUS_BAR_TRANSLUCENT } from '@/constants/platform';
 import { formatDateLabel, toDateStr } from '@/lib/dateTime';
+import type { ThemeColors } from '@/types/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Animated, Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -13,7 +15,7 @@ interface SinglePickerProps {
     selectedDate: string;
     onSelect: (date: string) => void;
     onClose: () => void;
-    colors: any;
+    colors: ThemeColors;
     title?: string;
 }
 
@@ -24,7 +26,7 @@ interface RangePickerProps {
     endDate: string;
     onConfirm: (start: string, end: string) => void;
     onClose: () => void;
-    colors: any;
+    colors: ThemeColors;
     title?: string;
 }
 
@@ -195,7 +197,13 @@ export default function CalendarPicker(props: CalendarPickerProps) {
               : null;
 
     return (
-        <Modal visible={visible || isRendered} transparent animationType="none" onRequestClose={handleClose}>
+        <Modal
+            visible={visible || isRendered}
+            transparent
+            animationType="none"
+            statusBarTranslucent={MODAL_STATUS_BAR_TRANSLUCENT}
+            onRequestClose={handleClose}
+        >
             <View style={s.overlay}>
                 <Animated.View style={[s.backdrop, { opacity: backdropOpacity }]}>
                     <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={handleClose} />
@@ -211,7 +219,12 @@ export default function CalendarPicker(props: CalendarPickerProps) {
                         <Text style={[s.title, { color: colors.textPrimary }]}>
                             {title ?? (isRange ? 'Select Dates' : 'Select Date')}
                         </Text>
-                        <TouchableOpacity onPress={handleDone} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <TouchableOpacity
+                            onPress={handleDone}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Done"
+                        >
                             <Text style={{ fontSize: 15, fontWeight: '600', color: colors.accent }}>Done</Text>
                         </TouchableOpacity>
                     </View>
@@ -232,6 +245,8 @@ export default function CalendarPicker(props: CalendarPickerProps) {
                         <TouchableOpacity
                             onPress={() => navigateMonth(-1)}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Previous month"
                         >
                             <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
                         </TouchableOpacity>
@@ -239,6 +254,8 @@ export default function CalendarPicker(props: CalendarPickerProps) {
                         <TouchableOpacity
                             onPress={() => navigateMonth(1)}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Next month"
                         >
                             <Ionicons name="chevron-forward" size={22} color={colors.textPrimary} />
                         </TouchableOpacity>
@@ -277,6 +294,8 @@ export default function CalendarPicker(props: CalendarPickerProps) {
                                             style={[s.dayCell, { width: DAY_SIZE }]}
                                             onPress={() => handleDayPress(date)}
                                             activeOpacity={0.6}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={`${date.getDate()} ${date.toLocaleDateString('en-SG', { month: 'long', year: 'numeric' })}`}
                                         >
                                             {/* Range band — full width for mid-range cells */}
                                             {isInRange && (
@@ -361,6 +380,8 @@ export default function CalendarPicker(props: CalendarPickerProps) {
                                 setDisplayMonth({ year: now.getFullYear(), month: now.getMonth() });
                                 handleDayPress(now);
                             }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Select today"
                         >
                             <Text style={[s.todayBtnText, { color: colors.accent }]}>Today</Text>
                         </TouchableOpacity>
