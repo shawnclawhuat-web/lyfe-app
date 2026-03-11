@@ -1,7 +1,7 @@
 /**
  * Activity tracking service — log and query agent activities on leads.
  */
-import type { LeadActivity, LeadActivityType } from '@/types/lead';
+import type { LeadActivityType } from '@/types/lead';
 import { supabase } from './supabase';
 
 // ── Types ────────────────────────────────────────────────────
@@ -14,60 +14,6 @@ export interface ActivitySummary {
 }
 
 // ── Functions ────────────────────────────────────────────────
-
-/**
- * Log an activity (call, meeting, follow-up, etc.) against a lead.
- * Also bumps the lead's updated_at timestamp.
- */
-export async function logActivity(
-    leadId: string,
-    type: LeadActivityType,
-    note: string | null,
-    userId: string,
-    metadata: Record<string, unknown> = {},
-): Promise<{ data: LeadActivity | null; error: string | null }> {
-    try {
-        // Bump lead updated_at
-        await supabase.from('leads').update({ updated_at: new Date().toISOString() }).eq('id', leadId);
-
-        const { data, error } = await supabase
-            .from('lead_activities')
-            .insert({
-                lead_id: leadId,
-                user_id: userId,
-                type,
-                description: note,
-                metadata,
-            })
-            .select()
-            .single();
-
-        if (error) return { data: null, error: error.message };
-        return { data: data as LeadActivity, error: null };
-    } catch (err) {
-        return { data: null, error: err instanceof Error ? err.message : 'Unknown error logging activity' };
-    }
-}
-
-/**
- * Get all activities for a specific lead, ordered by most recent first.
- */
-export async function getActivitiesByLead(
-    leadId: string,
-): Promise<{ data: LeadActivity[]; error: string | null }> {
-    try {
-        const { data, error } = await supabase
-            .from('lead_activities')
-            .select('*')
-            .eq('lead_id', leadId)
-            .order('created_at', { ascending: false });
-
-        if (error) return { data: [], error: error.message };
-        return { data: (data || []) as LeadActivity[], error: null };
-    } catch (err) {
-        return { data: [], error: err instanceof Error ? err.message : 'Unknown error fetching activities' };
-    }
-}
 
 /**
  * Get an activity summary for a specific agent within a date range.

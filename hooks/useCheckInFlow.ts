@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
+import { DEFAULT_PLEDGED_CLOSED, DEFAULT_PLEDGED_PITCHES, DEFAULT_PLEDGED_SITDOWNS } from '@/constants/ui';
 import { hasUserCheckedIn, logRoadshowActivity, logRoadshowAttendanceWithPledge, type PledgeInput } from '@/lib/events';
 import { supabase } from '@/lib/supabase';
 import type { RoadshowConfig } from '@/types/event';
@@ -16,9 +17,9 @@ export function useCheckInFlow({ eventId, userId, userFullName, roadshowConfig, 
     const [showLateReason, setShowLateReason] = useState(false);
     const [lateReason, setLateReason] = useState('');
     const [showPledgeSheet, setShowPledgeSheet] = useState(false);
-    const [pledgeSitdowns, setPledgeSitdowns] = useState(5);
-    const [pledgePitches, setPledgePitches] = useState(3);
-    const [pledgeClosed, setPledgeClosed] = useState(1);
+    const [pledgeSitdowns, setPledgeSitdowns] = useState(DEFAULT_PLEDGED_SITDOWNS);
+    const [pledgePitches, setPledgePitches] = useState(DEFAULT_PLEDGED_PITCHES);
+    const [pledgeClosed, setPledgeClosed] = useState(DEFAULT_PLEDGED_CLOSED);
     const [pledgeAfyc, setPledgeAfyc] = useState('');
     const [checkingIn, setCheckingIn] = useState(false);
     const [checkinError, setCheckinError] = useState<string | null>(null);
@@ -38,7 +39,12 @@ export function useCheckInFlow({ eventId, userId, userFullName, roadshowConfig, 
         setCheckinError(null);
 
         // Check for existing attendance (manager may have checked in already)
-        const alreadyCheckedIn = await hasUserCheckedIn(eventId!, userId!);
+        const { data: alreadyCheckedIn, error: checkError } = await hasUserCheckedIn(eventId!, userId!);
+        if (checkError) {
+            setCheckinError(checkError);
+            setCheckingIn(false);
+            return;
+        }
         if (alreadyCheckedIn) {
             setCheckingIn(false);
             setShowPledgeSheet(false);

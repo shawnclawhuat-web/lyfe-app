@@ -1,17 +1,12 @@
 /**
  * User roles and permission helpers
+ *
+ * UserRole and LifecycleStage are canonical in types/database.ts (derived from Supabase enums).
+ * Re-exported here for convenience — do NOT redefine locally.
  */
 
-export type UserRole = 'admin' | 'director' | 'manager' | 'agent' | 'pa' | 'candidate';
-
-export type LifecycleStage =
-    | 'applied'
-    | 'interview_scheduled'
-    | 'interviewed'
-    | 'approved'
-    | 'exam_prep'
-    | 'licensed'
-    | 'active_agent';
+import type { UserRole } from '@/types/database';
+export type { UserRole, LifecycleStage } from '@/types/database';
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'proposed' | 'won' | 'lost';
 
@@ -78,13 +73,13 @@ export const ROLE_TABS: Record<UserRole, string[]> = {
     manager: ['home', 'leads', 'team', 'events', 'profile'],
     agent: ['home', 'leads', 'events', 'profile'],
     pa: ['home', 'pa', 'events', 'profile'],
-    candidate: ['home', 'exams', 'events', 'profile'],
+    candidate: ['home', 'roadmap', 'events', 'profile'],
 };
 
 /** View-mode-aware tab resolver (FM-01, FM-03 mitigation) */
 export function getVisibleTabs(role: UserRole, viewMode?: 'agent' | 'manager'): string[] {
-    // Only manager/director have dual modes
-    if ((role === 'manager' || role === 'director') && viewMode) {
+    // Roles that can toggle view mode have dual tab sets
+    if (canToggleViewMode(role) && viewMode) {
         if (viewMode === 'agent') {
             return ['home', 'leads', 'events', 'profile'];
         }
@@ -136,11 +131,17 @@ export function canViewTeam(role: UserRole): boolean {
     return hasCapability(role, 'view_team');
 }
 
+/** Check if a role can toggle between Agent and Manager view modes.
+ *  A role is toggleable if it has both 'hold_agents' and 'view_leads' — i.e. a management role that can also act as agent. */
+export function canToggleViewMode(role: UserRole): boolean {
+    return hasCapability(role, 'hold_agents') && hasCapability(role, 'view_leads');
+}
+
 /** Tab display configuration */
 export const TAB_CONFIG: Record<string, { label: string; icon: string }> = {
     home: { label: 'Home', icon: 'home' },
     leads: { label: 'Leads', icon: 'people' },
-    exams: { label: 'Exams', icon: 'school' },
+    roadmap: { label: 'Roadmap', icon: 'map' },
     candidates: { label: 'Candidates', icon: 'document-text' },
     team: { label: 'Team', icon: 'business' },
     events: { label: 'Events', icon: 'calendar' },

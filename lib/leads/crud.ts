@@ -176,24 +176,6 @@ export async function assignLead(
 }
 
 /**
- * Get all leads assigned to a specific agent, ordered by most recently updated.
- */
-export async function getLeadsByAgent(agentId: string): Promise<{ data: Lead[]; error: string | null }> {
-    try {
-        const { data, error } = await supabase
-            .from('leads')
-            .select('*')
-            .eq('assigned_to', agentId)
-            .order('updated_at', { ascending: false });
-
-        if (error) return { data: [], error: error.message };
-        return { data: (data || []) as Lead[], error: null };
-    } catch (err) {
-        return { data: [], error: err instanceof Error ? err.message : 'Unknown error fetching leads' };
-    }
-}
-
-/**
  * Update a lead's status to progress it through the pipeline.
  * Logs a status_change activity with from/to metadata.
  */

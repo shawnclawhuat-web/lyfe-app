@@ -5,6 +5,9 @@ import type { RoadshowActivity, RoadshowActivityType, RoadshowAttendance, Roadsh
 import { applyPageRange, resolvePage } from './pagination';
 import { supabase } from './supabase';
 
+/** PostgREST error code: "no rows found" from .single() */
+const PGRST_NO_ROWS = 'PGRST116';
+
 // ── Helpers ──────────────────────────────────────────────────
 
 /** Compute daily/slot cost client-side */
@@ -36,14 +39,22 @@ function computeLate(
 // ── Check-in ─────────────────────────────────────────────────
 
 /** Check if a user has already checked in to an event */
-export async function hasUserCheckedIn(eventId: string, userId: string): Promise<boolean> {
-    const { data } = await supabase
+export async function hasUserCheckedIn(
+    eventId: string,
+    userId: string,
+): Promise<{ data: boolean; error: string | null }> {
+    const { data, error } = await supabase
         .from('roadshow_attendance')
         .select('id')
         .eq('event_id', eventId)
         .eq('user_id', userId)
         .single();
-    return !!data;
+
+    // PGRST116 = "no rows found" — not an error, just means not checked in
+    if (error && error.code !== PGRST_NO_ROWS) {
+        return { data: false, error: error.message };
+    }
+    return { data: !!data, error: null };
 }
 
 // ── Config ───────────────────────────────────────────────────
@@ -63,7 +74,7 @@ export async function fetchRoadshowConfig(
 ): Promise<{ data: RoadshowConfig | null; error: string | null }> {
     const { data, error } = await supabase.from('roadshow_configs').select('*').eq('event_id', eventId).single();
 
-    if (error && error.code !== 'PGRST116') return { data: null, error: error.message };
+    if (error && error.code !== PGRST_NO_ROWS) return { data: null, error: error.message };
     if (!data) return { data: null, error: null };
 
     const costs = computeCosts(data);

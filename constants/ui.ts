@@ -90,6 +90,11 @@ export const INTERVIEW_STATUS_COLORS: Record<string, string> = {
 // ── Roadshow constants ──────────────────────────────────────────
 export const ROADSHOW_PINK = '#EC4899';
 
+/** Default pledge values when no roadshow config is provided */
+export const DEFAULT_PLEDGED_SITDOWNS = 5;
+export const DEFAULT_PLEDGED_PITCHES = 3;
+export const DEFAULT_PLEDGED_CLOSED = 1;
+
 export function activityLabel(type: string): string {
     return ACTIVITY_TYPE_CONFIG[type as RoadshowActivityType]?.label ?? type;
 }
@@ -97,3 +102,28 @@ export function activityLabel(type: string): string {
 export function activityTypeColor(type: string, fallback: string): string {
     return ACTIVITY_TYPE_CONFIG[type as RoadshowActivityType]?.color ?? fallback;
 }
+
+// ── Animation timing ──────────────────────────────────────────
+export const ANIM = {
+    MICRO: 200, // hover, press, toggle
+    TRANSITION: 300, // tab switch, modal slide
+    REVEAL: 600, // progress bar, entrance
+} as const;
+
+// ── Spacing scale (4pt grid) ──────────────────────────────────
+export const SPACING = {
+    XS: 4,
+    SM: 8,
+    MD: 12,
+    LG: 16,
+    XL: 20,
+    XXL: 24,
+} as const;
+
+// ── Icon sizes ─────────────────────────────────────────────────
+export const ICON = {
+    SM: 16, // inline, badges, meta
+    MD: 20, // list items, actions
+    LG: 24, // headers, primary actions
+    XL: 32, // empty states, heroes
+} as const;

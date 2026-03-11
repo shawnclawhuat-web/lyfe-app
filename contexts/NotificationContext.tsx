@@ -44,7 +44,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         const channel = supabase
             .channel(`notifications:${user.id}`)
             .on(
-                'postgres_changes' as any,
+                'postgres_changes',
                 {
                     event: 'INSERT',
                     schema: 'public',

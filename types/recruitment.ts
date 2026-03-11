@@ -1,16 +1,13 @@
 /**
  * Recruitment types — Candidate pipeline & interview scheduling
+ *
+ * CandidateStatus is canonical in types/database.ts (derived from Supabase enums).
+ * Re-exported here for convenience — do NOT redefine locally.
  */
 
 // ── Candidate Statuses ──
-export type CandidateStatus =
-    | 'applied'
-    | 'interview_scheduled'
-    | 'interviewed'
-    | 'approved'
-    | 'exam_prep'
-    | 'licensed'
-    | 'active_agent';
+import type { CandidateStatus } from '@/types/database';
+export type { CandidateStatus } from '@/types/database';
 
 export interface CandidateStatusConfig {
     label: string;

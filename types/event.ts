@@ -94,12 +94,3 @@ export interface RoadshowActivity {
     afyc_amount: number | null;
     logged_at: string;
 }
-
-/** @deprecated Use EVENT_TYPE_CONFIG from constants/displayConfigs instead */
-export const EVENT_TYPE_COLORS: Record<EventType, string> = {
-    team_meeting: '#6366F1',
-    training: '#FF7600',
-    agency_event: '#F59E0B',
-    roadshow: '#EC4899',
-    other: '#8E8E93',
-};

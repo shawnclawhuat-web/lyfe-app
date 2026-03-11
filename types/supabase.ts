@@ -81,6 +81,128 @@ export type Database = {
                     },
                 ];
             };
+            candidate_module_progress: {
+                Row: {
+                    candidate_id: string;
+                    completed_at: string | null;
+                    completed_by: string | null;
+                    created_at: string;
+                    id: string;
+                    module_id: string;
+                    notes: string | null;
+                    score: number | null;
+                    status: string;
+                    updated_at: string;
+                };
+                Insert: {
+                    candidate_id: string;
+                    completed_at?: string | null;
+                    completed_by?: string | null;
+                    created_at?: string;
+                    id?: string;
+                    module_id: string;
+                    notes?: string | null;
+                    score?: number | null;
+                    status?: string;
+                    updated_at?: string;
+                };
+                Update: {
+                    candidate_id?: string;
+                    completed_at?: string | null;
+                    completed_by?: string | null;
+                    created_at?: string;
+                    id?: string;
+                    module_id?: string;
+                    notes?: string | null;
+                    score?: number | null;
+                    status?: string;
+                    updated_at?: string;
+                };
+                Relationships: [
+                    {
+                        foreignKeyName: 'candidate_module_progress_candidate_id_fkey';
+                        columns: ['candidate_id'];
+                        isOneToOne: false;
+                        referencedRelation: 'candidates';
+                        referencedColumns: ['id'];
+                    },
+                    {
+                        foreignKeyName: 'candidate_module_progress_completed_by_fkey';
+                        columns: ['completed_by'];
+                        isOneToOne: false;
+                        referencedRelation: 'users';
+                        referencedColumns: ['id'];
+                    },
+                    {
+                        foreignKeyName: 'candidate_module_progress_module_id_fkey';
+                        columns: ['module_id'];
+                        isOneToOne: false;
+                        referencedRelation: 'roadmap_modules';
+                        referencedColumns: ['id'];
+                    },
+                ];
+            };
+            candidate_programme_enrollment: {
+                Row: {
+                    candidate_id: string;
+                    completed_at: string | null;
+                    created_at: string;
+                    id: string;
+                    manually_unlocked: boolean;
+                    programme_id: string;
+                    started_at: string;
+                    status: string;
+                    unlocked_at: string | null;
+                    unlocked_by: string | null;
+                };
+                Insert: {
+                    candidate_id: string;
+                    completed_at?: string | null;
+                    created_at?: string;
+                    id?: string;
+                    manually_unlocked?: boolean;
+                    programme_id: string;
+                    started_at?: string;
+                    status?: string;
+                    unlocked_at?: string | null;
+                    unlocked_by?: string | null;
+                };
+                Update: {
+                    candidate_id?: string;
+                    completed_at?: string | null;
+                    created_at?: string;
+                    id?: string;
+                    manually_unlocked?: boolean;
+                    programme_id?: string;
+                    started_at?: string;
+                    status?: string;
+                    unlocked_at?: string | null;
+                    unlocked_by?: string | null;
+                };
+                Relationships: [
+                    {
+                        foreignKeyName: 'candidate_programme_enrollment_candidate_id_fkey';
+                        columns: ['candidate_id'];
+                        isOneToOne: false;
+                        referencedRelation: 'candidates';
+                        referencedColumns: ['id'];
+                    },
+                    {
+                        foreignKeyName: 'candidate_programme_enrollment_programme_id_fkey';
+                        columns: ['programme_id'];
+                        isOneToOne: false;
+                        referencedRelation: 'roadmap_programmes';
+                        referencedColumns: ['id'];
+                    },
+                    {
+                        foreignKeyName: 'candidate_programme_enrollment_unlocked_by_fkey';
+                        columns: ['unlocked_by'];
+                        isOneToOne: false;
+                        referencedRelation: 'users';
+                        referencedColumns: ['id'];
+                    },
+                ];
+            };
             candidates: {
                 Row: {
                     assigned_manager_id: string;
@@ -742,6 +864,221 @@ export type Database = {
                         columns: ['pa_id'];
                         isOneToOne: false;
                         referencedRelation: 'users';
+                        referencedColumns: ['id'];
+                    },
+                ];
+            };
+            roadmap_modules: {
+                Row: {
+                    archived_at: string | null;
+                    archived_by: string | null;
+                    created_at: string;
+                    description: string | null;
+                    display_order: number;
+                    estimated_minutes: number | null;
+                    exam_paper_id: string | null;
+                    icon_color: string | null;
+                    icon_name: string | null;
+                    id: string;
+                    is_active: boolean;
+                    is_required: boolean;
+                    learning_objectives: string | null;
+                    module_type: string;
+                    programme_id: string;
+                    title: string;
+                    updated_at: string;
+                };
+                Insert: {
+                    archived_at?: string | null;
+                    archived_by?: string | null;
+                    created_at?: string;
+                    description?: string | null;
+                    display_order?: number;
+                    estimated_minutes?: number | null;
+                    exam_paper_id?: string | null;
+                    icon_color?: string | null;
+                    icon_name?: string | null;
+                    id?: string;
+                    is_active?: boolean;
+                    is_required?: boolean;
+                    learning_objectives?: string | null;
+                    module_type?: string;
+                    programme_id: string;
+                    title: string;
+                    updated_at?: string;
+                };
+                Update: {
+                    archived_at?: string | null;
+                    archived_by?: string | null;
+                    created_at?: string;
+                    description?: string | null;
+                    display_order?: number;
+                    estimated_minutes?: number | null;
+                    exam_paper_id?: string | null;
+                    icon_color?: string | null;
+                    icon_name?: string | null;
+                    id?: string;
+                    is_active?: boolean;
+                    is_required?: boolean;
+                    learning_objectives?: string | null;
+                    module_type?: string;
+                    programme_id?: string;
+                    title?: string;
+                    updated_at?: string;
+                };
+                Relationships: [
+                    {
+                        foreignKeyName: 'roadmap_modules_archived_by_fkey';
+                        columns: ['archived_by'];
+                        isOneToOne: false;
+                        referencedRelation: 'users';
+                        referencedColumns: ['id'];
+                    },
+                    {
+                        foreignKeyName: 'roadmap_modules_exam_paper_id_fkey';
+                        columns: ['exam_paper_id'];
+                        isOneToOne: false;
+                        referencedRelation: 'exam_papers';
+                        referencedColumns: ['id'];
+                    },
+                    {
+                        foreignKeyName: 'roadmap_modules_programme_id_fkey';
+                        columns: ['programme_id'];
+                        isOneToOne: false;
+                        referencedRelation: 'roadmap_programmes';
+                        referencedColumns: ['id'];
+                    },
+                ];
+            };
+            roadmap_prerequisites: {
+                Row: {
+                    created_at: string;
+                    id: string;
+                    module_id: string;
+                    required_module_id: string;
+                };
+                Insert: {
+                    created_at?: string;
+                    id?: string;
+                    module_id: string;
+                    required_module_id: string;
+                };
+                Update: {
+                    created_at?: string;
+                    id?: string;
+                    module_id?: string;
+                    required_module_id?: string;
+                };
+                Relationships: [
+                    {
+                        foreignKeyName: 'roadmap_prerequisites_module_id_fkey';
+                        columns: ['module_id'];
+                        isOneToOne: false;
+                        referencedRelation: 'roadmap_modules';
+                        referencedColumns: ['id'];
+                    },
+                    {
+                        foreignKeyName: 'roadmap_prerequisites_required_module_id_fkey';
+                        columns: ['required_module_id'];
+                        isOneToOne: false;
+                        referencedRelation: 'roadmap_modules';
+                        referencedColumns: ['id'];
+                    },
+                ];
+            };
+            roadmap_programmes: {
+                Row: {
+                    archived_at: string | null;
+                    archived_by: string | null;
+                    created_at: string;
+                    description: string | null;
+                    display_order: number;
+                    icon_type: string;
+                    id: string;
+                    is_active: boolean;
+                    slug: string;
+                    title: string;
+                    updated_at: string;
+                };
+                Insert: {
+                    archived_at?: string | null;
+                    archived_by?: string | null;
+                    created_at?: string;
+                    description?: string | null;
+                    display_order?: number;
+                    icon_type?: string;
+                    id?: string;
+                    is_active?: boolean;
+                    slug: string;
+                    title: string;
+                    updated_at?: string;
+                };
+                Update: {
+                    archived_at?: string | null;
+                    archived_by?: string | null;
+                    created_at?: string;
+                    description?: string | null;
+                    display_order?: number;
+                    icon_type?: string;
+                    id?: string;
+                    is_active?: boolean;
+                    slug?: string;
+                    title?: string;
+                    updated_at?: string;
+                };
+                Relationships: [
+                    {
+                        foreignKeyName: 'roadmap_programmes_archived_by_fkey';
+                        columns: ['archived_by'];
+                        isOneToOne: false;
+                        referencedRelation: 'users';
+                        referencedColumns: ['id'];
+                    },
+                ];
+            };
+            roadmap_resources: {
+                Row: {
+                    content_text: string | null;
+                    content_url: string | null;
+                    created_at: string;
+                    description: string | null;
+                    display_order: number;
+                    id: string;
+                    is_active: boolean;
+                    module_id: string;
+                    resource_type: string;
+                    title: string;
+                };
+                Insert: {
+                    content_text?: string | null;
+                    content_url?: string | null;
+                    created_at?: string;
+                    description?: string | null;
+                    display_order?: number;
+                    id?: string;
+                    is_active?: boolean;
+                    module_id: string;
+                    resource_type: string;
+                    title: string;
+                };
+                Update: {
+                    content_text?: string | null;
+                    content_url?: string | null;
+                    created_at?: string;
+                    description?: string | null;
+                    display_order?: number;
+                    id?: string;
+                    is_active?: boolean;
+                    module_id?: string;
+                    resource_type?: string;
+                    title?: string;
+                };
+                Relationships: [
+                    {
+                        foreignKeyName: 'roadmap_resources_module_id_fkey';
+                        columns: ['module_id'];
+                        isOneToOne: false;
+                        referencedRelation: 'roadmap_modules';
                         referencedColumns: ['id'];
                     },
                 ];

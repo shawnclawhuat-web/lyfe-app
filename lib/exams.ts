@@ -4,6 +4,9 @@
 import type { ExamQuestion } from '@/types/exam';
 import { supabase } from './supabase';
 
+/** Default pass threshold when exam_papers.pass_percentage is unavailable */
+const DEFAULT_PASS_PERCENTAGE = 70;
+
 // ── Submit Exam ──────────────────────────────────────────────
 
 interface SubmitExamInput {
@@ -52,7 +55,7 @@ export async function submitExamAttempt(
     });
 
     const percentage = Math.round((correct / questions.length) * 100);
-    const passed = percentage >= 70;
+    const passed = percentage >= DEFAULT_PASS_PERCENTAGE;
     const durationSeconds = Math.floor((Date.now() - startedAt) / 1000);
 
     // Insert attempt as 'in_progress' first so RLS allows answer inserts

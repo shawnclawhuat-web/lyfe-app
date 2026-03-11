@@ -1,4 +1,4 @@
-import type { UserRole } from '@/constants/Roles';
+import { canToggleViewMode, type UserRole } from '@/constants/Roles';
 import { useAuth } from '@/contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
@@ -18,9 +18,6 @@ interface ViewModeContextType {
 
 const VIEW_MODE_STORAGE_KEY = 'lyfe_view_mode';
 
-/** Roles that can toggle between Agent and Manager view */
-const TOGGLEABLE_ROLES: UserRole[] = ['manager', 'director'];
-
 const ViewModeContext = createContext<ViewModeContextType | undefined>(undefined);
 
 export function ViewModeProvider({ children }: { children: React.ReactNode }) {
@@ -29,7 +26,7 @@ export function ViewModeProvider({ children }: { children: React.ReactNode }) {
     const [isReady, setIsReady] = useState(false);
 
     const role = user?.role as UserRole | undefined;
-    const canToggle = !!role && TOGGLEABLE_ROLES.includes(role);
+    const canToggle = !!role && canToggleViewMode(role);
 
     // Load saved view mode on mount
     useEffect(() => {
@@ -44,9 +41,7 @@ export function ViewModeProvider({ children }: { children: React.ReactNode }) {
     // Resolve effective view mode:
     // - If user can't toggle, they don't have a viewMode (agents are always 'agent'-like)
     // - If stored mode is invalid for this role, default to 'manager'
-    const viewMode: ViewMode = canToggle
-        ? (storedMode || 'manager')
-        : 'agent';
+    const viewMode: ViewMode = canToggle ? storedMode || 'manager' : 'agent';
 
     const setViewMode = useCallback((newMode: ViewMode) => {
         setStoredMode(newMode);

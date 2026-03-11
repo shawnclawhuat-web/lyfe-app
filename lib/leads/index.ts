@@ -14,7 +14,6 @@ export {
     updateLeadStatus,
     fetchTeamAgents,
     assignLead,
-    getLeadsByAgent,
     updateLeadStage,
 } from './crud';
 export { fetchLeadActivities, addLeadNote, addLeadActivity, reassignLead } from './activities';

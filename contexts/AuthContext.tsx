@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import type { User } from '@/types/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 // ── Auth-only context ─────────────────────────────────────────
 interface AuthState {
@@ -160,18 +160,17 @@ function BiometricsProvider({
         setBiometricsEnabledState(false);
     }, []);
 
-    return (
-        <BiometricsContext.Provider
-            value={{
-                biometricsEnabled,
-                authenticateWithBiometrics,
-                enableBiometrics,
-                disableBiometrics,
-            }}
-        >
-            {children}
-        </BiometricsContext.Provider>
+    const biometricsValue = useMemo(
+        () => ({
+            biometricsEnabled,
+            authenticateWithBiometrics,
+            enableBiometrics,
+            disableBiometrics,
+        }),
+        [biometricsEnabled, authenticateWithBiometrics, enableBiometrics, disableBiometrics],
     );
+
+    return <BiometricsContext.Provider value={biometricsValue}>{children}</BiometricsContext.Provider>;
 }
 
 function ProfileProvider({
@@ -215,11 +214,12 @@ function ProfileProvider({
         }
     }, [sessionRef, setUser]);
 
-    return (
-        <ProfileContext.Provider value={{ user, updateProfile, updateAvatarUrl, refreshUser }}>
-            {children}
-        </ProfileContext.Provider>
+    const profileValue = useMemo(
+        () => ({ user, updateProfile, updateAvatarUrl, refreshUser }),
+        [user, updateProfile, updateAvatarUrl, refreshUser],
     );
+
+    return <ProfileContext.Provider value={profileValue}>{children}</ProfileContext.Provider>;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -369,15 +369,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }));
     }, []);
 
+    const authValue = useMemo(
+        () => ({
+            ...authState,
+            signInWithOtp,
+            verifyOtp,
+            signOut,
+        }),
+        [authState, signInWithOtp, verifyOtp, signOut],
+    );
+
     return (
-        <AuthContext.Provider
-            value={{
-                ...authState,
-                signInWithOtp,
-                verifyOtp,
-                signOut,
-            }}
-        >
+        <AuthContext.Provider value={authValue}>
             <ProfileProvider sessionRef={sessionRef} user={user} setUser={setUser}>
                 <BiometricsProvider sessionRef={sessionRef} onBiometricUnlock={handleBiometricUnlock}>
                     {children}

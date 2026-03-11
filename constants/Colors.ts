@@ -79,6 +79,18 @@ export const Colors = {
         // Shadows (iOS)
         shadow: 'rgba(0, 0, 0, 0.04)',
 
+        // Live status
+        statusLive: '#22C55E',
+
+        // Roadmap programme branding
+        seedLyfe: '#8BC34A',
+        sproutLyfe: '#6DAF3E',
+
+        // Roadmap module type colors (iOS system palette)
+        roadmapTraining: '#007AFF',
+        roadmapExam: '#FF9500',
+        roadmapResource: '#34C759',
+
         // Tab bar icons
         tabIconDefault: '#8E8E93',
         tabIconSelected: orange.primary,
@@ -144,8 +156,39 @@ export const Colors = {
         // Shadows
         shadow: 'rgba(0, 0, 0, 0.5)',
 
+        // Live status
+        statusLive: '#22C55E',
+
+        // Roadmap programme branding
+        seedLyfe: '#8BC34A',
+        sproutLyfe: '#6DAF3E',
+
+        // Roadmap module type colors (iOS system dark palette)
+        roadmapTraining: '#0A84FF',
+        roadmapExam: '#FF9F0A',
+        roadmapResource: '#30D158',
+
         // Tab bar icons
         tabIconDefault: '#8E8E93',
         tabIconSelected: '#FF8A2E',
     },
+};
+
+// ── Pixel art palettes (static — artistic colors, not theme-dependent) ──
+export const SEEDLING_PALETTE = {
+    light: '#78b84a',
+    medium: '#4daa3d',
+    dark: '#3a9438',
+    darkest: '#2d5c2d',
+};
+
+export const SPROUT_PALETTE = {
+    stem: '#5C7A4A',
+    leafDark: '#4E8C2A',
+    leafPrimary: '#6DAF3E',
+    leafLight: '#8FCC5C',
+    leafHighlight: '#B8E88A',
+    soilDark: '#6D563A',
+    soilLight: '#8B6F47',
+    soilMedium: '#A08060',
 };
