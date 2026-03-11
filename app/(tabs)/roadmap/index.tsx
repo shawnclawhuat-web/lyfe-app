@@ -1,6 +1,5 @@
-import React, { useCallback, useRef } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import React, { useCallback } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,10 +10,11 @@ import { useRoadmap } from '@/hooks/useRoadmap';
 import ScreenHeader from '@/components/ScreenHeader';
 import ProgrammeHero from '@/components/roadmap/ProgrammeHero';
 import ProgrammeTabs from '@/components/roadmap/ProgrammeTabs';
-import RoadmapPath from '@/components/roadmap/RoadmapPath';
+import RoadmapGrid from '@/components/roadmap/RoadmapGrid';
 import ProgrammeLockedOverlay from '@/components/roadmap/ProgrammeLockedOverlay';
 import ErrorBanner from '@/components/ErrorBanner';
-import { displayWeight, TAB_BAR_HEIGHT } from '@/constants/platform';
+import { displayWeight } from '@/constants/platform';
+import { TAB_BAR_HEIGHT } from '@/constants/platform';
 
 export default function RoadmapScreen() {
     const { colors } = useTheme();
@@ -23,58 +23,65 @@ export default function RoadmapScreen() {
     const { bottom } = useSafeAreaInsets();
     const reducedMotion = useReducedMotion();
 
-    // Scroll tracking for auto-scroll to bubble
-    const scrollRef = useRef<ScrollView>(null);
-    const scrollY = useRef(0);
-    const viewportH = useRef(0);
-    const pathOffsetY = useRef(0);
-
-    // For candidates, use their own user ID as the candidate ID
-    // In production, map user.id → candidate record
     const candidateId = user?.id;
 
-    const { programmes, nodeStates, isLoading, error, refresh, activeProgrammeIndex, setActiveProgrammeIndex } =
-        useRoadmap(candidateId);
+    const {
+        programmes,
+        nodeStates,
+        isLoading,
+        error,
+        refresh,
+        isRefreshing,
+        activeProgrammeIndex,
+        setActiveProgrammeIndex,
+    } = useRoadmap(candidateId);
 
     const activeProgramme = programmes[activeProgrammeIndex];
     const seedProgramme = programmes.find((p) => p.slug === 'seedlyfe');
+    const isLocked = activeProgramme?.isLocked && !activeProgramme?.manuallyUnlocked;
 
-    const handleNodePress = useCallback(
+    const handleModulePress = useCallback(
         (moduleId: string) => {
             router.push(`/(tabs)/roadmap/module/${moduleId}`);
         },
         [router],
     );
 
-    const handleScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-        scrollY.current = e.nativeEvent.contentOffset.y;
-    }, []);
+    // When locked, pass empty modules so the grid just renders the header
+    const activeModules = isLocked ? [] : (activeProgramme?.modules.filter((m) => m.is_active && !m.isArchived) ?? []);
 
-    const handleViewportLayout = useCallback((e: LayoutChangeEvent) => {
-        viewportH.current = e.nativeEvent.layout.height;
-    }, []);
+    // Single unified header: hero + tabs + locked overlay or unlocked-early banner
+    const gridHeader = activeProgramme ? (
+        <View style={styles.headerSection}>
+            <ProgrammeHero
+                iconType={activeProgramme.icon_type}
+                title={activeProgramme.title}
+                completedCount={activeProgramme.completedCount}
+                totalCount={activeProgramme.totalCount}
+                percentage={activeProgramme.percentage}
+                colors={colors}
+                reducedMotion={reducedMotion}
+            />
 
-    const handlePathLayout = useCallback((e: LayoutChangeEvent) => {
-        pathOffsetY.current = e.nativeEvent.layout.y;
-    }, []);
+            <ProgrammeTabs
+                programmes={programmes}
+                activeIndex={activeProgrammeIndex}
+                onSelect={setActiveProgrammeIndex}
+                colors={colors}
+            />
 
-    const handleScrollToNode = useCallback((nodeTop: number, bubbleBottom: number) => {
-        if (!viewportH.current) return;
-        const absoluteBubbleBottom = pathOffsetY.current + bubbleBottom;
-        const visibleBottom = scrollY.current + viewportH.current;
-        const margin = 24;
-        if (absoluteBubbleBottom + margin > visibleBottom) {
-            scrollRef.current?.scrollTo({
-                y: absoluteBubbleBottom + margin - viewportH.current,
-                animated: true,
-            });
-        }
-        // Also scroll up if the node itself is above the viewport
-        const absoluteNodeTop = pathOffsetY.current + nodeTop;
-        if (absoluteNodeTop < scrollY.current + margin) {
-            scrollRef.current?.scrollTo({ y: Math.max(0, absoluteNodeTop - margin), animated: true });
-        }
-    }, []);
+            {/* Locked overlay OR unlocked-early banner */}
+            {isLocked && <ProgrammeLockedOverlay seedProgramme={seedProgramme} colors={colors} />}
+            {activeProgramme.manuallyUnlocked && (
+                <ProgrammeLockedOverlay
+                    seedProgramme={seedProgramme}
+                    manuallyUnlocked
+                    unlockedByName={activeProgramme.unlockedByName}
+                    colors={colors}
+                />
+            )}
+        </View>
+    ) : undefined;
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -82,13 +89,18 @@ export default function RoadmapScreen() {
 
             {error && <ErrorBanner message={error} onRetry={refresh} />}
 
-            {isLoading ? (
+            {isLoading && !isRefreshing ? (
                 <View style={styles.loading}>
                     <ActivityIndicator size="large" color={colors.accent} />
                     <Text style={[styles.loadingText, { color: colors.textTertiary }]}>Loading your roadmap...</Text>
                 </View>
             ) : programmes.length === 0 ? (
-                <View style={styles.empty}>
+                <ScrollView
+                    contentContainerStyle={styles.empty}
+                    refreshControl={
+                        <RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={colors.accent} />
+                    }
+                >
                     <View style={[styles.emptyIcon, { backgroundColor: colors.surfacePrimary }]}>
                         <Ionicons name="leaf-outline" size={48} color={colors.textTertiary} />
                     </View>
@@ -96,57 +108,21 @@ export default function RoadmapScreen() {
                     <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
                         Contact your manager to get started.
                     </Text>
-                </View>
-            ) : (
-                <ScrollView
-                    ref={scrollRef}
-                    style={styles.scroll}
-                    contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }}
-                    showsVerticalScrollIndicator={false}
-                    onScroll={handleScroll}
-                    scrollEventThrottle={16}
-                    onLayout={handleViewportLayout}
-                >
-                    {activeProgramme && (
-                        <ProgrammeHero
-                            iconType={activeProgramme.icon_type}
-                            title={activeProgramme.title}
-                            completedCount={activeProgramme.completedCount}
-                            totalCount={activeProgramme.totalCount}
-                            percentage={activeProgramme.percentage}
-                            colors={colors}
-                            reducedMotion={reducedMotion}
-                        />
-                    )}
-
-                    <ProgrammeTabs
-                        programmes={programmes}
-                        activeIndex={activeProgrammeIndex}
-                        onSelect={setActiveProgrammeIndex}
-                        colors={colors}
-                    />
-
-                    {activeProgramme && activeProgramme.isLocked ? (
-                        <ProgrammeLockedOverlay
-                            seedProgramme={seedProgramme}
-                            manuallyUnlocked={activeProgramme.manuallyUnlocked}
-                            unlockedByName={activeProgramme.unlockedByName}
-                            colors={colors}
-                        />
-                    ) : activeProgramme ? (
-                        <View style={styles.pathContainer} onLayout={handlePathLayout}>
-                            <RoadmapPath
-                                key={activeProgramme.id}
-                                modules={activeProgramme.modules.filter((m) => m.is_active && !m.isArchived)}
-                                nodeStates={nodeStates}
-                                onNodePress={handleNodePress}
-                                colors={colors}
-                                reducedMotion={reducedMotion}
-                                onScrollToNode={handleScrollToNode}
-                            />
-                        </View>
-                    ) : null}
                 </ScrollView>
+            ) : (
+                <RoadmapGrid
+                    modules={activeModules}
+                    nodeStates={nodeStates}
+                    onModulePress={handleModulePress}
+                    colors={colors}
+                    reducedMotion={reducedMotion}
+                    ListHeaderComponent={gridHeader}
+                    contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }}
+                    refreshing={isRefreshing}
+                    onRefresh={refresh}
+                    scrollToCurrentOnMount={!isLocked}
+                    hideEmptyState={isLocked}
+                />
             )}
         </SafeAreaView>
     );
@@ -156,11 +132,8 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    scroll: {
-        flex: 1,
-    },
-    pathContainer: {
-        marginTop: 16,
+    headerSection: {
+        marginBottom: 16,
     },
     loading: {
         flex: 1,

@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
 import Touchable from '@/components/Touchable';
 import type { RoadmapProgramme } from '@/types/roadmap';
@@ -15,11 +15,17 @@ interface Props {
 }
 
 function ProgrammeTabs({ programmes, activeIndex, onSelect, colors }: Props) {
-    const { width: screenWidth } = useWindowDimensions();
-    const indicatorX = useSharedValue(0);
+    const [containerWidth, setContainerWidth] = useState(0);
+    const indicatorX = useSharedValue(activeIndex);
 
-    // 32 = marginHorizontal * 2, 4 = padding * 2
-    const tabWidth = Math.floor((screenWidth - 32 - 4) / programmes.length);
+    // Derive tab width from measured container (accounts for margins, safe areas, etc.)
+    const PADDING = 2; // container padding on each side
+    const innerWidth = containerWidth > 0 ? containerWidth - PADDING * 2 : 0;
+    const tabWidth = innerWidth / programmes.length;
+
+    useEffect(() => {
+        indicatorX.value = withTiming(activeIndex, { duration: ANIM.TRANSITION, easing: Easing.out(Easing.cubic) });
+    }, [activeIndex]);
 
     const handleSelect = useCallback(
         (index: number) => {
@@ -36,14 +42,24 @@ function ProgrammeTabs({ programmes, activeIndex, onSelect, colors }: Props) {
     if (programmes.length < 2) return null;
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.border }]}>
-            <Animated.View
-                style={[styles.indicator, { backgroundColor: colors.surfacePrimary, width: tabWidth }, indicatorStyle]}
-            />
+        <View
+            style={[styles.container, { backgroundColor: colors.border }]}
+            accessibilityRole="tablist"
+            onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+        >
+            {containerWidth > 0 && (
+                <Animated.View
+                    style={[
+                        styles.indicator,
+                        { backgroundColor: colors.surfacePrimary, width: tabWidth },
+                        indicatorStyle,
+                    ]}
+                />
+            )}
             {programmes.map((p, i) => (
                 <Touchable
                     key={p.id}
-                    style={[styles.tab, { width: tabWidth }]}
+                    style={styles.tab}
                     onPress={() => handleSelect(i)}
                     activeOpacity={0.7}
                     accessibilityRole="tab"
@@ -51,6 +67,7 @@ function ProgrammeTabs({ programmes, activeIndex, onSelect, colors }: Props) {
                     accessibilityLabel={p.title}
                 >
                     <Text
+                        numberOfLines={1}
                         style={[
                             styles.tabText,
                             { color: i === activeIndex ? colors.textPrimary : colors.textTertiary },

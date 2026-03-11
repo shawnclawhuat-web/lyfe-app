@@ -7,7 +7,10 @@ interface UseRoadmapResult {
     programmes: ProgrammeWithModules[];
     nodeStates: Map<string, NodeState>;
     isLoading: boolean;
+    /** True only when the user explicitly pulls to refresh (drives RefreshControl spinner). */
+    isRefreshing: boolean;
     error: string | null;
+    /** User-initiated pull-to-refresh — shows the RefreshControl spinner. */
     refresh: () => Promise<void>;
     activeProgrammeIndex: number;
     setActiveProgrammeIndex: (index: number) => void;
@@ -22,57 +25,79 @@ export function useRoadmap(candidateId: string | undefined): UseRoadmapResult {
     const [programmes, setProgrammes] = useState<ProgrammeWithModules[]>([]);
     const [nodeStates, setNodeStates] = useState<Map<string, NodeState>>(new Map());
     const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [activeProgrammeIndex, setActiveProgrammeIndex] = useState(0);
     const mountedRef = useRef(true);
+    const hasLoadedRef = useRef(false);
 
-    const loadRoadmap = useCallback(async () => {
-        if (!candidateId) return;
-        setIsLoading(true);
-        setError(null);
+    const loadRoadmap = useCallback(
+        async (showRefreshIndicator = false) => {
+            if (!candidateId) return;
 
-        const { data, error: fetchError } = await fetchCandidateRoadmap(candidateId);
+            if (!hasLoadedRef.current) {
+                // First load: show full-screen spinner
+                setIsLoading(true);
+            } else if (showRefreshIndicator) {
+                // User-initiated pull: show RefreshControl spinner
+                setIsRefreshing(true);
+            }
+            // Focus returns: silent background refresh (no spinner)
 
-        if (!mountedRef.current) return;
+            setError(null);
 
-        if (fetchError) {
-            setError(fetchError);
-            setIsLoading(false);
-            return;
-        }
+            const { data, error: fetchError } = await fetchCandidateRoadmap(candidateId);
 
-        if (data) {
-            setProgrammes(data);
+            if (!mountedRef.current) return;
 
-            const stateMap = new Map<string, NodeState>();
-            data.forEach((programme) => {
-                const states = computeNodeStates(programme.modules);
-                programme.modules.forEach((m, i) => {
-                    stateMap.set(m.id, states[i]);
+            if (fetchError) {
+                setError(fetchError);
+                setIsLoading(false);
+                setIsRefreshing(false);
+                return;
+            }
+
+            if (data) {
+                setProgrammes(data);
+
+                const stateMap = new Map<string, NodeState>();
+                data.forEach((programme) => {
+                    const states = computeNodeStates(programme.modules);
+                    programme.modules.forEach((m, i) => {
+                        stateMap.set(m.id, states[i]);
+                    });
                 });
-            });
-            setNodeStates(stateMap);
-        }
+                setNodeStates(stateMap);
+            }
 
-        setIsLoading(false);
-    }, [candidateId]);
+            hasLoadedRef.current = true;
+            setIsLoading(false);
+            setIsRefreshing(false);
+        },
+        [candidateId],
+    );
 
+    // Focus effect: silent background refresh (no spinner)
     useFocusEffect(
         useCallback(() => {
             mountedRef.current = true;
-            loadRoadmap();
+            loadRoadmap(false);
             return () => {
                 mountedRef.current = false;
             };
         }, [loadRoadmap]),
     );
 
+    // User-initiated pull-to-refresh: shows the RefreshControl spinner
+    const pullToRefresh = useCallback(() => loadRoadmap(true), [loadRoadmap]);
+
     return {
         programmes,
         nodeStates,
         isLoading,
+        isRefreshing,
         error,
-        refresh: loadRoadmap,
+        refresh: pullToRefresh,
         activeProgrammeIndex,
         setActiveProgrammeIndex,
     };

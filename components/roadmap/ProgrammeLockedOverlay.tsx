@@ -1,11 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
-import { useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import type { ProgrammeWithModules } from '@/types/roadmap';
 import { displayWeight, letterSpacing } from '@/constants/platform';
-import { ANIM } from '@/constants/ui';
 import type { ThemeColors } from '@/types/theme';
 
 interface Props {
@@ -32,17 +29,9 @@ interface Props {
  *   - Manually unlocked: info banner "Unlocked early by [name]"
  */
 function ProgrammeLockedOverlay({ seedProgramme, manuallyUnlocked, unlockedByName, colors }: Props) {
-    const opacity = useSharedValue(0);
-
-    useEffect(() => {
-        opacity.value = withTiming(1, { duration: ANIM.MICRO, easing: Easing.out(Easing.cubic) });
-    }, [opacity]);
-
-    const fadeStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
-
     if (manuallyUnlocked) {
         return (
-            <Animated.View style={[styles.container, fadeStyle]}>
+            <View style={styles.container}>
                 <View
                     style={[
                         styles.unlockedBanner,
@@ -54,7 +43,7 @@ function ProgrammeLockedOverlay({ seedProgramme, manuallyUnlocked, unlockedByNam
                         {unlockedByName ? `Unlocked early by ${unlockedByName}` : 'Unlocked early by your manager'}
                     </Text>
                 </View>
-            </Animated.View>
+            </View>
         );
     }
 
@@ -63,7 +52,7 @@ function ProgrammeLockedOverlay({ seedProgramme, manuallyUnlocked, unlockedByNam
     const seedPercentage = seedProgramme?.percentage ?? 0;
 
     return (
-        <Animated.View style={[styles.container, fadeStyle]}>
+        <View style={styles.container}>
             <View style={[styles.card, { backgroundColor: colors.surfacePrimary }]}>
                 {/* Lock icon */}
                 <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
@@ -103,13 +92,12 @@ function ProgrammeLockedOverlay({ seedProgramme, manuallyUnlocked, unlockedByNam
                     <Text style={[styles.percentage, { color: colors.accent }]}>{seedPercentage}% complete</Text>
                 </View>
             </View>
-        </Animated.View>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
         paddingHorizontal: 16,
         paddingTop: 24,
         paddingBottom: 40,

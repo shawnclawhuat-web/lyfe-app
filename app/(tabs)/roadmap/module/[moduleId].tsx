@@ -7,10 +7,17 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import ScreenHeader from '@/components/ScreenHeader';
 import ModuleCard from '@/components/roadmap/ModuleCard';
+import ModuleItemRow from '@/components/roadmap/ModuleItemRow';
 import ErrorBanner from '@/components/ErrorBanner';
-import { fetchModule, fetchModuleResources, fetchModuleProgressForCandidate } from '@/lib/roadmap';
+import {
+    fetchModule,
+    fetchModuleResources,
+    fetchModuleProgressForCandidate,
+    fetchModuleItemsWithProgress,
+} from '@/lib/roadmap';
 import { TAB_BAR_HEIGHT } from '@/constants/platform';
-import type { RoadmapModule, RoadmapResource, CandidateModuleProgress } from '@/types/roadmap';
+import { letterSpacing } from '@/constants/platform';
+import type { RoadmapModule, RoadmapResource, CandidateModuleProgress, ModuleItemWithProgress } from '@/types/roadmap';
 
 /**
  * Candidate-facing module detail screen.
@@ -27,7 +34,9 @@ export default function ModuleDetailScreen() {
     const [module, setModule] = useState<RoadmapModule | null>(null);
     const [progress, setProgress] = useState<CandidateModuleProgress | null>(null);
     const [resources, setResources] = useState<RoadmapResource[]>([]);
+    const [items, setItems] = useState<ModuleItemWithProgress[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isItemsLoading, setIsItemsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const loadData = useCallback(async () => {
@@ -53,7 +62,6 @@ export default function ModuleDetailScreen() {
         }
 
         if (!moduleRes.data) {
-            // Module doesn't exist or is not accessible (disabled/archived)
             setError('This module is not available.');
             setIsLoading(false);
             return;
@@ -63,6 +71,16 @@ export default function ModuleDetailScreen() {
         setResources(resourcesRes.data ?? []);
         setProgress(progressRes.data ?? null);
         setIsLoading(false);
+
+        // Lazy-load items after main content renders
+        if (user?.id) {
+            setIsItemsLoading(true);
+            const itemsRes = await fetchModuleItemsWithProgress(moduleId, user.id);
+            setItems(itemsRes.data ?? []);
+            setIsItemsLoading(false);
+        } else {
+            setIsItemsLoading(false);
+        }
     }, [moduleId, user?.id]);
 
     useEffect(() => {
@@ -75,14 +93,22 @@ export default function ModuleDetailScreen() {
         }
     }, [module, router]);
 
+    const handleStartExam = useCallback(
+        (examPaperId: string) => {
+            router.push(`/(tabs)/exams/take/${examPaperId}`);
+        },
+        [router],
+    );
+
     // Build the enriched module object that ModuleCard expects
     const enrichedModule = module
         ? {
               ...module,
               progress,
               resources,
+              itemSummary: null,
               isLocked: false,
-              examPaper: null, // exam paper info not loaded here; CTA still works via exam_paper_id
+              examPaper: null,
               prerequisiteIds: [],
               isArchived: module.archived_at !== null,
           }
@@ -90,7 +116,7 @@ export default function ModuleDetailScreen() {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-            <ScreenHeader title="Module" showBack />
+            <ScreenHeader title={module?.title ?? 'Module'} showBack />
 
             {error && <ErrorBanner message={error} onRetry={loadData} />}
 
@@ -109,6 +135,35 @@ export default function ModuleDetailScreen() {
                         colors={colors}
                         onTakeExam={module?.module_type === 'exam' && module.exam_paper_id ? handleTakeExam : undefined}
                     />
+
+                    {/* Items Checklist */}
+                    {isItemsLoading ? (
+                        <View style={styles.itemsLoading}>
+                            {[0, 1, 2].map((i) => (
+                                <View key={i} style={[styles.skeletonRow, { backgroundColor: colors.border + '20' }]} />
+                            ))}
+                        </View>
+                    ) : items.length > 0 ? (
+                        <View style={styles.itemsSection}>
+                            <View style={styles.itemsHeader}>
+                                <Text style={[styles.itemsSectionTitle, { color: colors.textPrimary }]}>Checklist</Text>
+                                <View style={[styles.itemsCountBadge, { backgroundColor: colors.accent + '14' }]}>
+                                    <Text style={[styles.itemsCountText, { color: colors.accent }]}>
+                                        {items.filter((i) => i.progress?.status === 'completed').length}/{items.length}
+                                    </Text>
+                                </View>
+                            </View>
+                            {items.map((item, idx) => (
+                                <ModuleItemRow
+                                    key={item.id}
+                                    item={item}
+                                    colors={colors}
+                                    isLast={idx === items.length - 1}
+                                    onStartExam={handleStartExam}
+                                />
+                            ))}
+                        </View>
+                    ) : null}
                 </ScrollView>
             ) : (
                 <View style={styles.emptyState}>
@@ -144,6 +199,39 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         fontSize: 14,
+    },
+    itemsSection: {
+        paddingHorizontal: 16,
+        paddingTop: 24,
+    },
+    itemsHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 4,
+    },
+    itemsSectionTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        letterSpacing: letterSpacing(-0.2),
+    },
+    itemsCountBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
+    },
+    itemsCountText: {
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    itemsLoading: {
+        paddingHorizontal: 16,
+        paddingTop: 24,
+        gap: 12,
+    },
+    skeletonRow: {
+        height: 44,
+        borderRadius: 8,
     },
     emptyState: {
         flex: 1,

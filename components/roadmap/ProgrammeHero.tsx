@@ -43,9 +43,9 @@ function ProgrammeHero({ iconType, title, completedCount, totalCount, percentage
             <View style={styles.illustrationRow}>
                 <View style={styles.illustration}>
                     {iconType === 'seedling' ? (
-                        <PixelSeedling size={1.0} reducedMotion={reducedMotion} />
+                        <PixelSeedling size={0.88} reducedMotion={reducedMotion} />
                     ) : (
-                        <PixelSprout size={1.5} reducedMotion={reducedMotion} />
+                        <PixelSprout size={1.0} reducedMotion={reducedMotion} />
                     )}
                 </View>
                 <View style={styles.info}>
