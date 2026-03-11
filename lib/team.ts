@@ -2,7 +2,6 @@
  * Team service — Supabase queries for team members with lead stats
  */
 import type { Lead } from '@/types/lead';
-import { getRandomBytes } from 'expo-crypto';
 import { supabase } from './supabase';
 
 /** 7-day invite token expiry (milliseconds) */
@@ -274,7 +273,8 @@ export async function inviteAgent(
             return { data: null, error: 'Invalid email format' };
         }
         // Generate a cryptographically secure token
-        const randomBytes = getRandomBytes(24);
+        const randomBytes = new Uint8Array(24);
+        crypto.getRandomValues(randomBytes);
         const hex = Array.from(randomBytes, (b) => b.toString(16).padStart(2, '0')).join('');
         const token = `inv_${hex}`;
         const expiresAt = new Date(Date.now() + INVITE_TOKEN_EXPIRY_MS).toISOString();
