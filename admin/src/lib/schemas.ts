@@ -88,6 +88,27 @@ export const resourceSchema = z.object({
     is_active: z.boolean(),
 });
 
+export const moduleItemSchema = z.object({
+    module_id: z.string().uuid('Select a module'),
+    item_type: z.enum(['material', 'pre_quiz', 'quiz', 'exam', 'attendance']),
+    title: z.string().min(1, 'Title is required'),
+    description: z.string().nullable(),
+    display_order: z.coerce.number().int().min(0),
+    is_required: z.boolean(),
+    is_active: z.boolean(),
+    icon_name: z.string().nullable(),
+    resource_url: z
+        .string()
+        .url()
+        .nullable()
+        .or(z.literal('').transform(() => null)),
+    resource_type: z.enum(['pdf', 'video', 'link', 'image']).nullable(),
+    exam_paper_id: z.string().uuid().nullable(),
+    pass_percentage: z.coerce.number().int().min(0).max(100).nullable(),
+    time_limit_minutes: z.coerce.number().int().min(0).nullable(),
+});
+
 export type ProgrammeFormInput = z.infer<typeof programmeSchema>;
 export type ModuleFormInput = z.infer<typeof moduleSchema>;
 export type ResourceFormInput = z.infer<typeof resourceSchema>;
+export type ModuleItemFormInput = z.infer<typeof moduleItemSchema>;

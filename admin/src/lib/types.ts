@@ -393,3 +393,50 @@ export const RESOURCE_TYPE_LABELS: Record<ResourceType, string> = {
     video: 'Video',
     text: 'Article',
 };
+
+// ── Module Item types ──
+
+export const ITEM_TYPES = ['material', 'pre_quiz', 'quiz', 'exam', 'attendance'] as const;
+export type ItemType = (typeof ITEM_TYPES)[number];
+
+export const ITEM_RESOURCE_TYPES = ['pdf', 'video', 'link', 'image'] as const;
+export type ItemResourceType = (typeof ITEM_RESOURCE_TYPES)[number];
+
+export interface RoadmapModuleItem {
+    id: string;
+    module_id: string;
+    item_type: ItemType;
+    title: string;
+    description: string | null;
+    display_order: number;
+    is_required: boolean;
+    is_active: boolean;
+    icon_name: string | null;
+    resource_url: string | null;
+    resource_type: ItemResourceType | null;
+    exam_paper_id: string | null;
+    pass_percentage: number | null;
+    time_limit_minutes: number | null;
+    archived_at: string | null;
+    archived_by: string | null;
+    created_at: string;
+    updated_at: string;
+    // Join data
+    roadmap_modules?: { title: string } | null;
+    exam_papers?: { code: string; title: string } | null;
+}
+
+export const ITEM_TYPE_LABELS: Record<ItemType, string> = {
+    material: 'Material',
+    pre_quiz: 'Pre-Quiz',
+    quiz: 'Quiz',
+    exam: 'Exam',
+    attendance: 'Attendance',
+};
+
+export const ITEM_RESOURCE_TYPE_LABELS: Record<ItemResourceType, string> = {
+    pdf: 'PDF',
+    video: 'Video',
+    link: 'Link',
+    image: 'Image',
+};

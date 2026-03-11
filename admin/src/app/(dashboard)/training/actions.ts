@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { adminAction } from '@/lib/actions';
 import { createServiceClient } from '@/lib/supabase/server';
-import type { ProgrammeFormInput, ModuleFormInput, ResourceFormInput } from '@/lib/schemas';
+import type { ProgrammeFormInput, ModuleFormInput, ResourceFormInput, ModuleItemFormInput } from '@/lib/schemas';
 
 // ── Programme actions ──
 
@@ -190,6 +190,62 @@ export async function reorderResources(moduleId: string, orderedIds: string[]) {
                 .eq('id', orderedIds[i]);
             if (error) throw new Error(error.message);
         }
+        revalidatePath('/training');
+    });
+}
+
+// ── Module Item actions ──
+
+export async function fetchModuleItems() {
+    return adminAction(async () => {
+        const supabase = createServiceClient();
+        const { data, error } = await supabase
+            .from('roadmap_module_items')
+            .select('*, roadmap_modules(title), exam_papers(code, title)')
+            .order('display_order');
+        if (error) throw new Error(error.message);
+        return data;
+    });
+}
+
+export async function createModuleItem(data: ModuleItemFormInput) {
+    return adminAction(async () => {
+        const supabase = createServiceClient();
+        const { error } = await supabase.from('roadmap_module_items').insert(data);
+        if (error) throw new Error(error.message);
+        revalidatePath('/training');
+    });
+}
+
+export async function updateModuleItem(id: string, data: ModuleItemFormInput) {
+    return adminAction(async () => {
+        const supabase = createServiceClient();
+        const { error } = await supabase.from('roadmap_module_items').update(data).eq('id', id);
+        if (error) throw new Error(error.message);
+        revalidatePath('/training');
+    });
+}
+
+export async function archiveModuleItem(id: string, archivedBy: string) {
+    return adminAction(async () => {
+        const supabase = createServiceClient();
+        const { error } = await supabase
+            .from('roadmap_module_items')
+            .update({ archived_at: new Date().toISOString(), archived_by: archivedBy, is_active: false })
+            .eq('id', id);
+        if (error) throw new Error(error.message);
+        revalidatePath('/training');
+    });
+}
+
+export async function restoreModuleItem(id: string) {
+    return adminAction(async () => {
+        const supabase = createServiceClient();
+        const { error } = await supabase
+            .from('roadmap_module_items')
+            .update({ archived_at: null, archived_by: null, is_active: true })
+            .eq('id', id);
+        if (error) throw new Error(error.message);
         revalidatePath('/training');
     });
 }
