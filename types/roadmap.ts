@@ -5,6 +5,7 @@ import type { Tables } from './supabase';
 export type ProgrammeIconType = 'seedling' | 'sprout';
 export type ModuleType = 'training' | 'exam' | 'resource';
 export type ModuleStatus = 'not_started' | 'in_progress' | 'completed';
+export type ModuleItemType = 'material' | 'pre_quiz' | 'quiz' | 'exam' | 'attendance';
 export type EnrollmentStatus = 'active' | 'completed' | 'paused';
 export type ResourceType = 'link' | 'file' | 'video' | 'text';
 export type NodeState = 'completed' | 'current' | 'available' | 'locked';
@@ -29,11 +30,31 @@ export type CandidateProgrammeEnrollment = Omit<Tables<'candidate_programme_enro
     status: EnrollmentStatus;
 };
 
+export type RoadmapModuleItem = Omit<Tables<'roadmap_module_items'>, 'item_type' | 'resource_type'> & {
+    item_type: ModuleItemType;
+    resource_type: ResourceType | null;
+};
+
+export type CandidateModuleItemProgress = Omit<Tables<'candidate_module_item_progress'>, 'status'> & {
+    status: ModuleStatus;
+};
+
 // ─── Enriched UI Types ──────────────────────────────────────────────────────
+
+export interface ModuleItemWithProgress extends RoadmapModuleItem {
+    progress: CandidateModuleItemProgress | null;
+}
+
+export interface ModuleItemSummary {
+    total: number;
+    completed: number;
+    itemTypes: ModuleItemType[];
+}
 
 export interface RoadmapModuleWithProgress extends RoadmapModule {
     progress: CandidateModuleProgress | null;
     resources: RoadmapResource[];
+    itemSummary: ModuleItemSummary | null;
     isLocked: boolean;
     examPaper: { code: string; title: string; pass_percentage: number } | null;
     prerequisiteIds: string[];
@@ -84,4 +105,12 @@ export const NODE_STATE_CONFIG: Record<NodeState, { opacity: number; scale: numb
     current: { opacity: 1, scale: 1.05 },
     available: { opacity: 0.9, scale: 1 },
     locked: { opacity: 0.4, scale: 0.95 },
+};
+
+export const MODULE_ITEM_TYPE_CONFIG: Record<ModuleItemType, { label: string; icon: string; color: string }> = {
+    material: { label: 'Material', icon: 'document-text-outline', color: '#007AFF' },
+    pre_quiz: { label: 'Pre-Quiz', icon: 'help-circle-outline', color: '#AF52DE' },
+    quiz: { label: 'Quiz', icon: 'create-outline', color: '#FF9500' },
+    exam: { label: 'Exam', icon: 'school-outline', color: '#FF3B30' },
+    attendance: { label: 'Attendance', icon: 'people-outline', color: '#34C759' },
 };

@@ -17,6 +17,11 @@ import {
     archiveModule,
     restoreModule,
     computeNodeStates,
+    fetchModuleItems,
+    fetchModuleItemProgress,
+    fetchModuleItemsWithProgress,
+    updateModuleItemProgress,
+    fetchModuleItemSummaries,
 } from '@/lib/roadmap';
 import type {
     RoadmapProgramme,
@@ -860,6 +865,7 @@ describe('computeNodeStates', () => {
             ...makeModule(id, 'prog-seed', { is_required: isRequired }),
             progress: status ? makeProgress(id, status) : null,
             resources: [],
+            itemSummary: null,
             isLocked,
             examPaper: null,
             prerequisiteIds: [],
@@ -960,5 +966,163 @@ describe('computeNodeStates', () => {
         ];
         const states = computeNodeStates(modules);
         expect(states).toEqual(['current', 'available', 'available']);
+    });
+});
+
+// ── fetchModuleItems ──
+
+describe('fetchModuleItems', () => {
+    it('returns active items for a module', async () => {
+        const items = [
+            { id: 'item-1', module_id: 'm1', item_type: 'material', title: 'Reading', display_order: 0 },
+            { id: 'item-2', module_id: 'm1', item_type: 'quiz', title: 'Module Quiz', display_order: 1 },
+        ];
+        const chain = mockSupa.__getChain('roadmap_module_items');
+        chain.__resolveWith({ data: items, error: null });
+
+        const result = await fetchModuleItems('m1');
+
+        expect(result.error).toBeNull();
+        expect(result.data).toHaveLength(2);
+        expect(result.data![0].title).toBe('Reading');
+        expect(mockSupa.from).toHaveBeenCalledWith('roadmap_module_items');
+    });
+
+    it('returns error on failure', async () => {
+        const chain = mockSupa.__getChain('roadmap_module_items');
+        chain.__resolveWith({ data: null, error: { message: 'Not found' } });
+
+        const result = await fetchModuleItems('m-bad');
+
+        expect(result.data).toBeNull();
+        expect(result.error).toBe('Not found');
+    });
+
+    it('returns empty array when module has no items', async () => {
+        const chain = mockSupa.__getChain('roadmap_module_items');
+        chain.__resolveWith({ data: [], error: null });
+
+        const result = await fetchModuleItems('m1');
+
+        expect(result.error).toBeNull();
+        expect(result.data).toEqual([]);
+    });
+});
+
+// ── fetchModuleItemProgress ──
+
+describe('fetchModuleItemProgress', () => {
+    it('returns item progress for a candidate and module', async () => {
+        const progressData = [
+            {
+                id: 'ip-1',
+                candidate_id: 'cand-1',
+                module_item_id: 'item-1',
+                status: 'completed',
+                roadmap_module_items: { module_id: 'm1' },
+            },
+        ];
+        const chain = mockSupa.__getChain('candidate_module_item_progress');
+        chain.__resolveWith({ data: progressData, error: null });
+
+        const result = await fetchModuleItemProgress('cand-1', 'm1');
+
+        expect(result.error).toBeNull();
+        expect(result.data).toHaveLength(1);
+        // Join data should be stripped
+        expect((result.data![0] as any).roadmap_module_items).toBeUndefined();
+        expect(result.data![0].module_item_id).toBe('item-1');
+    });
+
+    it('returns error on failure', async () => {
+        const chain = mockSupa.__getChain('candidate_module_item_progress');
+        chain.__resolveWith({ data: null, error: { message: 'RLS violation' } });
+
+        const result = await fetchModuleItemProgress('cand-1', 'm1');
+
+        expect(result.data).toBeNull();
+        expect(result.error).toBe('RLS violation');
+    });
+});
+
+// ── updateModuleItemProgress ──
+
+describe('updateModuleItemProgress', () => {
+    it('returns null error on successful upsert', async () => {
+        const chain = mockSupa.__getChain('candidate_module_item_progress');
+        chain.__resolveWith({ error: null });
+
+        const result = await updateModuleItemProgress('cand-1', 'item-1', 'completed', 'mgr-1');
+
+        expect(result.error).toBeNull();
+        expect(mockSupa.from).toHaveBeenCalledWith('candidate_module_item_progress');
+    });
+
+    it('returns error message on failure', async () => {
+        const chain = mockSupa.__getChain('candidate_module_item_progress');
+        chain.__resolveWith({ error: { message: 'Constraint violation' } });
+
+        const result = await updateModuleItemProgress('cand-1', 'item-1', 'completed', 'mgr-1');
+
+        expect(result.error).toBe('Constraint violation');
+    });
+
+    it('accepts optional score and notes', async () => {
+        const chain = mockSupa.__getChain('candidate_module_item_progress');
+        chain.__resolveWith({ error: null });
+
+        const result = await updateModuleItemProgress('cand-1', 'item-1', 'completed', 'mgr-1', 92, 'Well done');
+
+        expect(result.error).toBeNull();
+    });
+});
+
+// ── fetchModuleItemSummaries ──
+
+describe('fetchModuleItemSummaries', () => {
+    it('returns empty map for empty module IDs', async () => {
+        const result = await fetchModuleItemSummaries([], 'cand-1');
+
+        expect(result.error).toBeNull();
+        expect(result.data.size).toBe(0);
+    });
+
+    it('returns summaries with correct counts', async () => {
+        const items = [
+            { id: 'item-1', module_id: 'm1', item_type: 'material', is_required: true },
+            { id: 'item-2', module_id: 'm1', item_type: 'quiz', is_required: true },
+            { id: 'item-3', module_id: 'm2', item_type: 'attendance', is_required: true },
+        ];
+        const progress = [{ module_item_id: 'item-1', status: 'completed' }];
+
+        mockSupa.__getChain('roadmap_module_items').__resolveWith({ data: items, error: null });
+        mockSupa.__getChain('candidate_module_item_progress').__resolveWith({ data: progress, error: null });
+
+        const result = await fetchModuleItemSummaries(['m1', 'm2'], 'cand-1');
+
+        expect(result.error).toBeNull();
+        const m1Summary = result.data.get('m1')!;
+        expect(m1Summary.total).toBe(2);
+        expect(m1Summary.completed).toBe(1);
+        expect(m1Summary.itemTypes).toContain('material');
+        expect(m1Summary.itemTypes).toContain('quiz');
+
+        const m2Summary = result.data.get('m2')!;
+        expect(m2Summary.total).toBe(1);
+        expect(m2Summary.completed).toBe(0);
+        expect(m2Summary.itemTypes).toContain('attendance');
+    });
+
+    it('returns empty map with error when items query fails', async () => {
+        mockSupa.__getChain('roadmap_module_items').__resolveWith({
+            data: null,
+            error: { message: 'Query failed' },
+        });
+        mockSupa.__getChain('candidate_module_item_progress').__resolveWith({ data: [], error: null });
+
+        const result = await fetchModuleItemSummaries(['m1'], 'cand-1');
+
+        expect(result.error).toBe('Query failed');
+        expect(result.data.size).toBe(0);
     });
 });

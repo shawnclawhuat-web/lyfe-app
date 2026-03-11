@@ -81,6 +81,70 @@ export type Database = {
                     },
                 ];
             };
+            candidate_module_item_progress: {
+                Row: {
+                    attempt_count: number;
+                    candidate_id: string;
+                    completed_at: string | null;
+                    completed_by: string | null;
+                    created_at: string;
+                    id: string;
+                    module_item_id: string;
+                    notes: string | null;
+                    score: number | null;
+                    status: string;
+                    updated_at: string;
+                };
+                Insert: {
+                    attempt_count?: number;
+                    candidate_id: string;
+                    completed_at?: string | null;
+                    completed_by?: string | null;
+                    created_at?: string;
+                    id?: string;
+                    module_item_id: string;
+                    notes?: string | null;
+                    score?: number | null;
+                    status?: string;
+                    updated_at?: string;
+                };
+                Update: {
+                    attempt_count?: number;
+                    candidate_id?: string;
+                    completed_at?: string | null;
+                    completed_by?: string | null;
+                    created_at?: string;
+                    id?: string;
+                    module_item_id?: string;
+                    notes?: string | null;
+                    score?: number | null;
+                    status?: string;
+                    updated_at?: string;
+                };
+                Relationships: [
+                    {
+                        foreignKeyName: 'candidate_module_item_progress_candidate_id_fkey';
+                        columns: ['candidate_id'];
+                        isOneToOne: false;
+                        referencedRelation: 'candidates';
+                        referencedColumns: ['id'];
+                    },
+                    {
+                        foreignKeyName: 'candidate_module_item_progress_completed_by_fkey';
+                        columns: ['completed_by'];
+                        isOneToOne: false;
+                        referencedRelation: 'users';
+                        referencedColumns: ['id'];
+                    },
+                    {
+                        foreignKeyName: 'candidate_module_item_progress_module_item_id_fkey';
+                        columns: ['module_item_id'];
+                        isOneToOne: false;
+                        referencedRelation: 'roadmap_module_items';
+                        referencedColumns: ['id'];
+                    },
+                ];
+            };
             candidate_module_progress: {
                 Row: {
                     candidate_id: string;
@@ -868,6 +932,81 @@ export type Database = {
                     },
                 ];
             };
+            roadmap_module_items: {
+                Row: {
+                    archived_at: string | null;
+                    created_at: string;
+                    description: string | null;
+                    display_order: number;
+                    exam_paper_id: string | null;
+                    icon_name: string | null;
+                    id: string;
+                    is_active: boolean;
+                    is_required: boolean;
+                    item_type: string;
+                    module_id: string;
+                    pass_percentage: number | null;
+                    resource_type: string | null;
+                    resource_url: string | null;
+                    time_limit_minutes: number | null;
+                    title: string;
+                    updated_at: string;
+                };
+                Insert: {
+                    archived_at?: string | null;
+                    created_at?: string;
+                    description?: string | null;
+                    display_order?: number;
+                    exam_paper_id?: string | null;
+                    icon_name?: string | null;
+                    id?: string;
+                    is_active?: boolean;
+                    is_required?: boolean;
+                    item_type: string;
+                    module_id: string;
+                    pass_percentage?: number | null;
+                    resource_type?: string | null;
+                    resource_url?: string | null;
+                    time_limit_minutes?: number | null;
+                    title: string;
+                    updated_at?: string;
+                };
+                Update: {
+                    archived_at?: string | null;
+                    created_at?: string;
+                    description?: string | null;
+                    display_order?: number;
+                    exam_paper_id?: string | null;
+                    icon_name?: string | null;
+                    id?: string;
+                    is_active?: boolean;
+                    is_required?: boolean;
+                    item_type?: string;
+                    module_id?: string;
+                    pass_percentage?: number | null;
+                    resource_type?: string | null;
+                    resource_url?: string | null;
+                    time_limit_minutes?: number | null;
+                    title?: string;
+                    updated_at?: string;
+                };
+                Relationships: [
+                    {
+                        foreignKeyName: 'roadmap_module_items_exam_paper_id_fkey';
+                        columns: ['exam_paper_id'];
+                        isOneToOne: false;
+                        referencedRelation: 'exam_papers';
+                        referencedColumns: ['id'];
+                    },
+                    {
+                        foreignKeyName: 'roadmap_module_items_module_id_fkey';
+                        columns: ['module_id'];
+                        isOneToOne: false;
+                        referencedRelation: 'roadmap_modules';
+                        referencedColumns: ['id'];
+                    },
+                ];
+            };
             roadmap_modules: {
                 Row: {
                     archived_at: string | null;
@@ -1312,6 +1451,14 @@ export type Database = {
             auth_user_role: {
                 Args: never;
                 Returns: Database['public']['Enums']['user_role'];
+            };
+            can_access_candidate: {
+                Args: { cand_created_by: string; cand_manager_id: string };
+                Returns: boolean;
+            };
+            can_access_lead: {
+                Args: { lead_assigned_to: string; lead_created_by: string };
+                Returns: boolean;
             };
             create_roadshow_bulk: {
                 Args: {

@@ -3,12 +3,17 @@ import type {
     RoadmapProgramme,
     RoadmapModule,
     RoadmapResource,
+    RoadmapModuleItem,
     CandidateModuleProgress,
+    CandidateModuleItemProgress,
     CandidateProgrammeEnrollment,
     ProgrammeWithModules,
     RoadmapModuleWithProgress,
+    ModuleItemWithProgress,
+    ModuleItemSummary,
     NodeState,
     ModuleStatus,
+    ModuleItemType,
 } from '@/types/roadmap';
 
 // ─── Fetch a single module by ID ────────────────────────────────────────────
@@ -96,6 +101,143 @@ export async function fetchModuleResources(moduleId: string): Promise<{
     return { data: data as RoadmapResource[] | null, error: error?.message ?? null };
 }
 
+// ─── Fetch module items ────────────────────────────────────────────────────
+
+export async function fetchModuleItems(moduleId: string): Promise<{
+    data: RoadmapModuleItem[] | null;
+    error: string | null;
+}> {
+    const { data, error } = await supabase
+        .from('roadmap_module_items')
+        .select('*')
+        .eq('module_id', moduleId)
+        .eq('is_active', true)
+        .is('archived_at', null)
+        .order('display_order');
+
+    return { data: data as RoadmapModuleItem[] | null, error: error?.message ?? null };
+}
+
+// ─── Fetch item progress for a candidate + module ─────────────────────────
+
+export async function fetchModuleItemProgress(
+    candidateId: string,
+    moduleId: string,
+): Promise<{
+    data: CandidateModuleItemProgress[] | null;
+    error: string | null;
+}> {
+    const { data, error } = await supabase
+        .from('candidate_module_item_progress')
+        .select('*, roadmap_module_items!inner(module_id)')
+        .eq('candidate_id', candidateId)
+        .eq('roadmap_module_items.module_id', moduleId);
+
+    if (error) return { data: null, error: error.message };
+
+    // Strip the join data and return clean progress records
+    const cleaned = (data ?? []).map(({ roadmap_module_items, ...rest }) => rest) as CandidateModuleItemProgress[];
+    return { data: cleaned, error: null };
+}
+
+// ─── Fetch items with progress for module detail screen ───────────────────
+
+export async function fetchModuleItemsWithProgress(
+    moduleId: string,
+    candidateId: string,
+): Promise<{
+    data: ModuleItemWithProgress[] | null;
+    error: string | null;
+}> {
+    const [itemsRes, progressRes] = await Promise.all([
+        fetchModuleItems(moduleId),
+        fetchModuleItemProgress(candidateId, moduleId),
+    ]);
+
+    if (itemsRes.error) return { data: null, error: itemsRes.error };
+
+    const progressMap = new Map((progressRes.data ?? []).map((p) => [p.module_item_id, p]));
+
+    const items: ModuleItemWithProgress[] = (itemsRes.data ?? []).map((item) => ({
+        ...item,
+        progress: progressMap.get(item.id) ?? null,
+    }));
+
+    return { data: items, error: null };
+}
+
+// ─── Update module item progress ──────────────────────────────────────────
+
+export async function updateModuleItemProgress(
+    candidateId: string,
+    itemId: string,
+    status: ModuleStatus,
+    updatedBy: string,
+    score?: number,
+    notes?: string,
+): Promise<{ error: string | null }> {
+    const { error } = await supabase.from('candidate_module_item_progress').upsert(
+        {
+            candidate_id: candidateId,
+            module_item_id: itemId,
+            status,
+            completed_at: status === 'completed' ? new Date().toISOString() : null,
+            completed_by: status === 'completed' ? updatedBy : null,
+            score: score ?? null,
+            notes: notes ?? null,
+            attempt_count: 1,
+            updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'candidate_id,module_item_id' },
+    );
+
+    return { error: error?.message ?? null };
+}
+
+// ─── Fetch item summary counts for grid cards ─────────────────────────────
+
+export async function fetchModuleItemSummaries(
+    moduleIds: string[],
+    candidateId: string,
+): Promise<{
+    data: Map<string, ModuleItemSummary>;
+    error: string | null;
+}> {
+    if (moduleIds.length === 0) return { data: new Map(), error: null };
+
+    const [itemsRes, progressRes] = await Promise.all([
+        supabase
+            .from('roadmap_module_items')
+            .select('id, module_id, item_type, is_required')
+            .in('module_id', moduleIds)
+            .eq('is_active', true)
+            .is('archived_at', null),
+        supabase
+            .from('candidate_module_item_progress')
+            .select('module_item_id, status')
+            .eq('candidate_id', candidateId)
+            .eq('status', 'completed'),
+    ]);
+
+    if (itemsRes.error) return { data: new Map(), error: itemsRes.error.message };
+
+    const completedSet = new Set((progressRes.data ?? []).map((p) => p.module_item_id));
+
+    const summaryMap = new Map<string, ModuleItemSummary>();
+
+    for (const item of itemsRes.data ?? []) {
+        const existing = summaryMap.get(item.module_id) ?? { total: 0, completed: 0, itemTypes: [] };
+        existing.total++;
+        if (completedSet.has(item.id)) existing.completed++;
+        if (!existing.itemTypes.includes(item.item_type as ModuleItemType)) {
+            existing.itemTypes.push(item.item_type as ModuleItemType);
+        }
+        summaryMap.set(item.module_id, existing);
+    }
+
+    return { data: summaryMap, error: null };
+}
+
 // ─── Fetch candidate progress ───────────────────────────────────────────────
 
 export async function fetchCandidateProgress(candidateId: string): Promise<{
@@ -149,6 +291,10 @@ export async function fetchCandidateRoadmap(
         if (progressRes.error) throw progressRes.error;
         if (enrollmentRes.error) throw enrollmentRes.error;
         if (prerequisitesRes.error) throw prerequisitesRes.error;
+
+        // Fetch item summaries for grid cards (lightweight — just counts + types)
+        const allModuleIds = (modulesRes.data ?? []).map((m) => m.id);
+        const { data: itemSummaryMap } = await fetchModuleItemSummaries(allModuleIds, candidateId);
 
         const programmes = programmesRes.data as RoadmapProgramme[];
         const modules = modulesRes.data as (RoadmapModule & {
@@ -210,6 +356,7 @@ export async function fetchCandidateRoadmap(
                         ...m,
                         progress: moduleProgress,
                         resources: [],
+                        itemSummary: itemSummaryMap?.get(m.id) ?? null,
                         isLocked: isProgrammeLocked || isLockedByPrereq,
                         examPaper: m.exam_papers ?? null,
                         prerequisiteIds: modulePrereqIds,
