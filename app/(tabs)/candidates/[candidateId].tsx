@@ -275,7 +275,7 @@ export default function CandidateDetailScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <ScreenHeader showBack backLabel="Candidates" title="Loading..." />
                 <LoadingState />
             </SafeAreaView>
@@ -284,7 +284,7 @@ export default function CandidateDetailScreen() {
 
     if (!candidate) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <ScreenHeader showBack backLabel="Candidates" title="Not Found" />
                 <View style={styles.notFound}>
                     <Ionicons name="alert-circle-outline" size={48} color={colors.textTertiary} />
@@ -328,7 +328,7 @@ export default function CandidateDetailScreen() {
     };
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScreenHeader showBack backLabel="Candidates" title={candidate.name} />
 
             <ScrollView

@@ -52,7 +52,7 @@ export default function AgentDetailScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <ScreenHeader title="Team Member" showBack backLabel="Team" />
                 <LoadingState />
             </SafeAreaView>
@@ -61,7 +61,7 @@ export default function AgentDetailScreen() {
 
     if (!agent) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <ScreenHeader title="Agent" showBack backLabel="Team" />
                 <View style={styles.errorContainer}>
                     <Ionicons name="person-outline" size={48} color={colors.textTertiary} />
@@ -91,7 +91,7 @@ export default function AgentDetailScreen() {
     };
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScreenHeader title="Team Member" showBack backLabel="Team" />
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>

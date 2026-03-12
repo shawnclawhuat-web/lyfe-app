@@ -99,7 +99,7 @@ export default function ExamsListScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <ScreenHeader title="Quizzes" />
                 <LoadingState rows={3} />
             </SafeAreaView>
@@ -107,7 +107,7 @@ export default function ExamsListScreen() {
     }
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScreenHeader title="Quizzes" />
             <ScrollView
                 contentContainerStyle={styles.scrollContent}

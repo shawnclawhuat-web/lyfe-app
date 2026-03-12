@@ -250,7 +250,7 @@ export default function EventDetailScreen() {
     // ── Render guards ─────────────────────────────────────────
     if (isLoading) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <ScreenHeader title="Event" showBack onBack={() => router.back()} />
                 <ActivityIndicator style={{ marginTop: 40 }} color={colors.accent} />
             </SafeAreaView>
@@ -259,7 +259,7 @@ export default function EventDetailScreen() {
 
     if (!event) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <ScreenHeader title="Event" showBack onBack={() => router.back()} />
                 <View style={styles.notFound}>
                     <Ionicons name="alert-circle-outline" size={48} color={colors.textTertiary} />
@@ -321,7 +321,7 @@ export default function EventDetailScreen() {
 
     // ── Full render ───────────────────────────────────────────
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScreenHeader
                 title="Event Detail"
                 showBack

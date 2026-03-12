@@ -75,7 +75,7 @@ export default function EventsScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <ScreenHeader title="Events" />
                 <LoadingState />
             </SafeAreaView>
@@ -83,7 +83,7 @@ export default function EventsScreen() {
     }
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScreenHeader title="Events" />
 
             <InlineCalendar

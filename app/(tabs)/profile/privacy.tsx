@@ -37,7 +37,7 @@ export default function PrivacyScreen() {
     const { colors } = useTheme();
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScreenHeader title="Privacy" showBack backLabel="Profile" />
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <Text style={[styles.intro, { color: colors.textSecondary }]}>Last updated: March 2026</Text>

@@ -138,7 +138,7 @@ export default function TeamScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <ScreenHeader title="Team" />
                 <LoadingState />
             </SafeAreaView>
@@ -246,7 +246,7 @@ export default function TeamScreen() {
     };
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScreenHeader title="Team" />
 
             {/* Pinned Search + Filters */}

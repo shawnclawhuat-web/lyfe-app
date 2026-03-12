@@ -307,7 +307,7 @@ export default function AnalyticsScreen() {
     const isEmpty = !loading && (!performance || performance.agents.length === 0);
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScreenHeader title="Analytics" showBack backLabel="Home" />
 
             {loading && !refreshing ? (

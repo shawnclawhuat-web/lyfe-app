@@ -320,7 +320,7 @@ export default function PipelineScreen() {
     const isEmpty = !loading && totalCandidates === 0;
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScreenHeader title="Candidate Pipeline" showBack backLabel="Home" />
 
             {loading && !refreshing ? (

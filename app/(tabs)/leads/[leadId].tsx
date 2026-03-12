@@ -108,7 +108,7 @@ export default function LeadDetailScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <ScreenHeader showBack backLabel="Leads" title="Loading..." />
                 <LoadingState />
             </SafeAreaView>
@@ -117,7 +117,7 @@ export default function LeadDetailScreen() {
 
     if (!lead) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <View style={styles.notFound}>
                     <Ionicons name="alert-circle-outline" size={48} color={colors.textTertiary} />
                     <Text style={[styles.notFoundText, { color: colors.textSecondary }]}>Lead not found</Text>
@@ -271,7 +271,7 @@ export default function LeadDetailScreen() {
     };
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             {/* Header Bar */}
             <ScreenHeader
                 showBack

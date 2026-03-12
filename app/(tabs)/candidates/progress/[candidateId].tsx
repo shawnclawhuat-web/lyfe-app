@@ -40,7 +40,7 @@ export default function CandidateProgressScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <ScreenHeader showBack backLabel="Profile" title="Development Roadmap" />
                 <LoadingState />
             </SafeAreaView>
@@ -49,7 +49,7 @@ export default function CandidateProgressScreen() {
 
     if (notFound || !candidateId) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <ScreenHeader showBack backLabel="Profile" title="Development Roadmap" />
                 <View style={styles.notFound}>
                     <Ionicons name="alert-circle-outline" size={48} color={colors.textTertiary} />
@@ -60,7 +60,7 @@ export default function CandidateProgressScreen() {
     }
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScreenHeader showBack backLabel="Profile" title={`${candidateName}'s Roadmap`} />
 
             <ScrollView

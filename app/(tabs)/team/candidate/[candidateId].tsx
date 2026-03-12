@@ -59,7 +59,7 @@ export default function CandidateDetailScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <LoadingState />
             </SafeAreaView>
         );
@@ -67,7 +67,7 @@ export default function CandidateDetailScreen() {
 
     if (!candidate) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <Text style={{ color: colors.textPrimary, padding: 20 }}>Candidate not found</Text>
             </SafeAreaView>
         );
@@ -145,7 +145,7 @@ export default function CandidateDetailScreen() {
     ];
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             {/* Nav Header */}
             <View style={styles.navHeader}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>

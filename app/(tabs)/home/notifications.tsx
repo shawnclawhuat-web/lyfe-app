@@ -148,7 +148,7 @@ export default function NotificationsScreen() {
     );
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScreenHeader
                 title="Notifications"
                 showBack

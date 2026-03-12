@@ -6,7 +6,12 @@ import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { fetchCandidates } from '@/lib/recruitment';
-import { CANDIDATE_STATUSES, CANDIDATE_STATUS_CONFIG, type CandidateStatus, type RecruitmentCandidate } from '@/types/recruitment';
+import {
+    CANDIDATE_STATUSES,
+    CANDIDATE_STATUS_CONFIG,
+    type CandidateStatus,
+    type RecruitmentCandidate,
+} from '@/types/recruitment';
 import { Ionicons } from '@expo/vector-icons';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useTypedRouter } from '@/hooks/useTypedRouter';
@@ -73,11 +78,15 @@ export default function CandidateListScreen({
     useFocusEffect(
         useCallback(() => {
             loadCandidates();
-        }, [loadCandidates])
+        }, [loadCandidates]),
     );
 
     const { filtered: filteredCandidates, counts } = useFilteredList(
-        candidates, search, activeFilter, 'status', CANDIDATE_SEARCH_FIELDS,
+        candidates,
+        search,
+        activeFilter,
+        'status',
+        CANDIDATE_SEARCH_FIELDS,
     );
 
     const onRefresh = useCallback(async () => {
@@ -88,7 +97,7 @@ export default function CandidateListScreen({
 
     if (isLoading) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <ScreenHeader title="Candidates" />
                 <LoadingState />
             </SafeAreaView>
@@ -96,7 +105,7 @@ export default function CandidateListScreen({
     }
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScreenHeader
                 title="Candidates"
                 rightAction={
@@ -112,7 +121,9 @@ export default function CandidateListScreen({
 
             {/* Pinned Search + Filters */}
             <View style={styles.stickyHeader}>
-                <View style={[styles.searchBar, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                <View
+                    style={[styles.searchBar, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                >
                     <Ionicons name="search" size={18} color={colors.textTertiary} />
                     <TextInput
                         style={[styles.searchInput, { color: colors.textPrimary }]}
@@ -180,7 +191,11 @@ export default function CandidateListScreen({
             </View>
 
             {/* Error Banner */}
-            {error && <View style={{ paddingHorizontal: 16 }}><ErrorBanner message={error} onRetry={loadCandidates} /></View>}
+            {error && (
+                <View style={{ paddingHorizontal: 16 }}>
+                    <ErrorBanner message={error} onRetry={loadCandidates} />
+                </View>
+            )}
 
             <FlatList
                 data={filteredCandidates}
@@ -198,10 +213,7 @@ export default function CandidateListScreen({
                     />
                 }
                 renderItem={({ item }) => (
-                    <CandidateCard
-                        candidate={item}
-                        onPress={() => router.push(candidateRoute(item.id))}
-                    />
+                    <CandidateCard candidate={item} onPress={() => router.push(candidateRoute(item.id))} />
                 )}
             />
         </SafeAreaView>

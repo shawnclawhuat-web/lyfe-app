@@ -76,7 +76,7 @@ export default function ExamResultsScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.accent} />
                 </View>
@@ -86,7 +86,7 @@ export default function ExamResultsScreen() {
 
     if (!result) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <View style={styles.loadingContainer}>
                     <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
                     <Text style={[styles.errorText, { color: colors.textSecondary }]}>Result not found</Text>
@@ -102,7 +102,7 @@ export default function ExamResultsScreen() {
     }
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 {/* Header */}
                 <View style={styles.header}>

@@ -395,7 +395,7 @@ export default function TakeExamScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.accent} />
                     <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading questions...</Text>
@@ -413,7 +413,7 @@ export default function TakeExamScreen() {
     const currentSelections = isMultiSelect ? (answers[currentQuestion.id] || '').split(',').filter(Boolean) : [];
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             {/* Top Bar */}
             <View style={[styles.topBar, { borderBottomColor: colors.borderLight }]}>
                 <TouchableOpacity onPress={handleBack} style={styles.backButton}>

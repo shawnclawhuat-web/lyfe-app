@@ -47,7 +47,7 @@ export default function TermsScreen() {
     const { colors } = useTheme();
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScreenHeader title="Terms of Service" showBack backLabel="Profile" />
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <Text style={[styles.effective, { color: colors.textTertiary }]}>Effective date: 1 January 2026</Text>

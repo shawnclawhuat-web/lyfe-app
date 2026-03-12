@@ -9,7 +9,7 @@ export default function AdminScreen() {
     const { colors } = useTheme();
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScreenHeader title="Admin" />
             <View style={styles.placeholder}>
                 <Ionicons name="settings-outline" size={64} color={colors.textTertiary} />

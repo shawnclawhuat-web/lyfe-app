@@ -226,7 +226,7 @@ export default function HomeScreen() {
     const totalPipeline = useMemo(() => pipeline.reduce((n, s) => n + s.count, 0), [pipeline]);
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             {/* Sticky Header */}
             <ScreenHeader
                 title="Lyfe"

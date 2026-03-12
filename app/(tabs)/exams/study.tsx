@@ -76,7 +76,7 @@ export default function StudyScreen() {
     const totalMinutes = STUDY_TOPICS.reduce((n, t) => n + t.estimatedMinutes, 0);
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <ScreenHeader
                 showBack
                 backLabel="Home"
