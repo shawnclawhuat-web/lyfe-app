@@ -2,6 +2,7 @@
  * Activity tracking service — log and query agent activities on leads.
  */
 import type { LeadActivityType } from '@/types/lead';
+import { captureError } from './sentry';
 import { supabase } from './supabase';
 
 // ── Types ────────────────────────────────────────────────────
@@ -71,6 +72,7 @@ export async function getAgentActivitySummary(
             error: null,
         };
     } catch (err) {
+        captureError(err, { fn: 'getActivitySummary' });
         return {
             data: emptyResult,
             error: err instanceof Error ? err.message : 'Unknown error fetching activity summary',

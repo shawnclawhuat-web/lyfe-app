@@ -5,7 +5,10 @@ import { Sentry } from '@/lib/sentry';
 import { Text } from 'react-native';
 
 jest.mock('@/lib/sentry', () => ({
-    Sentry: { captureException: jest.fn() },
+    Sentry: {
+        captureException: jest.fn(),
+        withScope: jest.fn((cb: any) => cb({ setExtra: jest.fn() })),
+    },
 }));
 
 // Component that throws on demand

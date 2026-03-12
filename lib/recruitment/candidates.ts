@@ -3,6 +3,7 @@
  */
 import type { CandidateStatus, Interview, RecruitmentCandidate } from '@/types/recruitment';
 import { applyPageRange, resolvePage } from '../pagination';
+import { captureError } from '../sentry';
 import { supabase } from '../supabase';
 
 export interface CreateCandidateInput {
@@ -248,6 +249,7 @@ export async function uploadCandidateResume(
 
         return { url: publicUrl, error: null };
     } catch (err: any) {
+        captureError(err, { fn: 'uploadResume' });
         return { url: null, error: err?.message || 'Upload failed' };
     }
 }
@@ -317,6 +319,7 @@ export async function syncAgentToMKTR(candidate: {
         if (__DEV__) console.log('Agent synced to MKTR:', data);
         return { success: true };
     } catch (err: any) {
+        captureError(err, { fn: 'syncAgentToMktr' });
         if (__DEV__) console.error('MKTR sync error:', err.message);
         return { success: false, error: err.message };
     }

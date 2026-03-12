@@ -2,6 +2,7 @@
  * Candidate document management — fetch, upload, delete
  */
 import type { CandidateDocument } from '@/types/recruitment';
+import { captureError } from '../sentry';
 import { supabase } from '../supabase';
 
 export async function fetchCandidateDocuments(
@@ -50,6 +51,7 @@ export async function uploadCandidateDocument(
 
         return { data: row as CandidateDocument, error: null };
     } catch (err: any) {
+        captureError(err, { fn: 'uploadCandidateDocument' });
         return { data: null, error: err?.message || 'Upload failed' };
     }
 }

@@ -1,4 +1,5 @@
 import { authenticate, isBiometricsAvailable, isBiometricsEnabled, setBiometricsEnabled } from '@/lib/biometrics';
+import { clearSentryUser, setSentryUser } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@/types/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -236,6 +237,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     /** Called by BiometricsProvider after successful Face ID */
     const handleBiometricUnlock = useCallback((session: Session, profile: User | null) => {
+        if (profile) {
+            setSentryUser({ id: session.user.id, phone: session.user.phone, role: profile.role });
+        }
         setUser(profile);
         setAuthState((prev) => ({
             ...prev,
@@ -271,6 +275,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     if (profile) {
                         await updateLastLogin(session.user.id);
                         registerPushToken(session.user.id);
+                        setSentryUser({ id: session.user.id, phone, role: profile.role });
                     }
                     setUser(profile);
                     setAuthState({
@@ -307,7 +312,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (session?.user) {
                 const profile = await fetchUserProfile(session.user.id, session.user.phone || null);
-                if (profile) registerPushToken(session.user.id);
+                if (profile) {
+                    registerPushToken(session.user.id);
+                    setSentryUser({
+                        id: session.user.id,
+                        phone: session.user.phone,
+                        role: profile.role,
+                    });
+                }
                 setUser(profile);
                 setAuthState((prev) => ({
                     ...prev,
@@ -317,6 +329,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     pendingBiometricSession: false,
                 }));
             } else {
+                clearSentryUser();
                 setUser(null);
                 setAuthState((prev) => ({
                     ...prev,
@@ -359,6 +372,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         await supabase.auth.signOut();
+        clearSentryUser();
         setUser(null);
         setAuthState((prev) => ({
             ...prev,

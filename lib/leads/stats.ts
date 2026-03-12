@@ -2,6 +2,7 @@
  * Lead stats & dashboard aggregations
  */
 import type { LeadActivity, LeadStatus } from '@/types/lead';
+import { captureError } from '../sentry';
 import { supabase } from '../supabase';
 
 const ONE_WEEK_MS = 7 * 86400000;
@@ -225,6 +226,7 @@ export async function getTeamLeadSummary(managerId: string): Promise<{
             error: null,
         };
     } catch (err) {
+        captureError(err, { fn: 'getTeamLeadSummary' });
         return { ...emptyResult, error: err instanceof Error ? err.message : 'Unknown error fetching team summary' };
     }
 }

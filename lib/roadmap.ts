@@ -1,3 +1,4 @@
+import { captureError } from './sentry';
 import { supabase } from './supabase';
 import type {
     RoadmapProgramme,
@@ -383,6 +384,7 @@ export async function fetchCandidateRoadmap(
 
         return { data: result, error: null };
     } catch (err: unknown) {
+        captureError(err, { fn: 'fetchFullRoadmap' });
         const message =
             err instanceof Error
                 ? err.message

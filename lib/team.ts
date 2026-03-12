@@ -2,6 +2,7 @@
  * Team service — Supabase queries for team members with lead stats
  */
 import type { Lead } from '@/types/lead';
+import { captureError } from './sentry';
 import { supabase } from './supabase';
 
 /** 7-day invite token expiry (milliseconds) */
@@ -100,6 +101,7 @@ export async function fetchTeamMembers(
 
         return { data: members, error: null };
     } catch (err) {
+        captureError(err, { fn: 'getTeamMembers' });
         return { data: [], error: err instanceof Error ? err.message : 'Unknown error fetching team members' };
     }
 }
@@ -148,6 +150,7 @@ export async function fetchTeamMember(
 
         return { member, leads: leadsList, error: null };
     } catch (err) {
+        captureError(err, { fn: 'getTeamMemberDetail' });
         return { member: null, leads: [], error: err instanceof Error ? err.message : 'Unknown error fetching member' };
     }
 }
@@ -250,6 +253,7 @@ export async function getTeamPerformance(
             error: null,
         };
     } catch (err) {
+        captureError(err, { fn: 'getTeamPerformance' });
         return { data: emptyResult, error: err instanceof Error ? err.message : 'Unknown error fetching performance' };
     }
 }
@@ -294,6 +298,7 @@ export async function inviteAgent(
         if (error) return { data: null, error: error.message };
         return { data: { token: (data as { token: string }).token }, error: null };
     } catch (err) {
+        captureError(err, { fn: 'sendTeamInvite' });
         return { data: null, error: err instanceof Error ? err.message : 'Unknown error sending invite' };
     }
 }

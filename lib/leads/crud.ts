@@ -3,6 +3,7 @@
  */
 import type { Lead, LeadActivityType, LeadSource, LeadStatus, ProductInterest } from '@/types/lead';
 import { applyPageRange, resolvePage } from '../pagination';
+import { captureError } from '../sentry';
 import { supabase } from '../supabase';
 
 export interface CreateLeadInput {
@@ -171,6 +172,7 @@ export async function assignLead(
 
         return { error: null };
     } catch (err) {
+        captureError(err, { fn: 'assignLead' });
         return { error: err instanceof Error ? err.message : 'Unknown error assigning lead' };
     }
 }
@@ -212,6 +214,7 @@ export async function updateLeadStage(
 
         return { error: null };
     } catch (err) {
+        captureError(err, { fn: 'updateLeadStage' });
         return { error: err instanceof Error ? err.message : 'Unknown error updating lead stage' };
     }
 }

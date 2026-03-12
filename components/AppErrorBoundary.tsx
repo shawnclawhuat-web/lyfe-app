@@ -19,7 +19,10 @@ export default class AppErrorBoundary extends React.Component<Props, State> {
     }
 
     componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-        Sentry.captureException(error);
+        Sentry.withScope((scope) => {
+            scope.setExtra('componentStack', errorInfo.componentStack);
+            Sentry.captureException(error);
+        });
     }
 
     handleReset = () => {

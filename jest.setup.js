@@ -46,8 +46,19 @@ jest.mock('@sentry/react-native', () => ({
     captureException: jest.fn(),
     captureMessage: jest.fn(),
     setUser: jest.fn(),
+    setTag: jest.fn(),
     addBreadcrumb: jest.fn(),
+    withScope: jest.fn((cb) => cb({ setExtra: jest.fn(), setExtras: jest.fn() })),
     mobileReplayIntegration: jest.fn(() => ({ name: 'MobileReplay' })),
+    reactNavigationIntegration: jest.fn(() => ({
+        name: 'ReactNavigation',
+        registerNavigationContainer: jest.fn(),
+    })),
+}));
+
+// Mock expo-constants
+jest.mock('expo-constants', () => ({
+    expoConfig: { version: '1.0.0', extra: { eas: { projectId: 'test' } } },
 }));
 
 // Mock react-native-safe-area-context

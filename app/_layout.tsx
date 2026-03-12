@@ -1,5 +1,5 @@
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useNavigationContainerRef, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -10,7 +10,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ViewModeProvider } from '@/contexts/ViewModeContext';
-import { initSentry, Sentry } from '@/lib/sentry';
+import { initSentry, navigationIntegration, Sentry } from '@/lib/sentry';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -74,6 +74,14 @@ function RootLayoutContent() {
 }
 
 function RootLayout() {
+    const ref = useNavigationContainerRef();
+
+    useEffect(() => {
+        if (ref?.current) {
+            navigationIntegration.registerNavigationContainer(ref);
+        }
+    }, [ref]);
+
     const [fontsLoaded, fontError] = useFonts({
         Pacifico: require('../assets/fonts/Pacifico-Regular.ttf'),
         SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
