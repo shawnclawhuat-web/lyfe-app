@@ -407,7 +407,6 @@ export default function TakeExamScreen() {
     }
 
     const currentQuestion = questions[currentIndex];
-    const answeredCount = questions.filter((q) => isQuestionAnswered(answers, q.id)).length;
     const isTimeLow = timeLeft < 300;
     const displayCode = PAPER_CODES[paperId || ''] || paperTitle || paperId;
 
@@ -590,9 +589,6 @@ export default function TakeExamScreen() {
                     onPress={() => setShowGrid(!showGrid)}
                 >
                     <Ionicons name="grid-outline" size={18} color={colors.textSecondary} />
-                    <Text style={[styles.gridBadge, { color: colors.accent }]}>
-                        {answeredCount}/{questions.length}
-                    </Text>
                 </TouchableOpacity>
 
                 {currentIndex === questions.length - 1 ? (
@@ -787,7 +783,6 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         borderRadius: 8,
     },
-    gridBadge: { fontSize: 13, fontWeight: '700' },
     submitButton: {
         flexDirection: 'row',
         alignItems: 'center',
