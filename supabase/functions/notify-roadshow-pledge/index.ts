@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
         // Get T2 (manager) and T3 (director = manager's reports_to)
         const { data: manager } = await supabase
             .from('users')
-            .select('id, push_token, reports_to')
+            .select('id, reports_to')
             .eq('id', event.created_by)
             .single();
 
@@ -124,11 +124,7 @@ Deno.serve(async (req) => {
         if (manager && manager.id !== agentId) recipientIds.push(manager.id);
 
         if (manager?.reports_to && manager.reports_to !== agentId) {
-            const { data: director } = await supabase
-                .from('users')
-                .select('id, push_token')
-                .eq('id', manager.reports_to)
-                .single();
+            const { data: director } = await supabase.from('users').select('id').eq('id', manager.reports_to).single();
             if (director && !recipientIds.includes(director.id)) {
                 recipientIds.push(director.id);
             }
@@ -138,33 +134,7 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ sent: 0 }), { headers: corsHeaders });
         }
 
-        // Fetch push tokens for recipients
-        const { data: recipients } = await supabase
-            .from('users')
-            .select('id, push_token')
-            .in('id', recipientIds)
-            .not('push_token', 'is', null);
-
-        const tokens = (recipients || []).map((r: any) => r.push_token).filter(Boolean);
-        if (tokens.length === 0) {
-            return new Response(JSON.stringify({ sent: 0 }), { headers: corsHeaders });
-        }
-
-        const message = {
-            to: tokens,
-            sound: 'default',
-            title: `${agentName} pledged for ${event.title}`,
-            body: `S${pledgedSitdowns} P${pledgedPitches} C${pledgedClosed} AFYC $${pledgedAfyc.toLocaleString()}`,
-            data: { eventId, agentId },
-        };
-
-        await fetch('https://exp.host/--/api/v2/push/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(message),
-        });
-
-        // Persist in-app notification rows for each recipient
+        // Persist in-app notification rows (push handled by send-push-notification dispatcher)
         const notificationRows = recipientIds.map((id) => ({
             user_id: id,
             type: 'roadshow_pledge',
@@ -172,11 +142,9 @@ Deno.serve(async (req) => {
             body: `S${pledgedSitdowns} P${pledgedPitches} C${pledgedClosed} AFYC $${pledgedAfyc.toLocaleString()}`,
             data: { route: `/(tabs)/events/${eventId}`, eventId, agentId },
         }));
-        if (notificationRows.length > 0) {
-            await supabase.from('notifications').insert(notificationRows);
-        }
+        await supabase.from('notifications').insert(notificationRows);
 
-        return new Response(JSON.stringify({ sent: tokens.length }), { headers: corsHeaders });
+        return new Response(JSON.stringify({ sent: recipientIds.length }), { headers: corsHeaders });
     } catch (err) {
         console.error('notify-roadshow-pledge error:', err);
         return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: corsHeaders });

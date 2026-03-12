@@ -194,26 +194,8 @@ Deno.serve(async (req) => {
             },
         });
 
-        // ── Push notification + in-app notification ───────────────
+        // ── In-app notification (push handled by send-push-notification dispatcher) ──
         if (agentId) {
-            const pushToken = agent?.push_token;
-
-            // Expo push (fire-and-forget)
-            if (pushToken) {
-                fetch('https://exp.host/--/api/v2/push/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        to: pushToken,
-                        sound: 'default',
-                        title: 'New Lead from MKTR',
-                        body: `${fullName} — ${campaign?.name || 'Unknown Campaign'}`,
-                        data: { route: `/(tabs)/leads/${leadId}` },
-                    }),
-                }).catch((err) => console.error('Push notification error:', err));
-            }
-
-            // In-app notification
             await supabase.from('notifications').insert({
                 user_id: agentId,
                 type: 'new_lead',

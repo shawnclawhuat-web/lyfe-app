@@ -1399,6 +1399,7 @@ export type Database = {
                     is_active: boolean | null;
                     last_login_at: string | null;
                     lifecycle_stage: Database['public']['Enums']['lifecycle_stage'] | null;
+                    notification_preferences: Json | null;
                     phone: string | null;
                     push_token: string | null;
                     reports_to: string | null;
@@ -1416,6 +1417,7 @@ export type Database = {
                     is_active?: boolean | null;
                     last_login_at?: string | null;
                     lifecycle_stage?: Database['public']['Enums']['lifecycle_stage'] | null;
+                    notification_preferences?: Json | null;
                     phone?: string | null;
                     push_token?: string | null;
                     reports_to?: string | null;
@@ -1433,6 +1435,7 @@ export type Database = {
                     is_active?: boolean | null;
                     last_login_at?: string | null;
                     lifecycle_stage?: Database['public']['Enums']['lifecycle_stage'] | null;
+                    notification_preferences?: Json | null;
                     phone?: string | null;
                     push_token?: string | null;
                     reports_to?: string | null;
@@ -1476,6 +1479,16 @@ export type Database = {
                 Returns: Json;
             };
             get_team_member_ids: { Args: { superior_id: string }; Returns: string[] };
+            notify_insert: {
+                Args: {
+                    p_body: string;
+                    p_data?: Json;
+                    p_title: string;
+                    p_type: string;
+                    p_user_id: string;
+                };
+                Returns: undefined;
+            };
         };
         Enums: {
             candidate_status:
@@ -1486,7 +1499,7 @@ export type Database = {
                 | 'exam_prep'
                 | 'licensed'
                 | 'active_agent';
-            event_type: 'team_meeting' | 'training' | 'agency_event' | 'roadshow' | 'other';
+            event_type: 'team_meeting' | 'training' | 'agency_event' | 'roadshow' | 'other' | 'exam';
             interview_status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
             interview_type: 'zoom' | 'in_person';
             lead_activity_type:
@@ -1638,7 +1651,7 @@ export const Constants = {
                 'licensed',
                 'active_agent',
             ],
-            event_type: ['team_meeting', 'training', 'agency_event', 'roadshow', 'other'],
+            event_type: ['team_meeting', 'training', 'agency_event', 'roadshow', 'other', 'exam'],
             interview_status: ['scheduled', 'completed', 'cancelled', 'rescheduled'],
             interview_type: ['zoom', 'in_person'],
             lead_activity_type: [

@@ -1,35 +1,93 @@
 import ScreenHeader from '@/components/ScreenHeader';
+import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import {
+    fetchNotificationPreferences,
+    updateNotificationPreference,
+    type NotificationPreferences,
+} from '@/lib/notificationPreferences';
+import { NOTIFICATION_TYPE_CONFIG, ROLE_NOTIFICATION_TYPES, type NotificationType } from '@/types/notification';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Linking, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const NOTIFICATION_TYPES = [
-    {
-        icon: 'calendar' as const,
-        title: 'Event Reminders',
-        subtitle: 'Upcoming events and roadshow check-ins',
-    },
-    {
-        icon: 'person-add' as const,
-        title: 'Candidate Updates',
-        subtitle: 'Interview schedules and status changes',
-    },
-    {
-        icon: 'trophy' as const,
-        title: 'Lead Milestones',
-        subtitle: 'Won deals and pipeline progress',
-    },
-    {
-        icon: 'megaphone' as const,
-        title: 'Agency Announcements',
-        subtitle: 'Important agency-wide messages',
-    },
-];
+/** Human-readable subtitle for each notification type */
+const TYPE_SUBTITLES: Partial<Record<NotificationType, string>> = {
+    event_reminder: 'Upcoming events and roadshow check-ins',
+    candidate_update: 'Candidate status changes',
+    lead_milestone: 'Won and lost deals',
+    agency_announcement: 'Important agency-wide messages',
+    roadshow_pledge: 'Agent pledges during roadshows',
+    new_lead: 'New leads assigned to you',
+    lead_reassigned: 'Leads reassigned to or from you',
+    interview_scheduled: 'New interview appointments',
+    interview_updated: 'Interview rescheduled or cancelled',
+    interview_reminder: 'Upcoming interview reminders',
+    candidate_assigned: 'New candidates added to your team',
+    agent_invite_accepted: 'Invited agents who joined',
+    module_completed: 'Training modules marked complete',
+    roadmap_unlocked: 'New programmes unlocked for you',
+    new_manager_joined: 'New managers joining your team',
+    lead_reassigned_global: 'Cross-team lead reassignments',
+    lead_stale: 'Leads with no recent activity',
+    roadshow_summary: 'Post-roadshow performance recap',
+    system_alert: 'System errors and alerts',
+};
 
 export default function NotificationsScreen() {
     const { colors } = useTheme();
+    const { user } = useAuth();
+    const role = user?.role ?? 'candidate';
+
+    const [prefs, setPrefs] = useState<NotificationPreferences>({});
+    const [loading, setLoading] = useState(true);
+    const [updating, setUpdating] = useState<NotificationType | null>(null);
+
+    const relevantTypes = ROLE_NOTIFICATION_TYPES[role] || [];
+
+    useEffect(() => {
+        if (!user?.id) return;
+        fetchNotificationPreferences(user.id).then(({ prefs: p }) => {
+            setPrefs(p);
+            setLoading(false);
+        });
+    }, [user?.id]);
+
+    const handleToggle = useCallback(
+        async (type: NotificationType, enabled: boolean) => {
+            if (!user?.id) return;
+            setUpdating(type);
+            // Optimistic update
+            setPrefs((prev) => {
+                const next = { ...prev };
+                if (enabled) {
+                    delete next[type];
+                } else {
+                    next[type] = false;
+                }
+                return next;
+            });
+
+            const { error } = await updateNotificationPreference(user.id, type, enabled);
+            if (error) {
+                // Rollback
+                setPrefs((prev) => {
+                    const next = { ...prev };
+                    if (enabled) {
+                        next[type] = false;
+                    } else {
+                        delete next[type];
+                    }
+                    return next;
+                });
+            }
+            setUpdating(null);
+        },
+        [user?.id],
+    );
+
+    const isEnabled = (type: NotificationType) => prefs[type] !== false;
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -39,40 +97,62 @@ export default function NotificationsScreen() {
                 <View style={[styles.infoCard, { backgroundColor: colors.accentLight }]}>
                     <Ionicons name="notifications" size={24} color={colors.accent} />
                     <View style={styles.infoText}>
-                        <Text style={[styles.infoTitle, { color: colors.accent }]}>Push Notifications Active</Text>
+                        <Text style={[styles.infoTitle, { color: colors.accent }]}>Push Notifications</Text>
                         <Text style={[styles.infoSubtitle, { color: colors.accent }]}>
-                            Lyfe sends you notifications for the activities below. Manage permissions from device
-                            settings.
+                            Toggle push notifications for each category. In-app notifications are always available in
+                            your inbox.
                         </Text>
                     </View>
                 </View>
 
                 {/* Notification types */}
-                <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>YOU RECEIVE NOTIFICATIONS FOR</Text>
-                <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
-                    {NOTIFICATION_TYPES.map((item, index) => (
-                        <View key={item.title}>
-                            <View style={styles.row}>
-                                <View style={[styles.iconCircle, { backgroundColor: colors.accentLight }]}>
-                                    <Ionicons name={item.icon} size={18} color={colors.accent} />
+                <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>PUSH NOTIFICATION PREFERENCES</Text>
+                {loading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="small" color={colors.accent} />
+                    </View>
+                ) : (
+                    <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+                        {relevantTypes.map((type, index) => {
+                            const config = NOTIFICATION_TYPE_CONFIG[type];
+                            const subtitle = TYPE_SUBTITLES[type];
+                            const enabled = isEnabled(type);
+
+                            return (
+                                <View key={type}>
+                                    <View style={styles.row}>
+                                        <View style={[styles.iconCircle, { backgroundColor: colors.accentLight }]}>
+                                            <Ionicons name={config.icon as any} size={18} color={colors.accent} />
+                                        </View>
+                                        <View style={styles.rowText}>
+                                            <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>
+                                                {config.label}
+                                            </Text>
+                                            {subtitle ? (
+                                                <Text style={[styles.rowSubtitle, { color: colors.textTertiary }]}>
+                                                    {subtitle}
+                                                </Text>
+                                            ) : null}
+                                        </View>
+                                        <Switch
+                                            value={enabled}
+                                            onValueChange={(val) => handleToggle(type, val)}
+                                            disabled={updating === type}
+                                            trackColor={{ false: colors.border, true: colors.accent }}
+                                            accessibilityLabel={`${config.label} push notifications`}
+                                        />
+                                    </View>
+                                    {index < relevantTypes.length - 1 && (
+                                        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                                    )}
                                 </View>
-                                <View style={styles.rowText}>
-                                    <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>{item.title}</Text>
-                                    <Text style={[styles.rowSubtitle, { color: colors.textTertiary }]}>
-                                        {item.subtitle}
-                                    </Text>
-                                </View>
-                                <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                            </View>
-                            {index < NOTIFICATION_TYPES.length - 1 && (
-                                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                            )}
-                        </View>
-                    ))}
-                </View>
+                            );
+                        })}
+                    </View>
+                )}
 
                 {/* Device settings button */}
-                <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>MANAGE PERMISSIONS</Text>
+                <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>DEVICE PERMISSIONS</Text>
                 <TouchableOpacity
                     style={[styles.card, styles.settingsBtn, { backgroundColor: colors.cardBackground }]}
                     onPress={() => Linking.openSettings()}
@@ -141,4 +221,9 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     settingsBtnText: { flex: 1, fontSize: 15, fontWeight: '500' },
+
+    loadingContainer: {
+        paddingVertical: 40,
+        alignItems: 'center',
+    },
 });
