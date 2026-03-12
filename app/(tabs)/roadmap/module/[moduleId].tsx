@@ -39,7 +39,7 @@ export default function ModuleDetailScreen() {
     const { user } = useAuth();
     const { moduleId } = useLocalSearchParams<{ moduleId: string }>();
     const router = useRouter();
-    const { bottom } = useSafeAreaInsets();
+    const { top, bottom } = useSafeAreaInsets();
 
     const [module, setModule] = useState<RoadmapModule | null>(null);
     const [progress, setProgress] = useState<CandidateModuleProgress | null>(null);
@@ -210,25 +210,27 @@ export default function ModuleDetailScreen() {
                 onRequestClose={() => setShowPdf(false)}
             >
                 <View style={{ flex: 1, backgroundColor: colors.background }}>
-                    <SafeAreaView style={{ backgroundColor: colors.background }} edges={['top']}>
-                        <View
-                            style={[
-                                styles.pdfHeader,
-                                { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-                            ]}
+                    <View
+                        style={[
+                            styles.pdfHeader,
+                            {
+                                paddingTop: top + 12,
+                                borderBottomWidth: StyleSheet.hairlineWidth,
+                                borderBottomColor: colors.border,
+                            },
+                        ]}
+                    >
+                        <TouchableOpacity
+                            onPress={() => setShowPdf(false)}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                            <TouchableOpacity
-                                onPress={() => setShowPdf(false)}
-                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            >
-                                <Ionicons name="chevron-down" size={24} color={colors.textPrimary} />
-                            </TouchableOpacity>
-                            <Text style={[styles.pdfTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                                {pdfTitle}
-                            </Text>
-                            <View style={{ width: 32 }} />
-                        </View>
-                    </SafeAreaView>
+                            <Ionicons name="chevron-down" size={24} color={colors.textPrimary} />
+                        </TouchableOpacity>
+                        <Text style={[styles.pdfTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                            {pdfTitle}
+                        </Text>
+                        <View style={{ width: 32 }} />
+                    </View>
                     {pdfUrl && <WebView source={{ uri: pdfUrl }} style={{ flex: 1 }} originWhitelist={['*']} />}
                 </View>
             </Modal>
