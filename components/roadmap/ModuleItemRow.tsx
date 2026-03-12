@@ -13,11 +13,13 @@ interface Props {
     isLast: boolean;
     /** Navigate to exam screen */
     onStartExam?: (examPaperId: string) => void;
+    /** Open material in-app (for file/pdf resources). Falls back to Linking.openURL if not provided. */
+    onViewMaterial?: (url: string, title: string) => void;
     /** When true, the left-side status icon is hidden (e.g. management context provides its own). */
     hideStatusIcon?: boolean;
 }
 
-function ModuleItemRow({ item, colors, isLast, onStartExam, hideStatusIcon }: Props) {
+function ModuleItemRow({ item, colors, isLast, onStartExam, onViewMaterial, hideStatusIcon }: Props) {
     const status = item.progress?.status ?? 'not_started';
     const isCompleted = status === 'completed';
     const typeConfig = MODULE_ITEM_TYPE_CONFIG[item.item_type];
@@ -36,7 +38,12 @@ function ModuleItemRow({ item, colors, isLast, onStartExam, hideStatusIcon }: Pr
 
     const handleAction = () => {
         if (item.item_type === 'material' && item.resource_url) {
-            Linking.openURL(item.resource_url);
+            // Open file-type materials in-app if handler provided; fall back to external browser
+            if (onViewMaterial && item.resource_type === 'file') {
+                onViewMaterial(item.resource_url, item.title);
+            } else {
+                Linking.openURL(item.resource_url);
+            }
         } else if (['pre_quiz', 'quiz', 'exam'].includes(item.item_type) && item.exam_paper_id && onStartExam) {
             onStartExam(item.exam_paper_id);
         }

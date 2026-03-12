@@ -1,8 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+    ActivityIndicator,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import WebView from 'react-native-webview';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import ScreenHeader from '@/components/ScreenHeader';
@@ -38,6 +48,11 @@ export default function ModuleDetailScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [isItemsLoading, setIsItemsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // In-app PDF viewer
+    const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+    const [pdfTitle, setPdfTitle] = useState('');
+    const [showPdf, setShowPdf] = useState(false);
 
     const loadData = useCallback(async () => {
         if (!moduleId) {
@@ -100,6 +115,12 @@ export default function ModuleDetailScreen() {
         [router],
     );
 
+    const handleViewMaterial = useCallback((url: string, title: string) => {
+        setPdfUrl(url);
+        setPdfTitle(title);
+        setShowPdf(true);
+    }, []);
+
     // Build the enriched module object that ModuleCard expects
     const enrichedModule = module
         ? {
@@ -160,6 +181,7 @@ export default function ModuleDetailScreen() {
                                     colors={colors}
                                     isLast={idx === items.length - 1}
                                     onStartExam={handleStartExam}
+                                    onViewMaterial={handleViewMaterial}
                                 />
                             ))}
                         </View>
@@ -180,6 +202,36 @@ export default function ModuleDetailScreen() {
                     </Pressable>
                 </View>
             )}
+            {/* In-app PDF / file viewer */}
+            <Modal
+                visible={showPdf}
+                animationType="slide"
+                presentationStyle="fullScreen"
+                onRequestClose={() => setShowPdf(false)}
+            >
+                <View style={{ flex: 1, backgroundColor: colors.background }}>
+                    <SafeAreaView style={{ backgroundColor: colors.background }} edges={['top']}>
+                        <View
+                            style={[
+                                styles.pdfHeader,
+                                { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                            ]}
+                        >
+                            <TouchableOpacity
+                                onPress={() => setShowPdf(false)}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                                <Ionicons name="chevron-down" size={24} color={colors.textPrimary} />
+                            </TouchableOpacity>
+                            <Text style={[styles.pdfTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                                {pdfTitle}
+                            </Text>
+                            <View style={{ width: 32 }} />
+                        </View>
+                    </SafeAreaView>
+                    {pdfUrl && <WebView source={{ uri: pdfUrl }} style={{ flex: 1 }} originWhitelist={['*']} />}
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -259,5 +311,17 @@ const styles = StyleSheet.create({
     backButtonText: {
         fontSize: 15,
         fontWeight: '600',
+    },
+    pdfHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+    },
+    pdfTitle: {
+        flex: 1,
+        fontSize: 15,
+        fontWeight: '600',
+        textAlign: 'center',
     },
 });
