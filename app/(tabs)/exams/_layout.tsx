@@ -22,6 +22,7 @@ export default function ExamsLayout() {
                 }}
             />
             <Stack.Screen name="results/[attemptId]" />
+            <Stack.Screen name="results/vark/[attemptId]" />
         </Stack>
     );
 }

@@ -12,10 +12,11 @@ export const examPaperSchema = z.object({
     title: z.string().min(1, 'Title is required'),
     description: z.string().nullable(),
     duration_minutes: z.coerce.number().int().min(1),
-    pass_percentage: z.coerce.number().int().min(1).max(100),
+    pass_percentage: z.coerce.number().int().min(0).max(100),
     question_count: z.coerce.number().int().min(0),
     is_active: z.boolean(),
     is_mandatory: z.boolean(),
+    allow_multiple_answers: z.boolean(),
     display_order: z.coerce.number().int().min(0),
 });
 

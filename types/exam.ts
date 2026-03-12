@@ -13,6 +13,8 @@ export interface ExamPaper {
     is_active: boolean;
     is_mandatory: boolean;
     display_order: number;
+    /** When true, quiz allows multi-select (personality/assessment quiz — no pass/fail) */
+    allow_multiple_answers: boolean;
 }
 
 export interface ExamQuestion {
@@ -54,15 +56,20 @@ export interface ExamAnswer {
 
 /** Local exam state for active session (persisted to AsyncStorage) */
 export interface ActiveExamState {
+    schemaVersion: number;
     attemptId: string;
     paperId: string;
     paperCode: string;
-    answers: Record<string, string>; // { [questionId]: selectedAnswer }
+    answers: Record<string, string>; // { [questionId]: selectedAnswer (comma-separated for multi-select) }
     currentIndex: number;
     startedAt: number; // Unix timestamp
     durationMinutes: number;
     totalQuestions: number;
+    allowMultipleAnswers: boolean;
 }
+
+/** Current schema version for ActiveExamState. Bump when shape changes. */
+export const ACTIVE_EXAM_SCHEMA_VERSION = 2;
 
 /** Stats shown on the exam card */
 export interface PaperStats {

@@ -3,9 +3,11 @@ import ErrorBanner from '@/components/ErrorBanner';
 import MathRenderer from '@/components/MathRenderer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { submitExamAttempt } from '@/lib/exams';
+import { submitExamAttempt, submitVarkAttempt } from '@/lib/exams';
+import { computeVarkScores } from '@/lib/vark';
 import { supabase } from '@/lib/supabase';
 import type { ExamQuestion } from '@/types/exam';
+import { ACTIVE_EXAM_SCHEMA_VERSION } from '@/types/exam';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -32,9 +34,18 @@ function formatTime(seconds: number): string {
 
 const STORAGE_KEY = 'lyfe_active_exam';
 
+/**
+ * Check if a question is answered. For multi-select, an empty string
+ * after all deselections means "not answered".
+ */
+function isQuestionAnswered(answers: Record<string, string>, questionId: string): boolean {
+    const val = answers[questionId];
+    return val != null && val.length > 0;
+}
+
 export default function TakeExamScreen() {
     const { paperId } = useLocalSearchParams<{ paperId: string }>();
-    const { colors, isDark } = useTheme();
+    const { colors } = useTheme();
     const { user } = useAuth();
     const router = useRouter();
 
@@ -46,6 +57,8 @@ export default function TakeExamScreen() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showGrid, setShowGrid] = useState(false);
+    const [isMultiSelect, setIsMultiSelect] = useState(false);
+    const [paperTitle, setPaperTitle] = useState<string | null>(null);
     const [dialogConfig, setDialogConfig] = useState<{
         visible: boolean;
         title: string;
@@ -63,6 +76,7 @@ export default function TakeExamScreen() {
     const pausedAtRef = useRef<number | null>(null);
     const startedAtRef = useRef<number>(Date.now());
     const hasRestoredRef = useRef(false);
+    const isMultiSelectRef = useRef(false);
 
     // Load questions + restore saved progress
     useEffect(() => {
@@ -77,7 +91,7 @@ export default function TakeExamScreen() {
                 .order('question_number');
 
             if (error) {
-                setError('Failed to load exam questions. Please try again.');
+                setError('Failed to load questions. Please try again.');
                 setIsLoading(false);
                 return;
             }
@@ -85,11 +99,15 @@ export default function TakeExamScreen() {
 
             const { data: paper } = await supabase
                 .from('exam_papers')
-                .select('duration_minutes')
+                .select('duration_minutes, allow_multiple_answers, title')
                 .eq('id', paperId)
                 .single();
 
             duration = paper?.duration_minutes || 60;
+            const multiSelect = paper?.allow_multiple_answers === true;
+            setIsMultiSelect(multiSelect);
+            isMultiSelectRef.current = multiSelect;
+            setPaperTitle(paper?.title || null);
 
             setQuestions(questionsData);
 
@@ -98,7 +116,12 @@ export default function TakeExamScreen() {
                 const saved = await AsyncStorage.getItem(STORAGE_KEY);
                 if (saved) {
                     const state = JSON.parse(saved);
-                    if (state.paperId === paperId) {
+                    // Only restore if same paper AND same schema version AND same multi-select mode
+                    if (
+                        state.paperId === paperId &&
+                        state.schemaVersion === ACTIVE_EXAM_SCHEMA_VERSION &&
+                        state.allowMultipleAnswers === multiSelect
+                    ) {
                         setAnswers(state.answers || {});
                         setCurrentIndex(state.currentIndex || 0);
                         startedAtRef.current = state.startedAt || Date.now();
@@ -114,6 +137,8 @@ export default function TakeExamScreen() {
                         }, 0);
                         return;
                     }
+                    // Incompatible saved state — discard it
+                    await AsyncStorage.removeItem(STORAGE_KEY);
                 }
             } catch (e) {
                 if (__DEV__) console.error('[ExamTake] Failed to restore saved state:', e);
@@ -123,7 +148,6 @@ export default function TakeExamScreen() {
             startedAtRef.current = Date.now();
             setTimeLeft(duration * 60);
             setIsLoading(false);
-            // Mark restoration complete after a tick so state settles
             setTimeout(() => {
                 hasRestoredRef.current = true;
             }, 0);
@@ -151,16 +175,13 @@ export default function TakeExamScreen() {
         };
     }, [isLoading, isSubmitting]);
 
-    // App state listener — pause timer when backgrounded (UX risk 3.3)
+    // App state listener — pause timer when backgrounded
     useEffect(() => {
         const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
             if (appStateRef.current === 'active' && nextState.match(/inactive|background/)) {
-                // Going to background — record pause time
                 pausedAtRef.current = Date.now();
                 if (timerRef.current) clearInterval(timerRef.current);
             } else if (nextState === 'active' && appStateRef.current.match(/inactive|background/)) {
-                // Returning to foreground — do NOT deduct paused time
-                // Timer resumes from where it left off
                 pausedAtRef.current = null;
             }
             appStateRef.current = nextState;
@@ -173,28 +194,51 @@ export default function TakeExamScreen() {
     useEffect(() => {
         if (questions.length === 0 || !hasRestoredRef.current) return;
         const state = {
+            schemaVersion: ACTIVE_EXAM_SCHEMA_VERSION,
             attemptId: `${user?.id}_${paperId}`,
             paperId: paperId || '',
-            paperCode: PAPER_CODES[paperId || ''] || '',
+            paperCode: PAPER_CODES[paperId || ''] || paperTitle || '',
             answers,
             currentIndex,
             startedAt: startedAtRef.current,
             durationMinutes: PAPER_DURATIONS[paperId || ''] || 60,
             totalQuestions: questions.length,
             timeLeft,
+            allowMultipleAnswers: isMultiSelectRef.current,
         };
         AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch((e) => {
             if (__DEV__) console.error('[ExamTake] Failed to auto-save state:', e);
         });
     }, [answers, currentIndex, timeLeft]);
 
+    // ── Answer handlers ──
+
+    /** Single-select: replace answer */
     const handleSelectAnswer = (questionId: string, answer: string) => {
         setAnswers((prev) => ({ ...prev, [questionId]: answer }));
     };
 
+    /** Multi-select: toggle an option on/off (comma-separated) */
+    const handleToggleAnswer = (questionId: string, option: string) => {
+        setAnswers((prev) => {
+            const current = prev[questionId] || '';
+            const selections = current ? current.split(',') : [];
+            const idx = selections.indexOf(option);
+            if (idx >= 0) {
+                selections.splice(idx, 1);
+            } else {
+                selections.push(option);
+            }
+            // Sort to keep stable order (A,B,C,D)
+            selections.sort();
+            return { ...prev, [questionId]: selections.join(',') };
+        });
+    };
+
     const handleAutoSubmit = useCallback(() => {
         if (timerRef.current) clearInterval(timerRef.current);
-        showDialog("Time's Up!", 'Your exam has been automatically submitted.', [
+        const label = isMultiSelectRef.current ? 'assessment' : 'exam';
+        showDialog("Time's Up!", `Your ${label} has been automatically submitted.`, [
             {
                 text: 'View Results',
                 onPress: () => {
@@ -206,49 +250,49 @@ export default function TakeExamScreen() {
     }, [answers, questions]);
 
     const handleSubmit = () => {
-        const unanswered = questions.filter((q) => !answers[q.id]).length;
+        const unanswered = questions.filter((q) => !isQuestionAnswered(answers, q.id)).length;
 
         if (unanswered > 0) {
-            showDialog(
-                'Unanswered Questions',
-                `You have ${unanswered} unanswered question${unanswered > 1 ? 's' : ''}. Unanswered questions will be marked incorrect. Submit anyway?`,
-                [
-                    { text: 'Review', style: 'cancel', onPress: hideDialog },
-                    {
-                        text: 'Submit',
-                        style: 'destructive',
-                        onPress: () => {
-                            hideDialog();
-                            submitExam('submitted');
-                        },
+            const unansweredMsg = isMultiSelect
+                ? `You have ${unanswered} unanswered question${unanswered > 1 ? 's' : ''}. They will not count toward your results. Submit anyway?`
+                : `You have ${unanswered} unanswered question${unanswered > 1 ? 's' : ''}. Unanswered questions will be marked incorrect. Submit anyway?`;
+
+            showDialog('Unanswered Questions', unansweredMsg, [
+                { text: 'Review', style: 'cancel', onPress: hideDialog },
+                {
+                    text: 'Submit',
+                    style: 'destructive',
+                    onPress: () => {
+                        hideDialog();
+                        submitExam('submitted');
                     },
-                ],
-            );
+                },
+            ]);
         } else {
-            showDialog(
-                'Submit Exam',
-                'Are you sure you want to submit? You cannot change your answers after submission.',
-                [
-                    { text: 'Cancel', style: 'cancel', onPress: hideDialog },
-                    {
-                        text: 'Submit',
-                        onPress: () => {
-                            hideDialog();
-                            submitExam('submitted');
-                        },
+            const title = isMultiSelect ? 'Submit Assessment' : 'Submit Exam';
+            showDialog(title, 'Are you sure you want to submit? You cannot change your answers after submission.', [
+                { text: 'Cancel', style: 'cancel', onPress: hideDialog },
+                {
+                    text: 'Submit',
+                    onPress: () => {
+                        hideDialog();
+                        submitExam('submitted');
                     },
-                ],
-            );
+                },
+            ]);
         }
     };
 
     const submitExam = async (status: 'submitted' | 'auto_submitted') => {
-        if (isSubmitting) return; // Double-tap guard (UX risk 3.7)
+        if (isSubmitting) return;
         setIsSubmitting(true);
         if (timerRef.current) clearInterval(timerRef.current);
 
+        const pc = PAPER_CODES[paperId || ''] || paperTitle || paperId || '';
+
         if (user?.id) {
-            const { data: result, error } = await submitExamAttempt(
+            const submitFn = isMultiSelect ? submitVarkAttempt : submitExamAttempt;
+            const { data: result, error } = await submitFn(
                 {
                     userId: user.id,
                     paperId: paperId || '',
@@ -257,54 +301,85 @@ export default function TakeExamScreen() {
                     status,
                     startedAt: startedAtRef.current,
                 },
-                PAPER_CODES[paperId || ''] || paperId || '',
+                pc,
             );
 
             if (error || !result) {
-                if (__DEV__) console.error('Failed to submit exam to Supabase:', error);
-                // Fall through to AsyncStorage fallback
+                if (__DEV__) console.error('Failed to submit to Supabase:', error);
+                // Fall through to local fallback
             } else {
-                // Also save to AsyncStorage for immediate results page use
                 await AsyncStorage.setItem(`exam_result_${result.id}`, JSON.stringify(result));
                 await AsyncStorage.removeItem(STORAGE_KEY);
-                router.replace(`/(tabs)/exams/results/${result.id}`);
+                // Route to VARK results or standard results
+                if (result.personalityResults) {
+                    router.replace(`/(tabs)/exams/results/vark/${result.id}`);
+                } else {
+                    router.replace(`/(tabs)/exams/results/${result.id}`);
+                }
                 return;
             }
         }
 
-        // Supabase fallback: save locally only
-        let correct = 0;
-        const answerDetails = questions.map((q) => {
-            const selected = answers[q.id] || null;
-            const isCorrect = selected === q.correct_answer;
-            if (isCorrect) correct++;
-            return { questionId: q.id, selected, isCorrect, correctAnswer: q.correct_answer };
-        });
+        // Local-only fallback
+        if (isMultiSelect) {
+            // VARK fallback — compute personality results locally
+            const varkResults = computeVarkScores(questions, answers);
+            const resultId = `result_${Date.now()}`;
+            const result = {
+                id: resultId,
+                score: 0,
+                totalQuestions: questions.length,
+                percentage: 0,
+                passed: false,
+                status,
+                answers: questions.map((q) => ({
+                    questionId: q.id,
+                    selected: answers[q.id] || null,
+                    isCorrect: false,
+                    correctAnswer: q.correct_answer,
+                })),
+                questions,
+                paperCode: pc,
+                personalityResults: varkResults,
+            };
+            await AsyncStorage.setItem(`exam_result_${resultId}`, JSON.stringify(result));
+            await AsyncStorage.removeItem(STORAGE_KEY);
+            router.replace(`/(tabs)/exams/results/vark/${resultId}`);
+        } else {
+            // Standard exam fallback
+            let correct = 0;
+            const answerDetails = questions.map((q) => {
+                const selected = answers[q.id] || null;
+                const isCorrect = selected === q.correct_answer;
+                if (isCorrect) correct++;
+                return { questionId: q.id, selected, isCorrect, correctAnswer: q.correct_answer };
+            });
 
-        const percentage = Math.round((correct / questions.length) * 100);
-        const passed = percentage >= 70;
+            const percentage = Math.round((correct / questions.length) * 100);
+            const passed = percentage >= 70;
 
-        const resultId = `result_${Date.now()}`;
-        const result = {
-            id: resultId,
-            score: correct,
-            totalQuestions: questions.length,
-            percentage,
-            passed,
-            status,
-            answers: answerDetails,
-            questions,
-            paperCode: PAPER_CODES[paperId || ''] || paperId,
-        };
+            const resultId = `result_${Date.now()}`;
+            const result = {
+                id: resultId,
+                score: correct,
+                totalQuestions: questions.length,
+                percentage,
+                passed,
+                status,
+                answers: answerDetails,
+                questions,
+                paperCode: PAPER_CODES[paperId || ''] || paperId,
+            };
 
-        await AsyncStorage.setItem(`exam_result_${resultId}`, JSON.stringify(result));
-        await AsyncStorage.removeItem(STORAGE_KEY);
-
-        router.replace(`/(tabs)/exams/results/${resultId}`);
+            await AsyncStorage.setItem(`exam_result_${resultId}`, JSON.stringify(result));
+            await AsyncStorage.removeItem(STORAGE_KEY);
+            router.replace(`/(tabs)/exams/results/${resultId}`);
+        }
     };
 
     const handleBack = () => {
-        showDialog('Leave Exam?', 'Your progress is saved. You can resume later.', [
+        const label = isMultiSelect ? 'assessment' : 'exam';
+        showDialog(`Leave ${isMultiSelect ? 'Assessment' : 'Exam'}?`, 'Your progress is saved. You can resume later.', [
             { text: 'Stay', style: 'cancel', onPress: hideDialog },
             {
                 text: 'Leave',
@@ -330,8 +405,12 @@ export default function TakeExamScreen() {
     }
 
     const currentQuestion = questions[currentIndex];
-    const answeredCount = Object.keys(answers).length;
-    const isTimeLow = timeLeft < 300; // 5 minutes
+    const answeredCount = questions.filter((q) => isQuestionAnswered(answers, q.id)).length;
+    const isTimeLow = timeLeft < 300;
+    const displayCode = PAPER_CODES[paperId || ''] || paperTitle || paperId;
+
+    // For multi-select, parse currently selected options for this question
+    const currentSelections = isMultiSelect ? (answers[currentQuestion.id] || '').split(',').filter(Boolean) : [];
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -341,9 +420,7 @@ export default function TakeExamScreen() {
                     <Ionicons name="close" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <View style={styles.topCenter}>
-                    <Text style={[styles.paperCode, { color: colors.accent }]}>
-                        {PAPER_CODES[paperId || ''] || paperId}
-                    </Text>
+                    <Text style={[styles.paperCode, { color: colors.accent }]}>{displayCode}</Text>
                     <Text style={[styles.questionCount, { color: colors.textSecondary }]}>
                         {currentIndex + 1} / {questions.length}
                     </Text>
@@ -405,13 +482,21 @@ export default function TakeExamScreen() {
                             {currentQuestion.question_text}
                         </Text>
                     )}
+                    {isMultiSelect && (
+                        <Text style={[styles.multiSelectHint, { color: colors.textTertiary }]}>
+                            Select all that apply
+                        </Text>
+                    )}
                 </View>
 
                 {/* Options */}
                 {['A', 'B', 'C', 'D'].map((option) => {
                     const optionText = currentQuestion.options[option];
                     if (!optionText) return null;
-                    const isSelected = answers[currentQuestion.id] === option;
+
+                    const isSelected = isMultiSelect
+                        ? currentSelections.includes(option)
+                        : answers[currentQuestion.id] === option;
                     const hasLatexContent = optionText.includes('$') || optionText.includes('\\');
 
                     return (
@@ -425,29 +510,47 @@ export default function TakeExamScreen() {
                                     borderWidth: isSelected ? 1.5 : 0.5,
                                 },
                             ]}
-                            onPress={() => handleSelectAnswer(currentQuestion.id, option)}
+                            onPress={() =>
+                                isMultiSelect
+                                    ? handleToggleAnswer(currentQuestion.id, option)
+                                    : handleSelectAnswer(currentQuestion.id, option)
+                            }
                             activeOpacity={0.7}
-                            accessibilityRole="radio"
+                            accessibilityRole={isMultiSelect ? 'checkbox' : 'radio'}
                             accessibilityState={{ selected: isSelected }}
                             accessibilityLabel={`Option ${option}: ${optionText}`}
                         >
                             <View
                                 style={[
                                     styles.optionLetter,
-                                    {
-                                        backgroundColor: isSelected ? colors.accent : colors.surfacePrimary,
-                                        borderColor: isSelected ? colors.accent : colors.border,
-                                    },
+                                    isMultiSelect
+                                        ? {
+                                              backgroundColor: isSelected ? colors.accent : 'transparent',
+                                              borderColor: isSelected ? colors.accent : colors.border,
+                                              borderRadius: 6,
+                                              borderWidth: 1.5,
+                                          }
+                                        : {
+                                              backgroundColor: isSelected ? colors.accent : colors.surfacePrimary,
+                                              borderColor: isSelected ? colors.accent : colors.border,
+                                              borderRadius: 8,
+                                          },
                                 ]}
                             >
-                                <Text
-                                    style={[
-                                        styles.optionLetterText,
-                                        { color: isSelected ? colors.textInverse : colors.textSecondary },
-                                    ]}
-                                >
-                                    {option}
-                                </Text>
+                                {isMultiSelect ? (
+                                    isSelected ? (
+                                        <Ionicons name="checkmark" size={16} color={colors.textInverse} />
+                                    ) : null
+                                ) : (
+                                    <Text
+                                        style={[
+                                            styles.optionLetterText,
+                                            { color: isSelected ? colors.textInverse : colors.textSecondary },
+                                        ]}
+                                    >
+                                        {option}
+                                    </Text>
+                                )}
                             </View>
                             <View style={styles.optionContent}>
                                 {hasLatexContent ? (
@@ -534,7 +637,7 @@ export default function TakeExamScreen() {
                         </View>
                         <View style={styles.gridItems}>
                             {questions.map((q, idx) => {
-                                const isAnswered = !!answers[q.id];
+                                const isAnswered = isQuestionAnswered(answers, q.id);
                                 const isCurrent = idx === currentIndex;
                                 return (
                                     <TouchableOpacity
@@ -636,6 +739,7 @@ const styles = StyleSheet.create({
     },
     questionLabel: { fontSize: 12, fontWeight: '600', letterSpacing: 0.5, marginBottom: 8 },
     questionText: { fontSize: 16, lineHeight: 24, fontWeight: '500' },
+    multiSelectHint: { fontSize: 12, fontWeight: '500', fontStyle: 'italic', marginTop: 8 },
     optionCard: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -647,7 +751,6 @@ const styles = StyleSheet.create({
     optionLetter: {
         width: 32,
         height: 32,
-        borderRadius: 8,
         borderWidth: 1,
         alignItems: 'center',
         justifyContent: 'center',

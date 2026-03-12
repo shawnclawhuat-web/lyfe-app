@@ -30,6 +30,7 @@ export default function ExamsListScreen() {
                 .from('exam_papers')
                 .select('*')
                 .eq('is_active', true)
+                .not('code', 'in', '("M5","M9","M9A","HI")')
                 .order('display_order');
 
             if (papersError) throw papersError;
@@ -75,7 +76,7 @@ export default function ExamsListScreen() {
                 }
             }
         } catch (err: any) {
-            setError(err.message || 'Failed to load exams');
+            setError(err.message || 'Failed to load quizzes');
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);
@@ -99,7 +100,7 @@ export default function ExamsListScreen() {
     if (isLoading) {
         return (
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-                <ScreenHeader title="Exams" subtitle="Complete all 4 mandatory papers to get licensed" />
+                <ScreenHeader title="Quizzes" />
                 <LoadingState rows={3} />
             </SafeAreaView>
         );
@@ -107,54 +108,13 @@ export default function ExamsListScreen() {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-            <ScreenHeader title="Exams" subtitle="Complete all 4 mandatory papers to get licensed" />
+            <ScreenHeader title="Quizzes" />
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 refreshControl={
                     <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.accent} />
                 }
             >
-                {/* Progress Overview */}
-                <View
-                    style={[
-                        styles.progressCard,
-                        { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
-                    ]}
-                >
-                    <View style={styles.progressHeader}>
-                        <Ionicons name="ribbon-outline" size={20} color={colors.accent} />
-                        <Text style={[styles.progressTitle, { color: colors.textPrimary }]}>Your Progress</Text>
-                    </View>
-                    <View style={styles.progressBar}>
-                        {papers
-                            .filter((p) => p.is_mandatory)
-                            .map((paper) => {
-                                const passed = stats[paper.id]?.bestPassed === true;
-                                return (
-                                    <View
-                                        key={paper.id}
-                                        style={[
-                                            styles.progressSegment,
-                                            {
-                                                backgroundColor: passed ? colors.success : colors.surfacePrimary,
-                                                borderColor: passed ? colors.success : colors.border,
-                                            },
-                                        ]}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.progressSegmentText,
-                                                { color: passed ? colors.textInverse : colors.textTertiary },
-                                            ]}
-                                        >
-                                            {paper.code}
-                                        </Text>
-                                    </View>
-                                );
-                            })}
-                    </View>
-                </View>
-
                 {/* Error Banner */}
                 {error && <ErrorBanner message={error} onRetry={fetchData} />}
 
@@ -173,7 +133,9 @@ export default function ExamsListScreen() {
                 {papers.length === 0 && !error && (
                     <View style={styles.emptyContainer}>
                         <Ionicons name="school-outline" size={64} color={colors.textTertiary} />
-                        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No exams available yet</Text>
+                        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                            No quizzes available yet
+                        </Text>
                     </View>
                 )}
             </ScrollView>
@@ -188,32 +150,6 @@ const styles = StyleSheet.create({
         paddingBottom: 32,
         paddingTop: 12,
     },
-    progressCard: {
-        borderRadius: 12,
-        borderWidth: 0.5,
-        padding: 16,
-        marginBottom: 20,
-    },
-    progressHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 12,
-    },
-    progressTitle: { fontSize: 14, fontWeight: '600' },
-    progressBar: {
-        flexDirection: 'row',
-        gap: 6,
-    },
-    progressSegment: {
-        flex: 1,
-        height: 32,
-        borderRadius: 8,
-        borderWidth: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    progressSegmentText: { fontSize: 11, fontWeight: '700' },
     emptyContainer: {
         alignItems: 'center',
         justifyContent: 'center',

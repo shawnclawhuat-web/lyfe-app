@@ -3,7 +3,7 @@
  */
 import { supabase } from '@/lib/supabase';
 
-import { submitExamAttempt, fetchExamResult } from '@/lib/exams';
+import { submitExamAttempt, submitVarkAttempt, fetchExamResult } from '@/lib/exams';
 import type { ExamQuestion } from '@/types/exam';
 
 jest.mock('@/lib/supabase');
@@ -342,6 +342,63 @@ describe('fetchExamResult', () => {
         expect(result.error).toBe('Answers query failed');
     });
 
+    it('returns VARK personality results when allow_multiple_answers is true', async () => {
+        const attemptsChain = mockSupa.__getChain('exam_attempts');
+        mockResolve(attemptsChain, {
+            data: {
+                id: 'attempt-vark',
+                paper_id: 'p-vark',
+                total_questions: 16,
+                status: 'submitted',
+                personality_results: {
+                    scores: { V: 6, A: 4, R: 3, K: 3 },
+                    percentages: { V: 38, A: 25, R: 19, K: 19 },
+                    preference: 'single',
+                    topTypes: ['V'],
+                },
+            },
+            error: null,
+        });
+
+        const papersChain = mockSupa.__getChain('exam_papers');
+        mockResolve(papersChain, { data: { code: 'VARK', allow_multiple_answers: true }, error: null });
+
+        const questionsChain = mockSupa.__getChain('exam_questions');
+        mockResolve(questionsChain, { data: [], error: null });
+
+        const result = await fetchExamResult('attempt-vark');
+        expect(result.error).toBeNull();
+        expect(result.data?.personalityResults).toBeDefined();
+        expect(result.data?.personalityResults?.preference).toBe('single');
+        expect(result.data?.personalityResults?.topTypes).toEqual(['V']);
+        expect(result.data?.score).toBe(0);
+        expect(result.data?.passed).toBe(false);
+    });
+
+    it('returns null personalityResults when JSONB data is malformed', async () => {
+        const attemptsChain = mockSupa.__getChain('exam_attempts');
+        mockResolve(attemptsChain, {
+            data: {
+                id: 'attempt-bad',
+                paper_id: 'p-vark',
+                total_questions: 16,
+                status: 'submitted',
+                personality_results: { broken: true }, // missing required fields
+            },
+            error: null,
+        });
+
+        const papersChain = mockSupa.__getChain('exam_papers');
+        mockResolve(papersChain, { data: { code: 'VARK', allow_multiple_answers: true }, error: null });
+
+        const questionsChain = mockSupa.__getChain('exam_questions');
+        mockResolve(questionsChain, { data: [], error: null });
+
+        const result = await fetchExamResult('attempt-bad');
+        expect(result.error).toBeNull();
+        expect(result.data?.personalityResults).toBeNull();
+    });
+
     it('defaults paperCode to empty string when paper not found', async () => {
         const attemptsChain = mockSupa.__getChain('exam_attempts');
         mockResolve(attemptsChain, {
@@ -365,5 +422,109 @@ describe('fetchExamResult', () => {
 
         const result = await fetchExamResult('attempt-1');
         expect(result.data?.paperCode).toBe('');
+    });
+});
+
+// ── submitVarkAttempt ──
+
+const VARK_QUESTIONS: ExamQuestion[] = [
+    {
+        id: 'vq1',
+        paper_id: 'p-vark',
+        question_number: 1,
+        question_text: 'How do you prefer to learn?',
+        options: { A: 'Diagrams', B: 'Listening', C: 'Reading', D: 'Practice' },
+        correct_answer: 'A:V,B:A,C:R,D:K',
+        explanation: '{"quiz_type":"vark","types":{"A":"V","B":"A","C":"R","D":"K"}}',
+    },
+    {
+        id: 'vq2',
+        paper_id: 'p-vark',
+        question_number: 2,
+        question_text: 'When studying, you prefer...',
+        options: { A: 'Charts', B: 'Discussion', C: 'Notes', D: 'Hands-on' },
+        correct_answer: 'A:V,B:A,C:R,D:K',
+        explanation: '{"quiz_type":"vark","types":{"A":"V","B":"A","C":"R","D":"K"}}',
+    },
+];
+
+describe('submitVarkAttempt', () => {
+    it('submits personality quiz with VARK scores and no pass/fail', async () => {
+        const attemptsChain = mockSupa.__getChain('exam_attempts');
+        mockResolve(attemptsChain, {
+            data: { id: 'vark-attempt-1', user_id: 'u1', paper_id: 'p-vark' },
+            error: null,
+        });
+
+        const answersChain = mockSupa.__getChain('exam_answers');
+        mockResolve(answersChain, { error: null });
+
+        const result = await submitVarkAttempt(
+            {
+                userId: 'u1',
+                paperId: 'p-vark',
+                questions: VARK_QUESTIONS,
+                answers: { vq1: 'A,C', vq2: 'A' }, // V+R, V → V:2, R:1
+                status: 'submitted',
+                startedAt: new Date('2026-03-08T11:55:00Z').getTime(),
+            },
+            'VARK',
+        );
+
+        expect(result.error).toBeNull();
+        expect(result.data?.score).toBe(0);
+        expect(result.data?.passed).toBe(false);
+        expect(result.data?.paperCode).toBe('VARK');
+        expect(result.data?.personalityResults).toBeDefined();
+        expect(result.data?.personalityResults?.scores.V).toBe(2);
+        expect(result.data?.personalityResults?.scores.R).toBe(1);
+        expect(result.data?.answers).toHaveLength(2);
+        expect(result.data?.answers.every((a) => a.isCorrect === false)).toBe(true);
+    });
+
+    it('returns error when attempt insert fails', async () => {
+        const attemptsChain = mockSupa.__getChain('exam_attempts');
+        mockResolve(attemptsChain, { data: null, error: { message: 'DB error' } });
+
+        const result = await submitVarkAttempt(
+            {
+                userId: 'u1',
+                paperId: 'p-vark',
+                questions: VARK_QUESTIONS,
+                answers: { vq1: 'A' },
+                status: 'submitted',
+                startedAt: Date.now(),
+            },
+            'VARK',
+        );
+
+        expect(result.data).toBeNull();
+        expect(result.error).toBe('DB error');
+    });
+
+    it('returns error and cleans up when answer insert fails', async () => {
+        const attemptsChain = mockSupa.__getChain('exam_attempts');
+        mockResolve(attemptsChain, {
+            data: { id: 'vark-attempt-2', user_id: 'u1', paper_id: 'p-vark' },
+            error: null,
+        });
+
+        const answersChain = mockSupa.__getChain('exam_answers');
+        mockResolve(answersChain, { error: { message: 'Answer insert failed' } });
+
+        const result = await submitVarkAttempt(
+            {
+                userId: 'u1',
+                paperId: 'p-vark',
+                questions: VARK_QUESTIONS,
+                answers: { vq1: 'A,B' },
+                status: 'submitted',
+                startedAt: Date.now(),
+            },
+            'VARK',
+        );
+
+        expect(result.data).toBeNull();
+        expect(result.error).toBe('Failed to save your answers. Please try again.');
     });
 });

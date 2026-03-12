@@ -137,6 +137,7 @@ export interface ExamPaper {
     question_count: number;
     is_active: boolean;
     is_mandatory: boolean;
+    allow_multiple_answers: boolean;
     display_order: number;
     created_at: string;
     updated_at: string;

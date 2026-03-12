@@ -469,6 +469,7 @@ export type Database = {
                     paper_id: string;
                     passed: boolean | null;
                     percentage: number | null;
+                    personality_results: Json | null;
                     score: number | null;
                     started_at: string | null;
                     status: string;
@@ -483,6 +484,7 @@ export type Database = {
                     paper_id: string;
                     passed?: boolean | null;
                     percentage?: number | null;
+                    personality_results?: Json | null;
                     score?: number | null;
                     started_at?: string | null;
                     status?: string;
@@ -497,6 +499,7 @@ export type Database = {
                     paper_id?: string;
                     passed?: boolean | null;
                     percentage?: number | null;
+                    personality_results?: Json | null;
                     score?: number | null;
                     started_at?: string | null;
                     status?: string;
@@ -523,6 +526,7 @@ export type Database = {
             };
             exam_papers: {
                 Row: {
+                    allow_multiple_answers: boolean;
                     code: string;
                     created_at: string | null;
                     description: string | null;
@@ -537,6 +541,7 @@ export type Database = {
                     updated_at: string | null;
                 };
                 Insert: {
+                    allow_multiple_answers?: boolean;
                     code: string;
                     created_at?: string | null;
                     description?: string | null;
@@ -551,6 +556,7 @@ export type Database = {
                     updated_at?: string | null;
                 };
                 Update: {
+                    allow_multiple_answers?: boolean;
                     code?: string;
                     created_at?: string | null;
                     description?: string | null;

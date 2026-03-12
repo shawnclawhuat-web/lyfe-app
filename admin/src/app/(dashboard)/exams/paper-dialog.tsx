@@ -24,6 +24,7 @@ type PaperFormValues = {
     question_count: number;
     is_active: boolean;
     is_mandatory: boolean;
+    allow_multiple_answers: boolean;
     display_order: number;
 };
 
@@ -47,6 +48,7 @@ export function PaperDialog({ open, onOpenChange, paper }: PaperDialogProps) {
             question_count: 0,
             is_active: true,
             is_mandatory: false,
+            allow_multiple_answers: false,
             display_order: 0,
         },
     });
@@ -62,6 +64,7 @@ export function PaperDialog({ open, onOpenChange, paper }: PaperDialogProps) {
                 question_count: paper.question_count,
                 is_active: paper.is_active,
                 is_mandatory: paper.is_mandatory,
+                allow_multiple_answers: paper.allow_multiple_answers,
                 display_order: paper.display_order,
             });
         } else {
@@ -74,6 +77,7 @@ export function PaperDialog({ open, onOpenChange, paper }: PaperDialogProps) {
                 question_count: 0,
                 is_active: true,
                 is_mandatory: false,
+                allow_multiple_answers: false,
                 display_order: 0,
             });
         }
@@ -204,7 +208,7 @@ export function PaperDialog({ open, onOpenChange, paper }: PaperDialogProps) {
                             />
                         </div>
 
-                        <div className="flex gap-6">
+                        <div className="flex flex-wrap gap-6">
                             <FormField
                                 control={form.control}
                                 name="is_active"
@@ -226,6 +230,21 @@ export function PaperDialog({ open, onOpenChange, paper }: PaperDialogProps) {
                                             <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                                         </FormControl>
                                         <FormLabel className="font-normal">Mandatory</FormLabel>
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="allow_multiple_answers"
+                                render={({ field }) => (
+                                    <FormItem className="flex items-center gap-2 space-y-0">
+                                        <FormControl>
+                                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                        </FormControl>
+                                        <FormLabel className="font-normal text-xs">
+                                            Multi-select
+                                            <span className="ml-1 text-muted-foreground">(assessment quiz)</span>
+                                        </FormLabel>
                                     </FormItem>
                                 )}
                             />
