@@ -3,7 +3,17 @@ import { toDateStr } from '@/lib/dateTime';
 import type { ThemeColors } from '@/types/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Dimensions, FlatList, PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+    Animated,
+    Dimensions,
+    FlatList,
+    PanResponder,
+    Pressable,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 // ── Calendar layout constants ──────────────────────────────────
 const SCREEN_W = Dimensions.get('window').width;
@@ -78,6 +88,126 @@ function buildMonthPages(todayStr: string): { pages: MonthPage[]; todayPageIdx: 
     }
     return { pages, todayPageIdx: MONTHS_BUFFER };
 }
+
+// ── Memoized strip day cell ────────────────────────────────────
+interface StripDayCellProps {
+    dateStr: string;
+    isSelected: boolean;
+    isToday: boolean;
+    hasEvent: boolean;
+    colors: ThemeColors;
+    onPress: (dateStr: string) => void;
+}
+
+const StripDayCell = React.memo(function StripDayCell({
+    dateStr,
+    isSelected,
+    isToday,
+    hasEvent,
+    colors,
+    onPress,
+}: StripDayCellProps) {
+    const d = new Date(dateStr + 'T00:00:00');
+    const dow = DOW_LETTERS[(d.getDay() + 6) % 7];
+
+    return (
+        <Pressable style={[calStyles.stripCell, { width: CELL_W }]} onPress={() => onPress(dateStr)}>
+            <Text style={[calStyles.stripDow, { color: isToday && !isSelected ? colors.accent : colors.textTertiary }]}>
+                {dow}
+            </Text>
+            <View
+                style={[
+                    calStyles.stripCircle,
+                    isSelected && { backgroundColor: colors.accent },
+                    isToday && !isSelected && { borderWidth: 1.5, borderColor: colors.accent },
+                ]}
+            >
+                <Text
+                    style={[
+                        calStyles.stripDayText,
+                        {
+                            color: isSelected ? colors.textInverse : isToday ? colors.accent : colors.textPrimary,
+                            fontWeight: isSelected || isToday ? '700' : '500',
+                        },
+                    ]}
+                >
+                    {d.getDate()}
+                </Text>
+            </View>
+            <View
+                style={[
+                    calStyles.dot,
+                    {
+                        backgroundColor: hasEvent ? (isSelected ? colors.textInverse : colors.accent) : 'transparent',
+                    },
+                ]}
+            />
+        </Pressable>
+    );
+});
+
+// ── Memoized grid day cell ─────────────────────────────────────
+interface GridDayCellProps {
+    dateStr: string;
+    dayNum: number;
+    isSelected: boolean;
+    isToday: boolean;
+    hasEvent: boolean;
+    isOtherMonth: boolean;
+    colors: ThemeColors;
+    onPress: (dateStr: string) => void;
+}
+
+const GridDayCell = React.memo(function GridDayCell({
+    dateStr,
+    dayNum,
+    isSelected,
+    isToday,
+    hasEvent,
+    isOtherMonth,
+    colors,
+    onPress,
+}: GridDayCellProps) {
+    return (
+        <Pressable style={calStyles.gridCell} onPress={() => onPress(dateStr)}>
+            <View
+                style={[
+                    calStyles.gridCircle,
+                    isSelected && { backgroundColor: colors.accent },
+                    isToday && !isSelected && { borderWidth: 1.5, borderColor: colors.accent },
+                ]}
+            >
+                <Text
+                    style={[
+                        calStyles.gridDayText,
+                        {
+                            color: isSelected
+                                ? colors.textInverse
+                                : isToday
+                                  ? colors.accent
+                                  : isOtherMonth
+                                    ? colors.textTertiary
+                                    : colors.textPrimary,
+                            fontWeight: isSelected ? '700' : '500',
+                        },
+                    ]}
+                >
+                    {dayNum}
+                </Text>
+            </View>
+            {hasEvent && (
+                <View
+                    style={[
+                        calStyles.dot,
+                        {
+                            backgroundColor: isSelected ? colors.textInverse : colors.accent,
+                        },
+                    ]}
+                />
+            )}
+        </Pressable>
+    );
+});
 
 // ── InlineCalendar ─────────────────────────────────────────────
 export interface InlineCalendarProps {
@@ -308,71 +438,36 @@ export default function InlineCalendar({
         [stripDates, todayIdx],
     );
 
-    // ── Render strip day cell ──
-    const renderStripDay = useCallback(
-        ({ item: dateStr }: { item: string }) => {
-            const d = new Date(dateStr + 'T00:00:00');
-            const dow = DOW_LETTERS[(d.getDay() + 6) % 7];
-            const isSelected = dateStr === selectedDate;
-            const isToday = dateStr === today;
-            const hasEvent = eventDates.has(dateStr);
-
-            return (
-                <TouchableOpacity
-                    style={[calStyles.stripCell, { width: CELL_W }]}
-                    onPress={() => {
-                        onSelectDate(dateStr);
-                        scrollStripToDate(dateStr);
-                    }}
-                    activeOpacity={0.7}
-                >
-                    <Text
-                        style={[
-                            calStyles.stripDow,
-                            { color: isToday && !isSelected ? colors.accent : colors.textTertiary },
-                        ]}
-                    >
-                        {dow}
-                    </Text>
-                    <View
-                        style={[
-                            calStyles.stripCircle,
-                            isSelected && { backgroundColor: colors.accent },
-                            isToday && !isSelected && { borderWidth: 1.5, borderColor: colors.accent },
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                calStyles.stripDayText,
-                                {
-                                    color: isSelected
-                                        ? colors.textInverse
-                                        : isToday
-                                          ? colors.accent
-                                          : colors.textPrimary,
-                                    fontWeight: isSelected || isToday ? '700' : '500',
-                                },
-                            ]}
-                        >
-                            {d.getDate()}
-                        </Text>
-                    </View>
-                    <View
-                        style={[
-                            calStyles.dot,
-                            {
-                                backgroundColor: hasEvent
-                                    ? isSelected
-                                        ? colors.textInverse
-                                        : colors.accent
-                                    : 'transparent',
-                            },
-                        ]}
-                    />
-                </TouchableOpacity>
-            );
+    // ── Stable press handler for strip cells (no selectedDate dependency) ──
+    const handleStripDayPress = useCallback(
+        (dateStr: string) => {
+            onSelectDate(dateStr);
+            scrollStripToDate(dateStr);
         },
-        [selectedDate, today, eventDates, colors, onSelectDate, scrollStripToDate],
+        [onSelectDate, scrollStripToDate],
+    );
+
+    // ── Render strip day cell (delegates to memoized component) ──
+    const renderStripDay = useCallback(
+        ({ item: dateStr }: { item: string }) => (
+            <StripDayCell
+                dateStr={dateStr}
+                isSelected={dateStr === selectedDate}
+                isToday={dateStr === today}
+                hasEvent={eventDates.has(dateStr)}
+                colors={colors}
+                onPress={handleStripDayPress}
+            />
+        ),
+        [selectedDate, today, eventDates, colors, handleStripDayPress],
+    );
+
+    // ── Stable press handler for grid cells ──
+    const handleGridDayPress = useCallback(
+        (dateStr: string) => {
+            onSelectDate(dateStr);
+        },
+        [onSelectDate],
     );
 
     // ── Render month grid page ──
@@ -394,67 +489,26 @@ export default function InlineCalendar({
                             if (!date) return <View key={di} style={calStyles.gridCell} />;
 
                             const ds = toDateStr(date);
-                            const isSelected = ds === selectedDate;
-                            const isToday = ds === today;
-                            const hasEvent = eventDates.has(ds);
-                            const isOtherMon = date.getMonth() !== page.month;
 
                             return (
-                                <TouchableOpacity
+                                <GridDayCell
                                     key={di}
-                                    style={calStyles.gridCell}
-                                    onPress={() => {
-                                        onSelectDate(ds);
-                                        if (isOtherMon) {
-                                            const idx = findPageIdx(date.getFullYear(), date.getMonth());
-                                            if (idx >= 0) scrollMonthToPage(idx);
-                                        }
-                                    }}
-                                    activeOpacity={0.7}
-                                >
-                                    <View
-                                        style={[
-                                            calStyles.gridCircle,
-                                            isSelected && { backgroundColor: colors.accent },
-                                            isToday && !isSelected && { borderWidth: 1.5, borderColor: colors.accent },
-                                        ]}
-                                    >
-                                        <Text
-                                            style={[
-                                                calStyles.gridDayText,
-                                                {
-                                                    color: isSelected
-                                                        ? colors.textInverse
-                                                        : isToday
-                                                          ? colors.accent
-                                                          : isOtherMon
-                                                            ? colors.textTertiary
-                                                            : colors.textPrimary,
-                                                    fontWeight: isSelected ? '700' : '500',
-                                                },
-                                            ]}
-                                        >
-                                            {date.getDate()}
-                                        </Text>
-                                    </View>
-                                    {hasEvent && (
-                                        <View
-                                            style={[
-                                                calStyles.dot,
-                                                {
-                                                    backgroundColor: isSelected ? colors.textInverse : colors.accent,
-                                                },
-                                            ]}
-                                        />
-                                    )}
-                                </TouchableOpacity>
+                                    dateStr={ds}
+                                    dayNum={date.getDate()}
+                                    isSelected={ds === selectedDate}
+                                    isToday={ds === today}
+                                    hasEvent={eventDates.has(ds)}
+                                    isOtherMonth={date.getMonth() !== page.month}
+                                    colors={colors}
+                                    onPress={handleGridDayPress}
+                                />
                             );
                         })}
                     </View>
                 ))}
             </View>
         ),
-        [selectedDate, today, eventDates, colors, onSelectDate, findPageIdx, scrollMonthToPage],
+        [selectedDate, today, eventDates, colors, handleGridDayPress],
     );
 
     const getStripItemLayout = useCallback(
@@ -563,6 +617,8 @@ export default function InlineCalendar({
                         onScroll={onStripScroll}
                         scrollEventThrottle={100}
                         extraData={selectedDate}
+                        windowSize={5}
+                        maxToRenderPerBatch={14}
                     />
                 </Animated.View>
 
