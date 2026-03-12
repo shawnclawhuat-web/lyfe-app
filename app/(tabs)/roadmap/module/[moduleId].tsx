@@ -39,7 +39,7 @@ export default function ModuleDetailScreen() {
     const { user } = useAuth();
     const { moduleId } = useLocalSearchParams<{ moduleId: string }>();
     const router = useRouter();
-    const { top, bottom } = useSafeAreaInsets();
+    const { bottom } = useSafeAreaInsets();
 
     const [module, setModule] = useState<RoadmapModule | null>(null);
     const [progress, setProgress] = useState<CandidateModuleProgress | null>(null);
@@ -206,7 +206,7 @@ export default function ModuleDetailScreen() {
             <Modal
                 visible={showPdf}
                 animationType="slide"
-                presentationStyle="fullScreen"
+                presentationStyle="pageSheet"
                 onRequestClose={() => setShowPdf(false)}
             >
                 <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -214,7 +214,6 @@ export default function ModuleDetailScreen() {
                         style={[
                             styles.pdfHeader,
                             {
-                                paddingTop: top + 12,
                                 borderBottomWidth: StyleSheet.hairlineWidth,
                                 borderBottomColor: colors.border,
                             },
@@ -222,16 +221,27 @@ export default function ModuleDetailScreen() {
                     >
                         <TouchableOpacity
                             onPress={() => setShowPdf(false)}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                            style={styles.pdfDoneButton}
                         >
-                            <Ionicons name="chevron-down" size={24} color={colors.textPrimary} />
+                            <Text style={[styles.pdfDoneText, { color: colors.accent }]}>Done</Text>
                         </TouchableOpacity>
                         <Text style={[styles.pdfTitle, { color: colors.textPrimary }]} numberOfLines={1}>
                             {pdfTitle}
                         </Text>
-                        <View style={{ width: 32 }} />
+                        <View style={styles.pdfDoneButton} />
                     </View>
-                    {pdfUrl && <WebView source={{ uri: pdfUrl }} style={{ flex: 1 }} originWhitelist={['*']} />}
+                    {pdfUrl && (
+                        <WebView
+                            source={{ uri: pdfUrl }}
+                            style={{ flex: 1 }}
+                            originWhitelist={['*']}
+                            startInLoadingState
+                            renderLoading={() => (
+                                <ActivityIndicator size="large" color={colors.accent} style={StyleSheet.absoluteFill} />
+                            )}
+                        />
+                    )}
                 </View>
             </Modal>
         </SafeAreaView>
@@ -319,6 +329,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 16,
         paddingVertical: 12,
+    },
+    pdfDoneButton: {
+        width: 52,
+    },
+    pdfDoneText: {
+        fontSize: 17,
+        fontWeight: '600',
     },
     pdfTitle: {
         flex: 1,
