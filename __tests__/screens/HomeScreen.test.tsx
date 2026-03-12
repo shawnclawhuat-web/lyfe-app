@@ -11,6 +11,7 @@ import { Colors } from '@/constants/Colors';
 import { fetchLeadStats, fetchRecentActivities, fetchManagerDashboardStats } from '@/lib/leads';
 import { fetchUpcomingEvents } from '@/lib/events';
 import { fetchPAManagerIds, fetchPACandidateCount, fetchPAInterviewCount } from '@/lib/recruitment';
+import { fetchCandidateRoadmap } from '@/lib/roadmap';
 import * as biometrics from '@/lib/biometrics';
 import HomeScreen from '@/app/(tabs)/home/index';
 
@@ -30,6 +31,7 @@ jest.mock('@/hooks/useTypedRouter');
 jest.mock('@/lib/leads');
 jest.mock('@/lib/events');
 jest.mock('@/lib/recruitment');
+jest.mock('@/lib/roadmap');
 jest.mock('@/lib/biometrics');
 
 const mockPush = jest.fn();
@@ -93,6 +95,36 @@ beforeEach(() => {
     (fetchPAManagerIds as jest.Mock).mockResolvedValue([]);
     (fetchPACandidateCount as jest.Mock).mockResolvedValue(0);
     (fetchPAInterviewCount as jest.Mock).mockResolvedValue(0);
+    (fetchCandidateRoadmap as jest.Mock).mockResolvedValue({
+        data: [
+            {
+                id: 'prog-1',
+                title: 'SeedLYFE',
+                icon_type: 'seedling',
+                percentage: 40,
+                completedCount: 2,
+                totalCount: 5,
+                isLocked: false,
+                manuallyUnlocked: false,
+                unlockedByName: null,
+                modules: [
+                    {
+                        id: 'mod-exam-1',
+                        title: 'Module 5 Exam',
+                        module_type: 'exam',
+                        isLocked: false,
+                        progress: null,
+                        examPaper: { code: 'M5', title: 'Module 5', pass_percentage: 70 },
+                        resources: [],
+                        itemSummary: null,
+                        prerequisiteIds: [],
+                        isArchived: false,
+                    },
+                ],
+            },
+        ],
+        error: null,
+    });
 });
 
 function setupRole(role: string, viewMode: 'agent' | 'manager' = 'agent') {
@@ -119,9 +151,7 @@ describe('HomeScreen', () => {
             expect(getByText('Total Leads')).toBeTruthy();
             expect(getByText('10')).toBeTruthy();
         });
-        expect(getByText('Quick Actions')).toBeTruthy();
-        expect(getByText('Add Lead')).toBeTruthy();
-        expect(getByText('All Leads')).toBeTruthy();
+        expect(getByText('Total Leads')).toBeTruthy();
     });
 
     it('shows lead pipeline for agent', async () => {
@@ -132,17 +162,6 @@ describe('HomeScreen', () => {
         });
     });
 
-    it('shows agent quick actions', async () => {
-        setupRole('agent');
-        const { getByText } = render(<HomeScreen />);
-        await waitFor(() => {
-            expect(getByText('Add Lead')).toBeTruthy();
-            expect(getByText('All Leads')).toBeTruthy();
-            expect(getByText('Events')).toBeTruthy();
-            expect(getByText('Pipeline')).toBeTruthy();
-        });
-    });
-
     // ── Manager view ──
 
     it('renders manager dashboard with team stats', async () => {
@@ -150,42 +169,31 @@ describe('HomeScreen', () => {
         const { getByText, getAllByText } = render(<HomeScreen />);
         await waitFor(() => {
             expect(getByText('Team Leads')).toBeTruthy();
-            // "Candidates" appears in both stat card and quick action
             expect(getAllByText('Candidates').length).toBeGreaterThanOrEqual(1);
             expect(getByText('Agents')).toBeTruthy();
         });
     });
 
-    it('shows manager quick actions', async () => {
-        setupRole('manager', 'manager');
-        const { getByText } = render(<HomeScreen />);
-        await waitFor(() => {
-            expect(getByText('Add Lead')).toBeTruthy();
-            expect(getByText('Team')).toBeTruthy();
-        });
-    });
-
     // ── Candidate view ──
 
-    it('renders candidate dashboard with exam stats', async () => {
+    it('renders candidate dashboard with roadmap progress', async () => {
         setupRole('candidate');
-        const { getByText, queryByText } = render(<HomeScreen />);
+        const { getByText, getAllByText, queryByText } = render(<HomeScreen />);
         await waitFor(() => {
-            expect(getByText('Exams to Pass')).toBeTruthy();
-            expect(getByText('Stage')).toBeTruthy();
-            expect(getByText('Days Left')).toBeTruthy();
+            expect(getByText('Roadmap Progress')).toBeTruthy();
+            expect(getAllByText('SeedLYFE').length).toBeGreaterThanOrEqual(1);
+            expect(getByText('2 of 5 modules completed')).toBeTruthy();
         });
         // Pipeline and activity should be hidden
         expect(queryByText('Lead Pipeline')).toBeNull();
         expect(queryByText('Recent Activity')).toBeNull();
     });
 
-    it('shows candidate quick actions', async () => {
+    it('shows upcoming events for candidate', async () => {
         setupRole('candidate');
         const { getByText } = render(<HomeScreen />);
         await waitFor(() => {
-            expect(getByText('Exams')).toBeTruthy();
-            expect(getByText('Study')).toBeTruthy();
+            expect(getByText('Upcoming Events')).toBeTruthy();
         });
     });
 
@@ -199,7 +207,6 @@ describe('HomeScreen', () => {
 
         const { getAllByText, queryByText } = render(<HomeScreen />);
         await waitFor(() => {
-            // "Candidates" appears in both hero stat and quick action
             expect(getAllByText('Candidates').length).toBeGreaterThanOrEqual(1);
             expect(getAllByText('8').length).toBeGreaterThanOrEqual(1);
             expect(getAllByText('Interviews').length).toBeGreaterThanOrEqual(1);
@@ -207,16 +214,6 @@ describe('HomeScreen', () => {
         // Pipeline and activity should be hidden for PA
         expect(queryByText('Lead Pipeline')).toBeNull();
         expect(queryByText('Recent Activity')).toBeNull();
-    });
-
-    it('shows PA quick actions', async () => {
-        setupRole('pa');
-        const { getByText, getAllByText } = render(<HomeScreen />);
-        await waitFor(() => {
-            expect(getByText('Add Candidate')).toBeTruthy();
-            // "Events" appears in both quick action and stat card
-            expect(getAllByText('Events').length).toBeGreaterThanOrEqual(1);
-        });
     });
 
     it('shows PA events section', async () => {

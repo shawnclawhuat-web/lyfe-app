@@ -34,7 +34,7 @@ export const CANDIDATE_STATUSES = [
 ] as const;
 export type CandidateStatus = (typeof CANDIDATE_STATUSES)[number];
 
-export const EVENT_TYPES = ['team_meeting', 'training', 'agency_event', 'roadshow', 'other'] as const;
+export const EVENT_TYPES = ['team_meeting', 'training', 'agency_event', 'roadshow', 'exam', 'other'] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 
 export const LEAD_ACTIVITY_TYPES = [
@@ -274,6 +274,7 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
     training: 'Training',
     agency_event: 'Agency Event',
     roadshow: 'Roadshow',
+    exam: 'Exam',
     other: 'Other',
 };
 

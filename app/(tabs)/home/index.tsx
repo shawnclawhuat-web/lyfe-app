@@ -1,7 +1,6 @@
 import { displayWeight, letterSpacing } from '@/constants/platform';
 import Avatar from '@/components/Avatar';
 import ErrorBanner from '@/components/ErrorBanner';
-import QuickActionBtn from '@/components/home/QuickActionBtn';
 import StatCardSmall from '@/components/home/StatCardSmall';
 import LyfeLogo from '@/components/LyfeLogo';
 import ScreenHeader from '@/components/ScreenHeader';
@@ -27,9 +26,11 @@ import {
 } from '@/lib/leads';
 import { formatDateShort, formatTime, timeAgo } from '@/lib/dateTime';
 import { fetchUpcomingEvents } from '@/lib/events';
+import { fetchCandidateRoadmap } from '@/lib/roadmap';
 import { fetchPAManagerIds, fetchPACandidateCount, fetchPAInterviewCount } from '@/lib/recruitment';
 import { EVENT_TYPE_CONFIG } from '@/constants/displayConfigs';
 import type { AgencyEvent } from '@/types/event';
+import type { ProgrammeWithModules } from '@/types/roadmap';
 import { STATUS_CONFIG, type LeadActivity, type LeadActivityType } from '@/types/lead';
 import { useTypedRouter } from '@/hooks/useTypedRouter';
 import { Ionicons } from '@expo/vector-icons';
@@ -147,6 +148,10 @@ export default function HomeScreen() {
     // Agent events state
     const [agentEvents, setAgentEvents] = useState<AgencyEvent[]>([]);
 
+    // Candidate state
+    const [candidateRoadmap, setCandidateRoadmap] = useState<ProgrammeWithModules[]>([]);
+    const [candidateEvents, setCandidateEvents] = useState<AgencyEvent[]>([]);
+
     const greeting = useMemo(() => getGreeting(), []);
     const firstName = user?.full_name?.split(' ')[0] || 'there';
 
@@ -159,6 +164,17 @@ export default function HomeScreen() {
         if (!user?.id) return;
         try {
             setError(null);
+
+            // ── Candidate branch ──
+            if (isCandidate) {
+                const [roadmapResult, eventsResult] = await Promise.all([
+                    fetchCandidateRoadmap(user.id),
+                    fetchUpcomingEvents(user.id, 3),
+                ]);
+                if (roadmapResult.data) setCandidateRoadmap(roadmapResult.data);
+                setCandidateEvents(eventsResult.data);
+                return;
+            }
 
             // ── PA branch ──
             if (isPa) {
@@ -195,7 +211,7 @@ export default function HomeScreen() {
         } catch {
             setError('Failed to load dashboard data');
         }
-    }, [user?.id, isPa, isManagerView, isAdminRole, user?.role]);
+    }, [user?.id, isCandidate, isPa, isManagerView, isAdminRole, user?.role]);
 
     useEffect(() => {
         loadDashboardData();
@@ -218,6 +234,9 @@ export default function HomeScreen() {
     );
 
     const totalPipeline = useMemo(() => pipeline.reduce((n, s) => n + s.count, 0), [pipeline]);
+
+    // Candidate derived data
+    const currentProgramme = candidateRoadmap.find((p) => !p.isLocked && p.percentage < 100) ?? candidateRoadmap[0];
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -290,19 +309,33 @@ export default function HomeScreen() {
                             <View style={styles.statsRow}>
                                 <View style={[styles.heroCardPrimary, { backgroundColor: colors.accent }]}>
                                     <Ionicons
-                                        name="school"
+                                        name="map"
                                         size={80}
                                         color="rgba(255,255,255,0.15)"
                                         style={styles.heroIconBg}
                                     />
-                                    <Text style={[styles.heroStatValue, { color: colors.textInverse }]}>2</Text>
+                                    <Text style={[styles.heroStatValue, { color: colors.textInverse }]}>
+                                        {currentProgramme ? `${currentProgramme.percentage}%` : '—'}
+                                    </Text>
                                     <Text style={[styles.heroStatLabel, { color: colors.textInverse, opacity: 0.9 }]}>
-                                        Exams to Pass
+                                        {currentProgramme?.title || 'Roadmap'}
                                     </Text>
                                 </View>
                                 <View style={styles.statsColumn}>
-                                    <StatCardSmall label="Stage" value="Exam Prep" colors={colors} />
-                                    <StatCardSmall label="Days Left" value="45" colors={colors} />
+                                    <StatCardSmall
+                                        label="Modules Done"
+                                        value={
+                                            currentProgramme
+                                                ? `${currentProgramme.completedCount}/${currentProgramme.totalCount}`
+                                                : '—'
+                                        }
+                                        colors={colors}
+                                    />
+                                    <StatCardSmall
+                                        label="Programmes"
+                                        value={candidateRoadmap.length.toString()}
+                                        colors={colors}
+                                    />
                                 </View>
                             </View>
                         </>
@@ -400,148 +433,87 @@ export default function HomeScreen() {
                     )}
                 </View>
 
-                {/* Quick Actions */}
-                <View style={[styles.section, styles.quickActionsSection]}>
-                    <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Quick Actions</Text>
-                    <View style={styles.quickActionsGrid}>
-                        {isCandidate ? (
-                            <>
-                                <QuickActionBtn
-                                    icon="school"
-                                    label="Exams"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/exams')}
-                                />
-                                <QuickActionBtn
-                                    icon="book"
-                                    label="Study"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/exams/study')}
-                                />
-                                <QuickActionBtn
-                                    icon="calendar"
-                                    label="My Events"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/events')}
-                                />
-                                <QuickActionBtn
-                                    icon="person"
-                                    label="Profile"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/profile')}
-                                />
-                            </>
-                        ) : isPa ? (
-                            <>
-                                <QuickActionBtn
-                                    icon="person-add"
-                                    label="Add Candidate"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/pa/add-candidate')}
-                                />
-                                <QuickActionBtn
-                                    icon="document-text"
-                                    label="Candidates"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/pa')}
-                                />
-                                <QuickActionBtn
-                                    icon="calendar"
-                                    label="Events"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/events')}
-                                />
-                                <QuickActionBtn
-                                    icon="person"
-                                    label="Profile"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/profile')}
-                                />
-                            </>
-                        ) : isAdminRole ? (
-                            <>
-                                <QuickActionBtn
-                                    icon="briefcase"
-                                    label="Team"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/team')}
-                                />
-                                <QuickActionBtn
-                                    icon="calendar"
-                                    label="Events"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/events')}
-                                />
-                                <QuickActionBtn
-                                    icon="people"
-                                    label="Leads"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/leads')}
-                                />
-                                <QuickActionBtn
-                                    icon="document-text"
-                                    label="Candidates"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/home/candidates')}
-                                />
-                            </>
-                        ) : isManagerView ? (
-                            <>
-                                <QuickActionBtn
-                                    icon="person-add"
-                                    label="Add Lead"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/leads/add')}
-                                />
-                                <QuickActionBtn
-                                    icon="briefcase"
-                                    label="Team"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/team')}
-                                />
-                                <QuickActionBtn
-                                    icon="document-text"
-                                    label="Candidates"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/home/candidates')}
-                                />
-                                <QuickActionBtn
-                                    icon="analytics"
-                                    label="Analytics"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/home/analytics')}
-                                />
-                            </>
+                {/* Roadmap Progress — candidate only */}
+                {isCandidate && currentProgramme && (
+                    <TouchableOpacity
+                        style={[styles.card, { backgroundColor: colors.cardBackground }]}
+                        onPress={() => router.push('/(tabs)/roadmap')}
+                        activeOpacity={0.7}
+                    >
+                        <View style={styles.sectionHeaderRow}>
+                            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Roadmap Progress</Text>
+                            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                        </View>
+                        <Text style={[styles.candidateProgName, { color: colors.textSecondary }]}>
+                            {currentProgramme.title}
+                        </Text>
+                        <View style={styles.candidateProgressBarTrack}>
+                            <View
+                                style={[
+                                    styles.candidateProgressBarFill,
+                                    {
+                                        backgroundColor: colors.accent,
+                                        width: `${Math.max(currentProgramme.percentage, 2)}%`,
+                                    },
+                                ]}
+                            />
+                        </View>
+                        <Text style={[styles.candidateProgressLabel, { color: colors.textTertiary }]}>
+                            {currentProgramme.completedCount} of {currentProgramme.totalCount} modules completed
+                        </Text>
+                    </TouchableOpacity>
+                )}
+
+                {/* Upcoming Events — candidate only */}
+                {isCandidate && (
+                    <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+                        <View style={styles.sectionHeaderRow}>
+                            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Upcoming Events</Text>
+                            <TouchableOpacity onPress={() => router.push('/(tabs)/events')}>
+                                <Text style={[styles.seeAllText, { color: colors.accent }]}>See All</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {candidateEvents.length === 0 ? (
+                            <Text style={[styles.emptyActivityText, { color: colors.textTertiary }]}>
+                                No upcoming events
+                            </Text>
                         ) : (
-                            <>
-                                <QuickActionBtn
-                                    icon="person-add"
-                                    label="Add Lead"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/leads/add')}
-                                />
-                                <QuickActionBtn
-                                    icon="list"
-                                    label="All Leads"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/leads')}
-                                />
-                                <QuickActionBtn
-                                    icon="calendar"
-                                    label="Events"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/events')}
-                                />
-                                <QuickActionBtn
-                                    icon="bar-chart"
-                                    label="Pipeline"
-                                    colors={colors}
-                                    onPress={() => router.push('/(tabs)/home/pipeline')}
-                                />
-                            </>
+                            candidateEvents.map((event) => {
+                                const typeColor = EVENT_TYPE_CONFIG[event.event_type].color ?? colors.accent;
+                                return (
+                                    <TouchableOpacity
+                                        key={event.id}
+                                        style={styles.managerEventRow}
+                                        onPress={() => router.push(`/(tabs)/home/event/${event.id}` as any)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={[styles.managerEventStripe, { backgroundColor: typeColor }]} />
+                                        <View style={styles.managerEventContent}>
+                                            <Text
+                                                style={[styles.managerEventTitle, { color: colors.textPrimary }]}
+                                                numberOfLines={1}
+                                            >
+                                                {event.title}
+                                            </Text>
+                                            <Text style={[styles.managerEventMeta, { color: colors.textTertiary }]}>
+                                                {formatDateShort(event.event_date)} · {formatTime(event.start_time)}
+                                            </Text>
+                                            {event.location ? (
+                                                <Text
+                                                    style={[styles.managerEventOwner, { color: typeColor }]}
+                                                    numberOfLines={1}
+                                                >
+                                                    {event.location}
+                                                </Text>
+                                            ) : null}
+                                        </View>
+                                    </TouchableOpacity>
+                                );
+                            })
                         )}
                     </View>
-                </View>
+                )}
 
                 {/* My Events — PA only */}
                 {isPa && (
@@ -911,16 +883,27 @@ const styles = StyleSheet.create({
         flex: 1,
         gap: 12,
     },
-    // Quick Actions
-    quickActionsSection: {
-        marginTop: 4,
-    },
-    quickActionsGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 12,
-    },
 
+    // Candidate sections
+    candidateProgName: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 10,
+    },
+    candidateProgressBarTrack: {
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: 'rgba(0,0,0,0.06)',
+        overflow: 'hidden',
+        marginBottom: 8,
+    },
+    candidateProgressBarFill: {
+        height: '100%',
+        borderRadius: 4,
+    },
+    candidateProgressLabel: {
+        fontSize: 13,
+    },
     // Pipeline
     pipelineWrapper: {
         borderRadius: 10,

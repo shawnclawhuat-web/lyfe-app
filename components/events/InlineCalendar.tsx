@@ -9,6 +9,7 @@ import { Animated, Dimensions, FlatList, PanResponder, StyleSheet, Text, Touchab
 const SCREEN_W = Dimensions.get('window').width;
 const CELL_W = Math.floor(SCREEN_W / 7);
 const WEEKS_BUFFER = 26; // ~6 months each direction
+const MONTHS_BUFFER = 24; // ~2 years each direction
 
 const CAL_HEADER_H = 40;
 const STRIP_H = 68; // week strip cell height
@@ -17,6 +18,7 @@ const GRID_ROW_H = 44; // each month-grid row
 const CAL_HANDLE_H = 20;
 const CAL_WEEK_H = CAL_HEADER_H + STRIP_H + CAL_HANDLE_H;
 const CAL_MONTH_H = CAL_HEADER_H + GRID_LABELS_H + GRID_ROW_H * 6 + CAL_HANDLE_H;
+const MONTH_GRID_H = GRID_LABELS_H + GRID_ROW_H * 6;
 
 const HIT = { top: 12, bottom: 12, left: 12, right: 12 };
 const DOW_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -54,6 +56,29 @@ function buildMonthGrid(year: number, month: number): (Date | null)[][] {
     return weeks;
 }
 
+interface MonthPage {
+    year: number;
+    month: number;
+    key: string;
+    grid: (Date | null)[][];
+}
+
+/** Pre-generate month pages centered on today */
+function buildMonthPages(todayStr: string): { pages: MonthPage[]; todayPageIdx: number } {
+    const d = new Date(todayStr + 'T00:00:00');
+    const centerYear = d.getFullYear();
+    const centerMonth = d.getMonth();
+
+    const pages: MonthPage[] = [];
+    for (let i = -MONTHS_BUFFER; i <= MONTHS_BUFFER; i++) {
+        const date = new Date(centerYear, centerMonth + i, 1);
+        const y = date.getFullYear();
+        const m = date.getMonth();
+        pages.push({ year: y, month: m, key: `${y}-${m}`, grid: buildMonthGrid(y, m) });
+    }
+    return { pages, todayPageIdx: MONTHS_BUFFER };
+}
+
 // ── InlineCalendar ─────────────────────────────────────────────
 export interface InlineCalendarProps {
     selectedDate: string;
@@ -88,19 +113,31 @@ export default function InlineCalendar({
     });
     const todayIdx = useMemo(() => stripDates.indexOf(today), [stripDates, today]);
     const [todayVisible, setTodayVisible] = useState(true);
+    const [todayMonthVisible, setTodayMonthVisible] = useState(true);
 
     // ── Expand / collapse (week <-> month) ──
     const expandAnim = useRef(new Animated.Value(0)).current;
     const isExpandedRef = useRef(false);
     const [isExpanded, setIsExpanded] = useState(false);
 
-    // ── Month grid state ──
-    const [displayMonth, setDisplayMonth] = useState(() => {
-        const d = new Date(selectedDate + 'T00:00:00');
-        return { year: d.getFullYear(), month: d.getMonth() };
-    });
+    // ── Month pages (paging FlatList data) ──
+    const { pages: monthPages, todayPageIdx } = useMemo(() => buildMonthPages(today), [today]);
+    const monthGridRef = useRef<FlatList>(null);
+    const visiblePageIdx = useRef(todayPageIdx);
 
-    const monthGrid = useMemo(() => buildMonthGrid(displayMonth.year, displayMonth.month), [displayMonth]);
+    // Find the page index for a given year/month
+    const findPageIdx = useCallback(
+        (year: number, month: number) => {
+            return monthPages.findIndex((p) => p.year === year && p.month === month);
+        },
+        [monthPages],
+    );
+
+    // ── Month label derived from visible page ──
+    const [monthLabel, setMonthLabel] = useState(() => {
+        const d = new Date(selectedDate + 'T00:00:00');
+        return d.toLocaleDateString('en-SG', { month: 'long', year: 'numeric' });
+    });
 
     // ── Animated values ──
     const calHeight = expandAnim.interpolate({
@@ -132,7 +169,7 @@ export default function InlineCalendar({
 
     const contentH = expandAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [STRIP_H, GRID_LABELS_H + GRID_ROW_H * 6],
+        outputRange: [STRIP_H, MONTH_GRID_H],
         extrapolate: 'clamp',
     });
 
@@ -157,6 +194,24 @@ export default function InlineCalendar({
         }
     }, [scrollToTodayRef, today, onSelectDate, scrollStripToDate]);
 
+    // ── Scroll month grid to a page ──
+    const scrollMonthToPage = useCallback(
+        (idx: number, animated = true) => {
+            if (idx >= 0 && idx < monthPages.length) {
+                monthGridRef.current?.scrollToIndex({ index: idx, animated });
+                visiblePageIdx.current = idx;
+                const page = monthPages[idx];
+                const label = new Date(page.year, page.month, 1).toLocaleDateString('en-SG', {
+                    month: 'long',
+                    year: 'numeric',
+                });
+                setMonthLabel(label);
+                setTodayMonthVisible(idx === todayPageIdx);
+            }
+        },
+        [monthPages, todayPageIdx],
+    );
+
     // ── animateTo (stable ref so PanResponder closure never goes stale) ──
     const animateToRef = useRef<(v: number) => void>(() => {});
     animateToRef.current = (toValue: number) => {
@@ -165,8 +220,12 @@ export default function InlineCalendar({
         setIsExpanded(willExpand);
 
         if (willExpand) {
+            // Scroll month grid to the month of the selected date
             const d = new Date(selectedDate + 'T00:00:00');
-            setDisplayMonth({ year: d.getFullYear(), month: d.getMonth() });
+            const idx = findPageIdx(d.getFullYear(), d.getMonth());
+            if (idx >= 0) {
+                scrollMonthToPage(idx, false);
+            }
         } else {
             // Sync strip to selected date when collapsing
             setTimeout(() => {
@@ -185,7 +244,7 @@ export default function InlineCalendar({
         }).start();
     };
 
-    // ── PanResponder — covers full calendar surface ──
+    // ── PanResponder — vertical only (expand/collapse) ──
     const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => false,
@@ -204,18 +263,31 @@ export default function InlineCalendar({
         }),
     ).current;
 
-    // ── Month grid navigation ──
+    // ── Month grid arrow navigation ──
     const navigateMonth = (delta: number) => {
-        setDisplayMonth((prev) => {
-            const d = new Date(prev.year, prev.month + delta, 1);
-            return { year: d.getFullYear(), month: d.getMonth() };
-        });
+        const nextIdx = visiblePageIdx.current + delta;
+        scrollMonthToPage(nextIdx);
     };
 
-    const monthLabel = new Date(displayMonth.year, displayMonth.month, 1).toLocaleDateString('en-SG', {
-        month: 'long',
-        year: 'numeric',
-    });
+    // ── Month grid scroll → update label ──
+    const onMonthGridScroll = useCallback(
+        (e: any) => {
+            const offsetX = e.nativeEvent.contentOffset.x;
+            const pageIdx = Math.round(offsetX / SCREEN_W);
+            const clamped = Math.max(0, Math.min(pageIdx, monthPages.length - 1));
+            if (clamped !== visiblePageIdx.current) {
+                visiblePageIdx.current = clamped;
+                const page = monthPages[clamped];
+                const label = new Date(page.year, page.month, 1).toLocaleDateString('en-SG', {
+                    month: 'long',
+                    year: 'numeric',
+                });
+                setMonthLabel(label);
+                setTodayMonthVisible(clamped === todayPageIdx);
+            }
+        },
+        [monthPages, todayPageIdx],
+    );
 
     // ── Strip scroll -> update month label + today visibility ──
     const onStripScroll = useCallback(
@@ -303,7 +375,89 @@ export default function InlineCalendar({
         [selectedDate, today, eventDates, colors, onSelectDate, scrollStripToDate],
     );
 
-    const getItemLayout = useCallback(
+    // ── Render month grid page ──
+    const renderMonthPage = useCallback(
+        ({ item: page }: { item: MonthPage }) => (
+            <View style={{ width: SCREEN_W }}>
+                {/* Day-of-week initials */}
+                <View style={calStyles.dayLabels}>
+                    {DOW_LETTERS.map((lbl, i) => (
+                        <View key={i} style={calStyles.dayLabelCell}>
+                            <Text style={[calStyles.dayLabelText, { color: colors.textTertiary }]}>{lbl}</Text>
+                        </View>
+                    ))}
+                </View>
+
+                {page.grid.map((week, wi) => (
+                    <View key={wi} style={calStyles.gridRow}>
+                        {week.map((date, di) => {
+                            if (!date) return <View key={di} style={calStyles.gridCell} />;
+
+                            const ds = toDateStr(date);
+                            const isSelected = ds === selectedDate;
+                            const isToday = ds === today;
+                            const hasEvent = eventDates.has(ds);
+                            const isOtherMon = date.getMonth() !== page.month;
+
+                            return (
+                                <TouchableOpacity
+                                    key={di}
+                                    style={calStyles.gridCell}
+                                    onPress={() => {
+                                        onSelectDate(ds);
+                                        if (isOtherMon) {
+                                            const idx = findPageIdx(date.getFullYear(), date.getMonth());
+                                            if (idx >= 0) scrollMonthToPage(idx);
+                                        }
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <View
+                                        style={[
+                                            calStyles.gridCircle,
+                                            isSelected && { backgroundColor: colors.accent },
+                                            isToday && !isSelected && { borderWidth: 1.5, borderColor: colors.accent },
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                calStyles.gridDayText,
+                                                {
+                                                    color: isSelected
+                                                        ? colors.textInverse
+                                                        : isToday
+                                                          ? colors.accent
+                                                          : isOtherMon
+                                                            ? colors.textTertiary
+                                                            : colors.textPrimary,
+                                                    fontWeight: isSelected ? '700' : '500',
+                                                },
+                                            ]}
+                                        >
+                                            {date.getDate()}
+                                        </Text>
+                                    </View>
+                                    {hasEvent && (
+                                        <View
+                                            style={[
+                                                calStyles.dot,
+                                                {
+                                                    backgroundColor: isSelected ? colors.textInverse : colors.accent,
+                                                },
+                                            ]}
+                                        />
+                                    )}
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+                ))}
+            </View>
+        ),
+        [selectedDate, today, eventDates, colors, onSelectDate, findPageIdx, scrollMonthToPage],
+    );
+
+    const getStripItemLayout = useCallback(
         (_: any, index: number) => ({
             length: CELL_W,
             offset: CELL_W * index,
@@ -311,6 +465,22 @@ export default function InlineCalendar({
         }),
         [],
     );
+
+    const getMonthItemLayout = useCallback(
+        (_: any, index: number) => ({
+            length: SCREEN_W,
+            offset: SCREEN_W * index,
+            index,
+        }),
+        [],
+    );
+
+    // Find initial page for selectedDate
+    const initialMonthPageIdx = useMemo(() => {
+        const d = new Date(selectedDate + 'T00:00:00');
+        const idx = monthPages.findIndex((p) => p.year === d.getFullYear() && p.month === d.getMonth());
+        return idx >= 0 ? idx : todayPageIdx;
+    }, []); // only on mount
 
     return (
         <Animated.View
@@ -342,18 +512,32 @@ export default function InlineCalendar({
                     )}
                 </Animated.View>
 
-                {/* Month mode — arrows + label */}
+                {/* Month mode — arrows + label + Today button */}
                 <Animated.View
                     style={[calStyles.headerRow, calStyles.headerOverlay, { opacity: monthLabelOpacity }]}
                     pointerEvents={isExpanded ? 'auto' : 'none'}
                 >
-                    <TouchableOpacity onPress={() => navigateMonth(-1)} hitSlop={HIT}>
-                        <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                    <Text style={[calStyles.monthText, { color: colors.textPrimary }]}>{monthLabel}</Text>
-                    <TouchableOpacity onPress={() => navigateMonth(1)} hitSlop={HIT}>
-                        <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-                    </TouchableOpacity>
+                    <View style={calStyles.monthNavRow}>
+                        <TouchableOpacity onPress={() => navigateMonth(-1)} hitSlop={HIT}>
+                            <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+                        </TouchableOpacity>
+                        <Text style={[calStyles.monthText, { color: colors.textPrimary }]}>{monthLabel}</Text>
+                        <TouchableOpacity onPress={() => navigateMonth(1)} hitSlop={HIT}>
+                            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                        </TouchableOpacity>
+                    </View>
+                    {!todayMonthVisible && (
+                        <TouchableOpacity
+                            onPress={() => {
+                                onSelectDate(today);
+                                scrollMonthToPage(todayPageIdx);
+                            }}
+                            style={[calStyles.todayBtn, { borderColor: colors.accent }]}
+                            hitSlop={HIT}
+                        >
+                            <Text style={[calStyles.todayBtnText, { color: colors.accent }]}>Today</Text>
+                        </TouchableOpacity>
+                    )}
                 </Animated.View>
             </View>
 
@@ -371,7 +555,7 @@ export default function InlineCalendar({
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         decelerationRate="fast"
-                        getItemLayout={getItemLayout}
+                        getItemLayout={getStripItemLayout}
                         initialScrollIndex={initialIdx}
                         onScrollToIndexFailed={() => {}}
                         onLayout={() => requestAnimationFrame(() => scrollStripToDate(today, false))}
@@ -382,86 +566,26 @@ export default function InlineCalendar({
                     />
                 </Animated.View>
 
-                {/* Month grid — absolute overlay */}
+                {/* Month grid — paging horizontal FlatList */}
                 <Animated.View
                     style={[calStyles.gridOverlay, { opacity: gridOpacity }]}
                     pointerEvents={isExpanded ? 'auto' : 'none'}
                 >
-                    {/* Day-of-week initials */}
-                    <View style={calStyles.dayLabels}>
-                        {DOW_LETTERS.map((lbl, i) => (
-                            <View key={i} style={calStyles.dayLabelCell}>
-                                <Text style={[calStyles.dayLabelText, { color: colors.textTertiary }]}>{lbl}</Text>
-                            </View>
-                        ))}
-                    </View>
-
-                    {monthGrid.map((week, wi) => (
-                        <View key={wi} style={calStyles.gridRow}>
-                            {week.map((date, di) => {
-                                if (!date) return <View key={di} style={calStyles.gridCell} />;
-
-                                const ds = toDateStr(date);
-                                const isSelected = ds === selectedDate;
-                                const isToday = ds === today;
-                                const hasEvent = eventDates.has(ds);
-                                const isOtherMon = date.getMonth() !== displayMonth.month;
-
-                                return (
-                                    <TouchableOpacity
-                                        key={di}
-                                        style={calStyles.gridCell}
-                                        onPress={() => {
-                                            onSelectDate(ds);
-                                            if (isOtherMon) {
-                                                setDisplayMonth({ year: date.getFullYear(), month: date.getMonth() });
-                                            }
-                                        }}
-                                        activeOpacity={0.7}
-                                    >
-                                        <View
-                                            style={[
-                                                calStyles.gridCircle,
-                                                isSelected && { backgroundColor: colors.accent },
-                                                isToday &&
-                                                    !isSelected && { borderWidth: 1.5, borderColor: colors.accent },
-                                            ]}
-                                        >
-                                            <Text
-                                                style={[
-                                                    calStyles.gridDayText,
-                                                    {
-                                                        color: isSelected
-                                                            ? colors.textInverse
-                                                            : isToday
-                                                              ? colors.accent
-                                                              : isOtherMon
-                                                                ? colors.textTertiary
-                                                                : colors.textPrimary,
-                                                        fontWeight: isSelected ? '700' : '500',
-                                                    },
-                                                ]}
-                                            >
-                                                {date.getDate()}
-                                            </Text>
-                                        </View>
-                                        {hasEvent && (
-                                            <View
-                                                style={[
-                                                    calStyles.dot,
-                                                    {
-                                                        backgroundColor: isSelected
-                                                            ? colors.textInverse
-                                                            : colors.accent,
-                                                    },
-                                                ]}
-                                            />
-                                        )}
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
-                    ))}
+                    <FlatList
+                        ref={monthGridRef}
+                        data={monthPages}
+                        keyExtractor={(item) => item.key}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        getItemLayout={getMonthItemLayout}
+                        initialScrollIndex={initialMonthPageIdx}
+                        onScrollToIndexFailed={() => {}}
+                        renderItem={renderMonthPage}
+                        onScroll={onMonthGridScroll}
+                        scrollEventThrottle={16}
+                        extraData={selectedDate}
+                    />
                 </Animated.View>
             </Animated.View>
 
@@ -492,6 +616,11 @@ const calStyles = StyleSheet.create({
         position: 'absolute',
         left: 0,
         right: 0,
+    },
+    monthNavRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
     },
     monthText: {
         fontSize: 15,
@@ -535,6 +664,7 @@ const calStyles = StyleSheet.create({
         top: 0,
         left: 0,
         right: 0,
+        height: MONTH_GRID_H,
     },
     dayLabels: {
         height: GRID_LABELS_H,

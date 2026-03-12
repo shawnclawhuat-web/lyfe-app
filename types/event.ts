@@ -1,4 +1,4 @@
-export type EventType = 'team_meeting' | 'training' | 'agency_event' | 'roadshow' | 'other';
+export type EventType = 'team_meeting' | 'training' | 'agency_event' | 'roadshow' | 'exam' | 'other';
 export type AttendeeRole = 'attendee' | 'duty_manager' | 'presenter' | 'host';
 
 export interface EventAttendee {
@@ -49,6 +49,7 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
     training: 'Training',
     agency_event: 'Agency Event',
     roadshow: 'Roadshow',
+    exam: 'Exam',
     other: 'Other',
 };
 

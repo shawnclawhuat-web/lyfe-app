@@ -4,7 +4,7 @@ import { EVENT_TYPE_CONFIG } from '@/constants/displayConfigs';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const EVENT_TYPES: EventType[] = ['team_meeting', 'training', 'agency_event', 'roadshow', 'other'];
+const EVENT_TYPES: EventType[] = ['team_meeting', 'training', 'agency_event', 'roadshow', 'exam', 'other'];
 
 export interface EventTypeSelectorProps {
     eventType: EventType;
