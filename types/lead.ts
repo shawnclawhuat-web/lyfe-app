@@ -25,6 +25,8 @@ export interface Lead {
     phone: string | null;
     email: string | null;
     source: LeadSource;
+    source_name: string | null;
+    external_id: string | null;
     status: LeadStatus;
     product_interest: ProductInterest;
     notes: string | null;

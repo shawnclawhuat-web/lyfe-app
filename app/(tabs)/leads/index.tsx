@@ -6,6 +6,7 @@ import ScreenHeader from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useViewMode } from '@/contexts/ViewModeContext';
+import { useLeadRealtime } from '@/hooks/useLeadRealtime';
 import { fetchLeads } from '@/lib/leads';
 import type { Lead, LeadStatus } from '@/types/lead';
 import { useFilteredList } from '@/hooks/useFilteredList';
@@ -39,6 +40,16 @@ export default function LeadsListScreen() {
     const [leads, setLeads] = useState<Lead[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Realtime: prepend new leads from MKTR (or any source)
+    const handleNewLead = useCallback((newLead: Lead) => {
+        setLeads((prev) => {
+            // Avoid duplicates
+            if (prev.some((l) => l.id === newLead.id)) return prev;
+            return [newLead, ...prev];
+        });
+    }, []);
+    useLeadRealtime(handleNewLead);
 
     // Fetch leads from Supabase
     const loadLeads = useCallback(async () => {

@@ -10,7 +10,8 @@ export type NotificationType =
     | 'candidate_update'
     | 'lead_milestone'
     | 'agency_announcement'
-    | 'roadshow_pledge';
+    | 'roadshow_pledge'
+    | 'new_lead';
 
 export const NOTIFICATION_TYPE_CONFIG: Record<NotificationType, { icon: string; label: string }> = {
     event_reminder: { icon: 'calendar', label: 'Event Reminder' },
@@ -18,4 +19,5 @@ export const NOTIFICATION_TYPE_CONFIG: Record<NotificationType, { icon: string; 
     lead_milestone: { icon: 'trophy', label: 'Lead Milestone' },
     agency_announcement: { icon: 'megaphone', label: 'Agency Announcement' },
     roadshow_pledge: { icon: 'hand-left', label: 'Roadshow Pledge' },
+    new_lead: { icon: 'person-add', label: 'New Lead' },
 };
