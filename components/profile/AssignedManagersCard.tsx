@@ -1,6 +1,6 @@
 import { PA_MANAGER_COLORS } from '@/constants/ui';
 import { Ionicons } from '@expo/vector-icons';
-import type { AssignedManager } from '@/lib/mockData';
+import type { AssignedManager } from '@/types/recruitment';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { ThemeColors } from '@/types/theme';

@@ -17,7 +17,6 @@ module.exports = {
         'contexts/**/*.tsx',
         'components/**/*.tsx',
         'constants/**/*.ts',
-        '!lib/mockData/**',
         '!**/*.d.ts',
     ],
     coverageThreshold: {

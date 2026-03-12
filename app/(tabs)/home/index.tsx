@@ -26,7 +26,6 @@ import {
     type ManagerDashboardStats,
 } from '@/lib/leads';
 import { formatDateShort, formatTime, timeAgo } from '@/lib/dateTime';
-import { MOCK_AGENT_STATS, MOCK_LEAD_PIPELINE, MOCK_MANAGER_ACTIVITIES, MOCK_MANAGER_STATS } from '@/lib/mockData';
 import { fetchUpcomingEvents } from '@/lib/events';
 import { fetchPAManagerIds, fetchPACandidateCount, fetchPAInterviewCount } from '@/lib/recruitment';
 import { EVENT_TYPE_CONFIG } from '@/constants/displayConfigs';
@@ -208,18 +207,13 @@ export default function HomeScreen() {
         setRefreshing(false);
     }, [loadDashboardData]);
 
-    // Use real stats or mock fallback
-    const agentStats = stats || MOCK_AGENT_STATS;
-    const pipeline = stats?.pipeline || MOCK_LEAD_PIPELINE;
+    // Use real stats (show zeros when no data yet)
+    const agentStats = stats || { totalLeads: 0, newThisWeek: 0, conversionRate: 0, activeFollowUps: 0 };
+    const pipeline = stats?.pipeline || [];
 
     // Normalize recent activities for display
     const displayActivities = useMemo(
-        () =>
-            recentActivities.length > 0
-                ? formatActivities(recentActivities)
-                : isManagerView
-                  ? MOCK_MANAGER_ACTIVITIES
-                  : [],
+        () => (recentActivities.length > 0 ? formatActivities(recentActivities) : []),
         [recentActivities, isManagerView],
     );
 
@@ -281,8 +275,9 @@ export default function HomeScreen() {
             >
                 {/* Greeting + View Mode */}
                 <View style={styles.greetingRow}>
-                    <Text style={[styles.greetingText, { color: colors.textSecondary }]}>
-                        {greeting}, {firstName}
+                    <Text style={[styles.greetingText, { letterSpacing: letterSpacing(-0.3) }]} numberOfLines={1}>
+                        <Text style={{ color: colors.textSecondary }}>{greeting}, </Text>
+                        <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>{firstName}</Text>
                     </Text>
                 </View>
 
@@ -351,7 +346,7 @@ export default function HomeScreen() {
                                         style={styles.heroIconBg}
                                     />
                                     <Text style={[styles.heroStatValue, { color: colors.textInverse }]}>
-                                        {stats?.totalLeads || MOCK_MANAGER_STATS.teamLeads}
+                                        {stats?.totalLeads ?? 0}
                                     </Text>
                                     <Text style={[styles.heroStatLabel, { color: colors.textInverse, opacity: 0.9 }]}>
                                         Team Leads
@@ -360,16 +355,12 @@ export default function HomeScreen() {
                                 <View style={styles.statsColumn}>
                                     <StatCardSmall
                                         label="Candidates"
-                                        value={(
-                                            managerStats?.activeCandidates ?? MOCK_MANAGER_STATS.activeCandidates
-                                        ).toString()}
+                                        value={(managerStats?.activeCandidates ?? 0).toString()}
                                         colors={colors}
                                     />
                                     <StatCardSmall
                                         label="Agents"
-                                        value={(
-                                            managerStats?.agentsManaged ?? MOCK_MANAGER_STATS.agentsManaged
-                                        ).toString()}
+                                        value={(managerStats?.agentsManaged ?? 0).toString()}
                                         colors={colors}
                                     />
                                 </View>
@@ -820,9 +811,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        marginBottom: 4,
+        marginTop: 12,
+        marginBottom: 16,
     },
-    greetingText: { fontSize: 15, fontWeight: '400' },
+    greetingText: { fontSize: 22 },
 
     // Header
     headerRight: {

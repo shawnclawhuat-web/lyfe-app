@@ -94,6 +94,12 @@ export interface CandidateDocument {
 }
 
 // ── Candidate ──
+export interface AssignedManager {
+    id: string;
+    full_name: string;
+    role: string;
+}
+
 export interface RecruitmentCandidate {
     id: string;
     name: string;

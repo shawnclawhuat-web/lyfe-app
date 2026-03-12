@@ -16,7 +16,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useViewMode, type ViewMode } from '@/contexts/ViewModeContext';
 import { getBiometryType, type BiometryType } from '@/lib/biometrics';
 import { pickAndUploadAvatar, removeAvatar, takeAndUploadAvatar } from '@/lib/storage';
-import type { AssignedManager } from '@/lib/mockData';
+import type { AssignedManager } from '@/types/recruitment';
 import { useTypedRouter } from '@/hooks/useTypedRouter';
 import { fetchPAManagers } from '@/lib/recruitment';
 import { useFocusEffect } from 'expo-router';
