@@ -15,6 +15,7 @@ export default function TeamLayout() {
             <Stack.Screen name="index" />
             <Stack.Screen name="agent/[agentId]" options={{ presentation: 'card' }} />
             <Stack.Screen name="candidate/[candidateId]" options={{ presentation: 'card' }} />
+            <Stack.Screen name="lead/[leadId]" options={{ presentation: 'card' }} />
             <Stack.Screen name="add-candidate" options={{ presentation: 'modal' }} />
             <Stack.Screen name="candidate/progress/[candidateId]" options={{ presentation: 'card' }} />
         </Stack>

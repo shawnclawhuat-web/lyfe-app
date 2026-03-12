@@ -104,13 +104,13 @@ export default function ModuleDetailScreen() {
 
     const handleTakeExam = useCallback(() => {
         if (module?.exam_paper_id) {
-            router.push(`/(tabs)/exams/take/${module.exam_paper_id}`);
+            router.push(`/(tabs)/roadmap/exam/${module.exam_paper_id}` as any);
         }
     }, [module, router]);
 
     const handleStartExam = useCallback(
         (examPaperId: string) => {
-            router.push(`/(tabs)/exams/take/${examPaperId}`);
+            router.push(`/(tabs)/roadmap/exam/${examPaperId}` as any);
         },
         [router],
     );

@@ -13,6 +13,15 @@ export default function RoadmapLayout() {
         >
             <Stack.Screen name="index" />
             <Stack.Screen name="module/[moduleId]" options={{ presentation: 'card' }} />
+            <Stack.Screen
+                name="exam/[paperId]"
+                options={{
+                    gestureEnabled: false,
+                    animation: 'slide_from_bottom',
+                }}
+            />
+            <Stack.Screen name="results/[attemptId]" />
+            <Stack.Screen name="results/vark/[attemptId]" />
         </Stack>
     );
 }

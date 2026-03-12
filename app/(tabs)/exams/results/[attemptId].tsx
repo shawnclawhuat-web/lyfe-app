@@ -6,7 +6,7 @@ import type { ExamQuestion } from '@/types/exam';
 import { displayWeight, letterSpacing } from '@/constants/platform';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,6 +31,8 @@ export default function ExamResultsScreen() {
     const { attemptId } = useLocalSearchParams<{ attemptId: string }>();
     const { colors } = useTheme();
     const router = useRouter();
+    const segments = useSegments();
+    const isFromRoadmap = segments[1] === 'roadmap';
 
     const [result, setResult] = useState<ExamResult | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -66,12 +68,11 @@ export default function ExamResultsScreen() {
 
     const handleRetake = () => {
         if (!result) return;
-        // Navigate back to the exam list
-        router.replace('/(tabs)/exams');
+        router.replace(isFromRoadmap ? '/(tabs)/roadmap' : '/(tabs)/exams');
     };
 
     const handleDone = () => {
-        router.replace('/(tabs)/exams');
+        router.replace(isFromRoadmap ? '/(tabs)/roadmap' : '/(tabs)/exams');
     };
 
     if (isLoading) {

@@ -10,7 +10,7 @@ import type { ExamQuestion } from '@/types/exam';
 import { ACTIVE_EXAM_SCHEMA_VERSION } from '@/types/exam';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -48,6 +48,8 @@ export default function TakeExamScreen() {
     const { colors } = useTheme();
     const { user } = useAuth();
     const router = useRouter();
+    const segments = useSegments();
+    const tabBase = segments[1] === 'roadmap' ? '/(tabs)/roadmap' : '/(tabs)/exams';
 
     const [questions, setQuestions] = useState<ExamQuestion[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -312,9 +314,9 @@ export default function TakeExamScreen() {
                 await AsyncStorage.removeItem(STORAGE_KEY);
                 // Route to VARK results or standard results
                 if (result.personalityResults) {
-                    router.replace(`/(tabs)/exams/results/vark/${result.id}`);
+                    router.replace(`${tabBase}/results/vark/${result.id}` as any);
                 } else {
-                    router.replace(`/(tabs)/exams/results/${result.id}`);
+                    router.replace(`${tabBase}/results/${result.id}` as any);
                 }
                 return;
             }
@@ -344,7 +346,7 @@ export default function TakeExamScreen() {
             };
             await AsyncStorage.setItem(`exam_result_${resultId}`, JSON.stringify(result));
             await AsyncStorage.removeItem(STORAGE_KEY);
-            router.replace(`/(tabs)/exams/results/vark/${resultId}`);
+            router.replace(`${tabBase}/results/vark/${resultId}` as any);
         } else {
             // Standard exam fallback
             let correct = 0;
@@ -373,7 +375,7 @@ export default function TakeExamScreen() {
 
             await AsyncStorage.setItem(`exam_result_${resultId}`, JSON.stringify(result));
             await AsyncStorage.removeItem(STORAGE_KEY);
-            router.replace(`/(tabs)/exams/results/${resultId}`);
+            router.replace(`${tabBase}/results/${resultId}` as any);
         }
     };
 
@@ -454,7 +456,9 @@ export default function TakeExamScreen() {
             {error && (
                 <ErrorBanner
                     message={error}
-                    onRetry={() => router.replace(`/exams/take/${paperId}`)}
+                    onRetry={() =>
+                        router.replace(`${tabBase}/${segments[1] === 'roadmap' ? 'exam' : 'take'}/${paperId}` as any)
+                    }
                     onDismiss={() => setError(null)}
                 />
             )}

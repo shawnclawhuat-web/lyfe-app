@@ -6,7 +6,7 @@ import type { VarkType, VarkResults, VarkPreference } from '@/constants/vark';
 import { VARK_TYPE_INFO, VARK_CHART_COLORS, VARK_MIN_ANSWERED } from '@/constants/vark';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,6 +24,8 @@ export default function VarkResultsScreen() {
     const { attemptId } = useLocalSearchParams<{ attemptId: string }>();
     const { colors } = useTheme();
     const router = useRouter();
+    const segments = useSegments();
+    const isFromRoadmap = segments[1] === 'roadmap';
     const insets = useSafeAreaInsets();
 
     const [varkResults, setVarkResults] = useState<VarkResults | null>(null);
@@ -65,11 +67,11 @@ export default function VarkResultsScreen() {
     };
 
     const handleDone = () => {
-        router.replace('/(tabs)/roadmap');
+        router.replace(isFromRoadmap ? '/(tabs)/roadmap' : '/(tabs)/exams');
     };
 
     const handleRetake = () => {
-        router.replace('/(tabs)/exams');
+        router.replace(isFromRoadmap ? '/(tabs)/roadmap' : '/(tabs)/exams');
     };
 
     if (isLoading) {

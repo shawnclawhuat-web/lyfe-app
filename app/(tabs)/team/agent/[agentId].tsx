@@ -300,7 +300,7 @@ export default function AgentDetailScreen() {
                         <LeadCard
                             key={lead.id}
                             lead={lead}
-                            onPress={() => router.push(`/(tabs)/leads/${lead.id}` as any)}
+                            onPress={() => router.push(`/(tabs)/team/lead/${lead.id}` as any)}
                         />
                     ))
                 ) : (

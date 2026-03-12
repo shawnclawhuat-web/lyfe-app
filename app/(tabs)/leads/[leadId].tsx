@@ -25,7 +25,7 @@ import {
 import type { Lead } from '@/types/lead';
 import { PRODUCT_LABELS, SOURCE_LABELS, type LeadActivity, type LeadStatus } from '@/types/lead';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     AppState,
@@ -45,6 +45,8 @@ export default function LeadDetailScreen() {
     const { user } = useAuth();
     const { viewMode, canToggle } = useViewMode();
     const router = useRouter();
+    const segments = useSegments();
+    const backLabel = segments[1] === 'team' ? 'Agent' : 'Leads';
     const isManagerView = canToggle && viewMode === 'manager';
 
     const [lead, setLead] = useState<Lead | null>(null);
@@ -109,7 +111,7 @@ export default function LeadDetailScreen() {
     if (isLoading) {
         return (
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-                <ScreenHeader showBack backLabel="Leads" title="Loading..." />
+                <ScreenHeader showBack backLabel={backLabel} title="Loading..." />
                 <LoadingState />
             </SafeAreaView>
         );
@@ -275,7 +277,7 @@ export default function LeadDetailScreen() {
             {/* Header Bar */}
             <ScreenHeader
                 showBack
-                backLabel="Leads"
+                backLabel={backLabel}
                 title={lead.full_name}
                 banner={
                     isManagerView
