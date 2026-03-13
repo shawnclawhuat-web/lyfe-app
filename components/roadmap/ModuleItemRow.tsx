@@ -13,13 +13,15 @@ interface Props {
     isLast: boolean;
     /** Navigate to exam screen */
     onStartExam?: (examPaperId: string) => void;
+    /** Navigate to results screen for a completed quiz */
+    onViewResults?: (examPaperId: string) => void;
     /** Open material in-app (for file/pdf resources). Falls back to Linking.openURL if not provided. */
     onViewMaterial?: (url: string, title: string) => void;
     /** When true, the left-side status icon is hidden (e.g. management context provides its own). */
     hideStatusIcon?: boolean;
 }
 
-function ModuleItemRow({ item, colors, isLast, onStartExam, onViewMaterial, hideStatusIcon }: Props) {
+function ModuleItemRow({ item, colors, isLast, onStartExam, onViewResults, onViewMaterial, hideStatusIcon }: Props) {
     const status = item.progress?.status ?? 'not_started';
     const isCompleted = status === 'completed';
     const typeConfig = MODULE_ITEM_TYPE_CONFIG[item.item_type];
@@ -38,7 +40,6 @@ function ModuleItemRow({ item, colors, isLast, onStartExam, onViewMaterial, hide
 
     const handleAction = () => {
         if (item.item_type === 'material' && item.resource_url) {
-            // Open file-type materials in-app if handler provided; fall back to external browser
             if (onViewMaterial && item.resource_type === 'file') {
                 onViewMaterial(item.resource_url, item.title);
             } else {
@@ -46,6 +47,12 @@ function ModuleItemRow({ item, colors, isLast, onStartExam, onViewMaterial, hide
             }
         } else if (['pre_quiz', 'quiz', 'exam'].includes(item.item_type) && item.exam_paper_id && onStartExam) {
             onStartExam(item.exam_paper_id);
+        }
+    };
+
+    const handleViewResults = () => {
+        if (item.exam_paper_id && onViewResults) {
+            onViewResults(item.exam_paper_id);
         }
     };
 
@@ -97,6 +104,17 @@ function ModuleItemRow({ item, colors, isLast, onStartExam, onViewMaterial, hide
                     <Ionicons name="checkmark-circle" size={14} color={colors.success} />
                 </View>
             )}
+            {action.type === 'completed_personality' && (
+                <Touchable
+                    style={[styles.pill, { backgroundColor: colors.success + '15' }]}
+                    onPress={handleViewResults}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View results for ${item.title}`}
+                >
+                    <Text style={[styles.pillText, { color: colors.success }]}>Results</Text>
+                </Touchable>
+            )}
         </View>
     );
 }
@@ -105,6 +123,7 @@ type ActionConfig =
     | { type: 'button'; label: string; bg: string; textColor: string }
     | { type: 'badge'; label: string; bg: string; textColor: string }
     | { type: 'score' }
+    | { type: 'completed_personality' }
     | { type: 'none' };
 
 function getAction(
@@ -129,6 +148,10 @@ function getAction(
     // pre_quiz, quiz, exam
     if (status === 'completed' && item.progress?.score != null) {
         return { type: 'score' };
+    }
+    // Personality quizzes complete with no numeric score
+    if (status === 'completed' && item.exam_paper_id) {
+        return { type: 'completed_personality' };
     }
     if (status === 'in_progress') {
         return { type: 'button', label: 'Continue', bg: colors.accent + '15', textColor: colors.accent };

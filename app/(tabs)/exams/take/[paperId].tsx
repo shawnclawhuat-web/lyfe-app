@@ -3,8 +3,9 @@ import ErrorBanner from '@/components/ErrorBanner';
 import MathRenderer from '@/components/MathRenderer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { submitExamAttempt, submitVarkAttempt } from '@/lib/exams';
+import { submitExamAttempt, submitVarkAttempt, submitEnneagramAttempt } from '@/lib/exams';
 import { computeVarkScores } from '@/lib/vark';
+import { computeEnneagramScores } from '@/lib/enneagram';
 import { supabase } from '@/lib/supabase';
 import type { ExamQuestion } from '@/types/exam';
 import { ACTIVE_EXAM_SCHEMA_VERSION } from '@/types/exam';
@@ -60,6 +61,7 @@ export default function TakeExamScreen() {
     const [error, setError] = useState<string | null>(null);
     const [showGrid, setShowGrid] = useState(false);
     const [isMultiSelect, setIsMultiSelect] = useState(false);
+    const [quizType, setQuizType] = useState<'standard' | 'vark' | 'enneagram'>('standard');
     const [paperTitle, setPaperTitle] = useState<string | null>(null);
     const [dialogConfig, setDialogConfig] = useState<{
         visible: boolean;
@@ -79,6 +81,7 @@ export default function TakeExamScreen() {
     const startedAtRef = useRef<number>(Date.now());
     const hasRestoredRef = useRef(false);
     const isMultiSelectRef = useRef(false);
+    const quizTypeRef = useRef<'standard' | 'vark' | 'enneagram'>('standard');
 
     // Load questions + restore saved progress
     useEffect(() => {
@@ -106,10 +109,26 @@ export default function TakeExamScreen() {
                 .single();
 
             duration = paper?.duration_minutes || 60;
-            const multiSelect = paper?.allow_multiple_answers === true;
+            setPaperTitle(paper?.title || null);
+
+            // Detect specific quiz type from first question's explanation
+            let detected: 'standard' | 'vark' | 'enneagram' = 'standard';
+            if (questionsData.length > 0) {
+                try {
+                    const parsed = JSON.parse(questionsData[0].explanation || '');
+                    if (parsed?.quiz_type === 'enneagram') detected = 'enneagram';
+                    else if (parsed?.quiz_type === 'vark') detected = 'vark';
+                } catch {
+                    // Not a personality quiz
+                }
+            }
+            setQuizType(detected);
+            quizTypeRef.current = detected;
+
+            // Only VARK uses multi-select checkboxes; enneagram is single-select
+            const multiSelect = detected === 'vark';
             setIsMultiSelect(multiSelect);
             isMultiSelectRef.current = multiSelect;
-            setPaperTitle(paper?.title || null);
 
             setQuestions(questionsData);
 
@@ -158,9 +177,10 @@ export default function TakeExamScreen() {
         loadQuestions();
     }, [paperId]);
 
-    // Timer
+    // Timer — disabled for personality quizzes (no time pressure)
     useEffect(() => {
         if (isLoading || isSubmitting) return;
+        if (quizTypeRef.current !== 'standard') return;
 
         timerRef.current = setInterval(() => {
             setTimeLeft((prev) => {
@@ -237,9 +257,11 @@ export default function TakeExamScreen() {
         });
     };
 
+    const isPersonalityQuiz = quizType !== 'standard';
+
     const handleAutoSubmit = useCallback(() => {
         if (timerRef.current) clearInterval(timerRef.current);
-        const label = isMultiSelectRef.current ? 'assessment' : 'exam';
+        const label = quizTypeRef.current !== 'standard' ? 'assessment' : 'exam';
         showDialog("Time's Up!", `Your ${label} has been automatically submitted.`, [
             {
                 text: 'View Results',
@@ -252,26 +274,48 @@ export default function TakeExamScreen() {
     }, [answers, questions]);
 
     const handleSubmit = () => {
-        const unanswered = questions.filter((q) => !isQuestionAnswered(answers, q.id)).length;
+        const unansweredQuestions = questions.filter((q) => !isQuestionAnswered(answers, q.id));
+        const unanswered = unansweredQuestions.length;
 
-        if (unanswered > 0) {
-            const unansweredMsg = isMultiSelect
-                ? `You have ${unanswered} unanswered question${unanswered > 1 ? 's' : ''}. They will not count toward your results. Submit anyway?`
-                : `You have ${unanswered} unanswered question${unanswered > 1 ? 's' : ''}. Unanswered questions will be marked incorrect. Submit anyway?`;
-
-            showDialog('Unanswered Questions', unansweredMsg, [
-                { text: 'Review', style: 'cancel', onPress: hideDialog },
-                {
-                    text: 'Submit',
-                    style: 'destructive',
-                    onPress: () => {
-                        hideDialog();
-                        submitExam('submitted');
+        if (unanswered > 0 && isPersonalityQuiz) {
+            // Personality quizzes require 100% completion — show which questions are missing
+            const nums = unansweredQuestions.map((q) => q.question_number);
+            const preview =
+                nums.length <= 10
+                    ? nums.join(', ')
+                    : nums.slice(0, 10).join(', ') + `, ... and ${nums.length - 10} more`;
+            showDialog(
+                'All Questions Required',
+                `Please answer all questions for accurate results.\n\nUnanswered: ${preview}`,
+                [
+                    {
+                        text: 'Go to First',
+                        onPress: () => {
+                            hideDialog();
+                            const firstIdx = questions.findIndex((q) => q.id === unansweredQuestions[0].id);
+                            if (firstIdx >= 0) setCurrentIndex(firstIdx);
+                        },
                     },
-                },
-            ]);
+                ],
+            );
+        } else if (unanswered > 0) {
+            showDialog(
+                'Unanswered Questions',
+                `You have ${unanswered} unanswered question${unanswered > 1 ? 's' : ''}. Unanswered questions will be marked incorrect. Submit anyway?`,
+                [
+                    { text: 'Review', style: 'cancel', onPress: hideDialog },
+                    {
+                        text: 'Submit',
+                        style: 'destructive',
+                        onPress: () => {
+                            hideDialog();
+                            submitExam('submitted');
+                        },
+                    },
+                ],
+            );
         } else {
-            const title = isMultiSelect ? 'Submit Assessment' : 'Submit Exam';
+            const title = isPersonalityQuiz ? 'Submit Assessment' : 'Submit Exam';
             showDialog(title, 'Are you sure you want to submit? You cannot change your answers after submission.', [
                 { text: 'Cancel', style: 'cancel', onPress: hideDialog },
                 {
@@ -293,7 +337,12 @@ export default function TakeExamScreen() {
         const pc = PAPER_CODES[paperId || ''] || paperTitle || paperId || '';
 
         if (user?.id) {
-            const submitFn = isMultiSelect ? submitVarkAttempt : submitExamAttempt;
+            const submitFn =
+                quizTypeRef.current === 'enneagram'
+                    ? submitEnneagramAttempt
+                    : quizTypeRef.current === 'vark'
+                      ? submitVarkAttempt
+                      : submitExamAttempt;
             const { data: result, error } = await submitFn(
                 {
                     userId: user.id,
@@ -312,9 +361,12 @@ export default function TakeExamScreen() {
             } else {
                 await AsyncStorage.setItem(`exam_result_${result.id}`, JSON.stringify(result));
                 await AsyncStorage.removeItem(STORAGE_KEY);
-                // Route to VARK results or standard results
+                // Route to personality results or standard results
                 if (result.personalityResults) {
-                    router.replace(`${tabBase}/results/vark/${result.id}` as any);
+                    const isEnneagram =
+                        'quizType' in result.personalityResults && result.personalityResults.quizType === 'enneagram';
+                    const resultPath = isEnneagram ? 'enneagram' : 'vark';
+                    router.replace(`${tabBase}/results/${resultPath}/${result.id}` as any);
                 } else {
                     router.replace(`${tabBase}/results/${result.id}` as any);
                 }
@@ -323,7 +375,31 @@ export default function TakeExamScreen() {
         }
 
         // Local-only fallback
-        if (isMultiSelect) {
+        if (quizTypeRef.current === 'enneagram') {
+            // Enneagram fallback — compute personality results locally
+            const enneagramResults = computeEnneagramScores(questions, answers);
+            const resultId = `result_${Date.now()}`;
+            const result = {
+                id: resultId,
+                score: 0,
+                totalQuestions: questions.length,
+                percentage: 0,
+                passed: false,
+                status,
+                answers: questions.map((q) => ({
+                    questionId: q.id,
+                    selected: answers[q.id] || null,
+                    isCorrect: false,
+                    correctAnswer: q.correct_answer,
+                })),
+                questions,
+                paperCode: pc,
+                personalityResults: enneagramResults,
+            };
+            await AsyncStorage.setItem(`exam_result_${resultId}`, JSON.stringify(result));
+            await AsyncStorage.removeItem(STORAGE_KEY);
+            router.replace(`${tabBase}/results/enneagram/${resultId}` as any);
+        } else if (quizTypeRef.current === 'vark') {
             // VARK fallback — compute personality results locally
             const varkResults = computeVarkScores(questions, answers);
             const resultId = `result_${Date.now()}`;
@@ -380,19 +456,22 @@ export default function TakeExamScreen() {
     };
 
     const handleBack = () => {
-        const label = isMultiSelect ? 'assessment' : 'exam';
-        showDialog(`Leave ${isMultiSelect ? 'Assessment' : 'Exam'}?`, 'Your progress is saved. You can resume later.', [
-            { text: 'Stay', style: 'cancel', onPress: hideDialog },
-            {
-                text: 'Leave',
-                style: 'destructive',
-                onPress: () => {
-                    hideDialog();
-                    if (timerRef.current) clearInterval(timerRef.current);
-                    router.back();
+        showDialog(
+            `Leave ${isPersonalityQuiz ? 'Assessment' : 'Exam'}?`,
+            'Your progress is saved. You can resume later.',
+            [
+                { text: 'Stay', style: 'cancel', onPress: hideDialog },
+                {
+                    text: 'Leave',
+                    style: 'destructive',
+                    onPress: () => {
+                        hideDialog();
+                        if (timerRef.current) clearInterval(timerRef.current);
+                        router.back();
+                    },
                 },
-            },
-        ]);
+            ],
+        );
     };
 
     if (isLoading) {
@@ -409,6 +488,7 @@ export default function TakeExamScreen() {
     const currentQuestion = questions[currentIndex];
     const isTimeLow = timeLeft < 300;
     const displayCode = PAPER_CODES[paperId || ''] || paperTitle || paperId;
+    const allAnswered = isPersonalityQuiz && questions.every((q) => isQuestionAnswered(answers, q.id));
 
     // For multi-select, parse currently selected options for this question
     const currentSelections = isMultiSelect ? (answers[currentQuestion.id] || '').split(',').filter(Boolean) : [];
@@ -426,17 +506,25 @@ export default function TakeExamScreen() {
                         {currentIndex + 1} / {questions.length}
                     </Text>
                 </View>
-                <View
-                    style={[
-                        styles.timerBadge,
-                        { backgroundColor: isTimeLow ? colors.dangerLight : colors.surfacePrimary },
-                    ]}
-                >
-                    <Ionicons name="time-outline" size={16} color={isTimeLow ? colors.danger : colors.textSecondary} />
-                    <Text style={[styles.timerText, { color: isTimeLow ? colors.danger : colors.textPrimary }]}>
-                        {formatTime(timeLeft)}
-                    </Text>
-                </View>
+                {isPersonalityQuiz ? (
+                    <View style={styles.timerBadge} />
+                ) : (
+                    <View
+                        style={[
+                            styles.timerBadge,
+                            { backgroundColor: isTimeLow ? colors.dangerLight : colors.surfacePrimary },
+                        ]}
+                    >
+                        <Ionicons
+                            name="time-outline"
+                            size={16}
+                            color={isTimeLow ? colors.danger : colors.textSecondary}
+                        />
+                        <Text style={[styles.timerText, { color: isTimeLow ? colors.danger : colors.textPrimary }]}>
+                            {formatTime(timeLeft)}
+                        </Text>
+                    </View>
+                )}
             </View>
 
             {/* Progress Bar */}
@@ -489,6 +577,9 @@ export default function TakeExamScreen() {
                         <Text style={[styles.multiSelectHint, { color: colors.textTertiary }]}>
                             Select all that apply
                         </Text>
+                    )}
+                    {quizType === 'enneagram' && (
+                        <Text style={[styles.multiSelectHint, { color: colors.textTertiary }]}>Choose one</Text>
                     )}
                 </View>
 
@@ -610,13 +701,28 @@ export default function TakeExamScreen() {
                         )}
                     </TouchableOpacity>
                 ) : (
-                    <TouchableOpacity
-                        style={styles.navButton}
-                        onPress={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
-                    >
-                        <Text style={[styles.navButtonText, { color: colors.textPrimary }]}>Next</Text>
-                        <Ionicons name="chevron-forward" size={20} color={colors.textPrimary} />
-                    </TouchableOpacity>
+                    <View style={styles.navRight}>
+                        {allAnswered && (
+                            <TouchableOpacity
+                                style={[
+                                    styles.submitButton,
+                                    { backgroundColor: colors.accent, opacity: isSubmitting ? 0.6 : 1 },
+                                ]}
+                                onPress={handleSubmit}
+                                disabled={isSubmitting}
+                            >
+                                <Text style={[styles.submitButtonText, { color: colors.textInverse }]}>Submit</Text>
+                                <Ionicons name="checkmark-circle" size={18} color={colors.textInverse} />
+                            </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                            style={styles.navButton}
+                            onPress={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
+                        >
+                            <Text style={[styles.navButtonText, { color: colors.textPrimary }]}>Next</Text>
+                            <Ionicons name="chevron-forward" size={20} color={colors.textPrimary} />
+                        </TouchableOpacity>
+                    </View>
                 )}
             </View>
 
@@ -635,51 +741,53 @@ export default function TakeExamScreen() {
                                 <Ionicons name="close" size={22} color={colors.textPrimary} />
                             </TouchableOpacity>
                         </View>
-                        <View style={styles.gridItems}>
-                            {questions.map((q, idx) => {
-                                const isAnswered = isQuestionAnswered(answers, q.id);
-                                const isCurrent = idx === currentIndex;
-                                return (
-                                    <TouchableOpacity
-                                        key={q.id}
-                                        style={[
-                                            styles.gridItem,
-                                            {
-                                                backgroundColor: isCurrent
-                                                    ? colors.accent
-                                                    : isAnswered
-                                                      ? colors.accentLight
-                                                      : colors.surfacePrimary,
-                                                borderColor: isCurrent
-                                                    ? colors.accent
-                                                    : isAnswered
-                                                      ? colors.accent
-                                                      : colors.border,
-                                            },
-                                        ]}
-                                        onPress={() => {
-                                            setCurrentIndex(idx);
-                                            setShowGrid(false);
-                                        }}
-                                    >
-                                        <Text
+                        <ScrollView style={styles.gridScroll} showsVerticalScrollIndicator={false}>
+                            <View style={styles.gridItems}>
+                                {questions.map((q, idx) => {
+                                    const isAnswered = isQuestionAnswered(answers, q.id);
+                                    const isCurrent = idx === currentIndex;
+                                    return (
+                                        <TouchableOpacity
+                                            key={q.id}
                                             style={[
-                                                styles.gridItemText,
+                                                styles.gridItem,
                                                 {
-                                                    color: isCurrent
-                                                        ? colors.textInverse
+                                                    backgroundColor: isCurrent
+                                                        ? colors.accent
+                                                        : isAnswered
+                                                          ? colors.accentLight
+                                                          : colors.surfacePrimary,
+                                                    borderColor: isCurrent
+                                                        ? colors.accent
                                                         : isAnswered
                                                           ? colors.accent
-                                                          : colors.textTertiary,
+                                                          : colors.border,
                                                 },
                                             ]}
+                                            onPress={() => {
+                                                setCurrentIndex(idx);
+                                                setShowGrid(false);
+                                            }}
                                         >
-                                            {idx + 1}
-                                        </Text>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
+                                            <Text
+                                                style={[
+                                                    styles.gridItemText,
+                                                    {
+                                                        color: isCurrent
+                                                            ? colors.textInverse
+                                                            : isAnswered
+                                                              ? colors.accent
+                                                              : colors.textTertiary,
+                                                    },
+                                                ]}
+                                            >
+                                                {idx + 1}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        </ScrollView>
                     </View>
                 </View>
             )}
@@ -774,6 +882,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         minHeight: 44,
     },
+    navRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     navButtonText: { fontSize: 14, fontWeight: '600' },
     gridButton: {
         flexDirection: 'row',
@@ -801,6 +910,7 @@ const styles = StyleSheet.create({
     gridContainer: {
         width: '100%',
         maxWidth: 400,
+        maxHeight: '80%',
         borderRadius: 16,
         borderWidth: 0.5,
         padding: 20,
@@ -812,10 +922,14 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     gridTitle: { fontSize: 16, fontWeight: '700' },
+    gridScroll: {
+        flexShrink: 1,
+    },
     gridItems: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 8,
+        paddingBottom: 4,
     },
     gridItem: {
         width: 40,

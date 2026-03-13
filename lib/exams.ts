@@ -3,7 +3,9 @@
  */
 import type { ExamQuestion } from '@/types/exam';
 import type { VarkResults } from '@/constants/vark';
+import type { EnneagramResults } from '@/constants/enneagram';
 import { computeVarkScores, isVarkResults } from './vark';
+import { computeEnneagramScores, isEnneagramResults } from './enneagram';
 import { supabase } from './supabase';
 
 /** Default pass threshold when exam_papers.pass_percentage is unavailable */
@@ -35,8 +37,8 @@ export interface ExamResultData {
     }[];
     questions: ExamQuestion[];
     paperCode: string;
-    /** Present only for personality quizzes (VARK etc.) */
-    personalityResults?: VarkResults | null;
+    /** Present only for personality quizzes (VARK, Enneagram, etc.) */
+    personalityResults?: VarkResults | EnneagramResults | null;
 }
 
 /**
@@ -208,6 +210,91 @@ export async function submitVarkAttempt(
     };
 }
 
+// ── Submit Enneagram / Personality Quiz ──────────────────────
+
+/**
+ * Submit an Enneagram (forced-choice personality) quiz attempt.
+ * No right/wrong scoring — tallies 9 Enneagram types and stores a personality profile.
+ */
+export async function submitEnneagramAttempt(
+    input: SubmitExamInput,
+    paperCode: string,
+): Promise<{ data: ExamResultData | null; error: string | null }> {
+    const { userId, paperId, questions, answers, status, startedAt } = input;
+
+    const durationSeconds = Math.floor((Date.now() - startedAt) / 1000);
+    const enneagramResults = computeEnneagramScores(questions, answers);
+
+    // Build answer details (no correct/incorrect for personality quizzes)
+    const answerDetails = questions.map((q) => ({
+        questionId: q.id,
+        selected: answers[q.id] || null,
+        isCorrect: false,
+        correctAnswer: q.correct_answer,
+    }));
+
+    // Insert attempt
+    const { data: attempt, error: attemptError } = await supabase
+        .from('exam_attempts')
+        .insert({
+            user_id: userId,
+            paper_id: paperId,
+            status: 'in_progress',
+            score: null,
+            total_questions: questions.length,
+            percentage: null,
+            passed: null,
+            started_at: new Date(startedAt).toISOString(),
+            submitted_at: new Date().toISOString(),
+            duration_seconds: durationSeconds,
+            personality_results: enneagramResults,
+        })
+        .select()
+        .single();
+
+    if (attemptError) {
+        return { data: null, error: attemptError.message };
+    }
+
+    // Insert answers (single-select, is_correct = null)
+    const answerRows = questions.map((q) => ({
+        attempt_id: attempt.id,
+        question_id: q.id,
+        selected_answer: answers[q.id] || null,
+        is_correct: null,
+    }));
+
+    const { error: answersError } = await supabase.from('exam_answers').insert(answerRows);
+
+    if (answersError) {
+        await supabase.from('exam_attempts').delete().eq('id', attempt.id);
+        return { data: null, error: 'Failed to save your answers. Please try again.' };
+    }
+
+    // Update attempt to final status
+    const { error: updateError } = await supabase.from('exam_attempts').update({ status }).eq('id', attempt.id);
+
+    if (updateError) {
+        return { data: null, error: 'Assessment submitted but status update failed.' };
+    }
+
+    return {
+        data: {
+            id: attempt.id,
+            score: 0,
+            totalQuestions: questions.length,
+            percentage: 0,
+            passed: false,
+            status,
+            answers: answerDetails,
+            questions,
+            paperCode,
+            personalityResults: enneagramResults,
+        },
+        error: null,
+    };
+}
+
 // ── Fetch Exam Result ────────────────────────────────────────
 
 /**
@@ -234,7 +321,7 @@ export async function fetchExamResult(
         .single();
 
     // If this is a personality quiz with stored results, return them directly
-    if (paper?.allow_multiple_answers && attempt.personality_results) {
+    if (attempt.personality_results) {
         // Still fetch questions for display
         const { data: questionsData } = await supabase
             .from('exam_questions')
@@ -253,7 +340,11 @@ export async function fetchExamResult(
                 answers: [],
                 questions: (questionsData as ExamQuestion[]) || [],
                 paperCode: paper.code || '',
-                personalityResults: isVarkResults(attempt.personality_results) ? attempt.personality_results : null,
+                personalityResults: isEnneagramResults(attempt.personality_results)
+                    ? attempt.personality_results
+                    : isVarkResults(attempt.personality_results)
+                      ? attempt.personality_results
+                      : null,
             },
             error: null,
         };

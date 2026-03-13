@@ -25,6 +25,7 @@ import {
     fetchModuleProgressForCandidate,
     fetchModuleItemsWithProgress,
 } from '@/lib/roadmap';
+import { supabase } from '@/lib/supabase';
 import { TAB_BAR_HEIGHT } from '@/constants/platform';
 import { letterSpacing } from '@/constants/platform';
 import type { RoadmapModule, RoadmapResource, CandidateModuleProgress, ModuleItemWithProgress } from '@/types/roadmap';
@@ -115,6 +116,36 @@ export default function ModuleDetailScreen() {
         [router],
     );
 
+    const handleViewResults = useCallback(
+        async (examPaperId: string) => {
+            // Look up the latest completed attempt for this exam paper
+            const { data } = await supabase
+                .from('exam_attempts')
+                .select('id, personality_results')
+                .eq('paper_id', examPaperId)
+                .eq('user_id', user?.id ?? '')
+                .in('status', ['submitted', 'auto_submitted'])
+                .order('submitted_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (data) {
+                const isEnneagram =
+                    data.personality_results &&
+                    typeof data.personality_results === 'object' &&
+                    'quizType' in data.personality_results &&
+                    data.personality_results.quizType === 'enneagram';
+                const isVark =
+                    data.personality_results &&
+                    typeof data.personality_results === 'object' &&
+                    'topTypes' in data.personality_results;
+                const resultPath = isEnneagram ? `enneagram/${data.id}` : isVark ? `vark/${data.id}` : data.id;
+                router.push(`/(tabs)/roadmap/results/${resultPath}` as any);
+            }
+        },
+        [user?.id, router],
+    );
+
     const handleViewMaterial = useCallback((url: string, title: string) => {
         setPdfUrl(url);
         setPdfTitle(title);
@@ -181,6 +212,7 @@ export default function ModuleDetailScreen() {
                                     colors={colors}
                                     isLast={idx === items.length - 1}
                                     onStartExam={handleStartExam}
+                                    onViewResults={handleViewResults}
                                     onViewMaterial={handleViewMaterial}
                                 />
                             ))}
