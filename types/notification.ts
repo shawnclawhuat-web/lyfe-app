@@ -52,7 +52,7 @@ export const NOTIFICATION_TYPE_CONFIG: Record<NotificationType, { icon: string; 
     interview_reminder: { icon: 'time', label: 'Interview Reminder' },
     lead_stale: { icon: 'alert-circle', label: 'Stale Lead' },
     // User-initiated
-    agency_announcement: { icon: 'megaphone', label: 'Agency Announcement' },
+    agency_announcement: { icon: 'megaphone', label: 'Announcements' },
     roadshow_summary: { icon: 'stats-chart', label: 'Roadshow Summary' },
     system_alert: { icon: 'warning', label: 'System Alert' },
 };

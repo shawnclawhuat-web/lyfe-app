@@ -47,7 +47,7 @@ export interface CreateEventInput {
 export const EVENT_TYPE_LABELS: Record<EventType, string> = {
     team_meeting: 'Team Meeting',
     training: 'Training',
-    agency_event: 'Agency Event',
+    agency_event: 'Company Event',
     roadshow: 'Roadshow',
     exam: 'Exam',
     other: 'Other',

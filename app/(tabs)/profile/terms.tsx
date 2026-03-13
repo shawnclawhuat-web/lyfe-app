@@ -7,11 +7,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const SECTIONS = [
     {
         title: '1. Acceptance of Terms',
-        body: 'By using Lyfe, you agree to these Terms of Service. If you do not agree, do not use the application. Lyfe is provided exclusively to authorised agency personnel.',
+        body: 'By using Lyfe, you agree to these Terms of Service. If you do not agree, do not use the application. Lyfe is available to insurance professionals in Singapore.',
     },
     {
         title: '2. Authorised Use',
-        body: 'Lyfe is an internal agency management platform. Access is granted only to licensed agents, managers, directors, personal assistants, and approved candidates of the agency. Sharing your credentials with any third party is strictly prohibited.',
+        body: 'Lyfe is a professional development and management platform for insurance professionals. Access is available to licensed agents, managers, directors, personal assistants, and aspiring candidates. Sharing your credentials with any third party is strictly prohibited.',
     },
     {
         title: '3. Data Responsibility',
@@ -19,11 +19,11 @@ const SECTIONS = [
     },
     {
         title: '4. Confidentiality',
-        body: 'All data within Lyfe — including lead pipelines, candidate details, agency performance, and internal communications — is strictly confidential. You must not share, export, or reproduce this information outside of authorised agency workflows.',
+        body: 'All data within Lyfe — including lead pipelines, candidate details, performance data, and internal communications — is strictly confidential. You must not share, export, or reproduce this information outside of authorised workflows.',
     },
     {
         title: '5. Account Security',
-        body: 'You are responsible for maintaining the security of your account. Report any suspected unauthorised access to your agency administrator immediately. Lyfe uses SMS OTP and optional biometric authentication to protect your account.',
+        body: 'You are responsible for maintaining the security of your account. Report any suspected unauthorised access to support immediately. Lyfe uses SMS OTP and optional biometric authentication to protect your account.',
     },
     {
         title: '6. Acceptable Use',
@@ -61,7 +61,7 @@ export default function TermsScreen() {
 
                 <View style={[styles.footer, { borderTopColor: colors.border }]}>
                     <Text style={[styles.footerText, { color: colors.textTertiary }]}>
-                        For questions about these terms, contact your agency administrator or email admin@mktr.sg
+                        For questions about these terms, contact support at admin@mktr.sg
                     </Text>
                 </View>
             </ScrollView>

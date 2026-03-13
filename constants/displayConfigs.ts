@@ -8,7 +8,7 @@ import type { EventType, RoadshowActivityType } from '@/types/event';
 export const EVENT_TYPE_CONFIG: Record<EventType, { label: string; color: string; icon: string }> = {
     team_meeting: { label: 'Team Meeting', color: '#6366F1', icon: 'people' },
     training: { label: 'Training', color: '#FF7600', icon: 'school' },
-    agency_event: { label: 'Agency Event', color: '#F59E0B', icon: 'business' },
+    agency_event: { label: 'Company Event', color: '#F59E0B', icon: 'business' },
     roadshow: { label: 'Roadshow', color: '#EC4899', icon: 'megaphone' },
     exam: { label: 'Exam', color: '#FF3B30', icon: 'school' },
     other: { label: 'Other', color: '#8E8E93', icon: 'ellipsis-horizontal' },

@@ -17,10 +17,7 @@ export default function OnboardingCompleteScreen() {
             if (hasMarkedComplete.current || !user?.id) return;
             hasMarkedComplete.current = true;
 
-            await supabase
-                .from('users')
-                .update({ onboarding_complete: true })
-                .eq('id', user.id);
+            await supabase.from('users').update({ onboarding_complete: true }).eq('id', user.id);
         };
 
         markComplete();
@@ -48,7 +45,7 @@ export default function OnboardingCompleteScreen() {
                 <Text style={[styles.title, { color: colors.textPrimary }]}>You're all set!</Text>
 
                 <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                    Your onboarding is complete. Welcome to the Lyfe team.
+                    Your onboarding is complete. Welcome to Lyfe.
                 </Text>
 
                 <View style={styles.spacer} />
@@ -61,9 +58,7 @@ export default function OnboardingCompleteScreen() {
                     <Text style={[styles.buttonText, { color: colors.textInverse }]}>Go to Dashboard</Text>
                 </TouchableOpacity>
 
-                <Text style={[styles.redirectText, { color: colors.textTertiary }]}>
-                    Redirecting automatically...
-                </Text>
+                <Text style={[styles.redirectText, { color: colors.textTertiary }]}>Redirecting automatically...</Text>
             </View>
         </SafeAreaView>
     );

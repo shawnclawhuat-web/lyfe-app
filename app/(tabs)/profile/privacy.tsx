@@ -14,7 +14,7 @@ const PRIVACY_SECTIONS = [
     {
         icon: 'lock-closed' as const,
         title: 'How We Use It',
-        body: 'Your data is used solely to operate Lyfe within your agency. We do not sell or share your personal data with third parties outside your agency.',
+        body: 'Your data is used solely to operate the Lyfe platform. We do not sell or share your personal data with third parties.',
     },
     {
         icon: 'server' as const,
@@ -24,7 +24,7 @@ const PRIVACY_SECTIONS = [
     {
         icon: 'trash' as const,
         title: 'Data Deletion',
-        body: 'You can request full account deletion at any time by contacting your agency administrator. All your data will be permanently deleted within 30 days.',
+        body: 'You can request full account deletion at any time by contacting support. All your data will be permanently deleted within 30 days.',
     },
     {
         icon: 'eye-off' as const,

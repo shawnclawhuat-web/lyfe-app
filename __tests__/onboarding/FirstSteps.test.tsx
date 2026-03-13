@@ -1,11 +1,11 @@
-jest.mock('@/contexts/ThemeContext');
-
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors } from '@/constants/Colors';
 import FirstStepsScreen from '@/app/onboarding/FirstSteps';
+
+jest.mock('@/contexts/ThemeContext');
 
 const mockPush = jest.fn();
 
@@ -39,7 +39,7 @@ describe('FirstStepsScreen', () => {
     it('shows all checklist items', () => {
         const { getByText } = render(<FirstStepsScreen />);
         expect(getByText('Complete your profile')).toBeTruthy();
-        expect(getByText('Add your first lead')).toBeTruthy();
+        expect(getByText('Browse the training roadmap')).toBeTruthy();
         expect(getByText('Read the exam guide')).toBeTruthy();
     });
 
@@ -64,7 +64,7 @@ describe('FirstStepsScreen', () => {
     it('enables continue button when all items are checked', () => {
         const { getByTestId } = render(<FirstStepsScreen />);
         fireEvent.press(getByTestId('checklist-profile'));
-        fireEvent.press(getByTestId('checklist-lead'));
+        fireEvent.press(getByTestId('checklist-roadmap'));
         fireEvent.press(getByTestId('checklist-exam'));
         const button = getByTestId('continue-button');
         expect(button.props.accessibilityState?.disabled).toBeFalsy();
@@ -73,7 +73,7 @@ describe('FirstStepsScreen', () => {
     it('navigates to OnboardingComplete when all checked and button pressed', () => {
         const { getByTestId } = render(<FirstStepsScreen />);
         fireEvent.press(getByTestId('checklist-profile'));
-        fireEvent.press(getByTestId('checklist-lead'));
+        fireEvent.press(getByTestId('checklist-roadmap'));
         fireEvent.press(getByTestId('checklist-exam'));
         fireEvent.press(getByTestId('continue-button'));
         expect(mockPush).toHaveBeenCalledWith('/onboarding/OnboardingComplete');
@@ -82,7 +82,7 @@ describe('FirstStepsScreen', () => {
     it('shows success banner when all items checked', () => {
         const { getByTestId, getByText } = render(<FirstStepsScreen />);
         fireEvent.press(getByTestId('checklist-profile'));
-        fireEvent.press(getByTestId('checklist-lead'));
+        fireEvent.press(getByTestId('checklist-roadmap'));
         fireEvent.press(getByTestId('checklist-exam'));
         expect(getByText('All tasks completed!')).toBeTruthy();
     });

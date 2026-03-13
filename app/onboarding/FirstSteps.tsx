@@ -12,7 +12,7 @@ interface ChecklistItem {
 
 const INITIAL_ITEMS: ChecklistItem[] = [
     { id: 'profile', label: 'Complete your profile', done: false },
-    { id: 'lead', label: 'Add your first lead', done: false },
+    { id: 'roadmap', label: 'Browse the training roadmap', done: false },
     { id: 'exam', label: 'Read the exam guide', done: false },
 ];
 
@@ -24,17 +24,12 @@ export default function FirstStepsScreen() {
     const allDone = items.every((item) => item.done);
 
     const toggleItem = (id: string) => {
-        setItems((prev) =>
-            prev.map((item) => (item.id === id ? { ...item, done: !item.done } : item)),
-        );
+        setItems((prev) => prev.map((item) => (item.id === id ? { ...item, done: !item.done } : item)));
     };
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-            <ScrollView
-                style={styles.flex}
-                contentContainerStyle={styles.scrollContent}
-            >
+            <ScrollView style={styles.flex} contentContainerStyle={styles.scrollContent}>
                 <Text style={[styles.title, { color: colors.textPrimary }]}>First Steps</Text>
                 <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                     Complete these tasks to get started
@@ -69,19 +64,14 @@ export default function FirstStepsScreen() {
                 {allDone && (
                     <View style={[styles.successBanner, { backgroundColor: colors.successLight }]}>
                         <Ionicons name="checkmark-done" size={20} color={colors.success} />
-                        <Text style={[styles.successText, { color: colors.success }]}>
-                            All tasks completed!
-                        </Text>
+                        <Text style={[styles.successText, { color: colors.success }]}>All tasks completed!</Text>
                     </View>
                 )}
             </ScrollView>
 
             <View style={styles.footer}>
                 <TouchableOpacity
-                    style={[
-                        styles.button,
-                        { backgroundColor: allDone ? colors.accent : colors.textTertiary },
-                    ]}
+                    style={[styles.button, { backgroundColor: allDone ? colors.accent : colors.textTertiary }]}
                     onPress={() => router.push('/onboarding/OnboardingComplete')}
                     disabled={!allDone}
                     testID="continue-button"

@@ -1,14 +1,12 @@
-jest.mock('@/lib/supabase');
-jest.mock('@/contexts/ThemeContext');
-jest.mock('@/contexts/AuthContext');
-
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useAuth } from '@/contexts/AuthContext';
 import { Colors } from '@/constants/Colors';
 import AgencyInfoScreen from '@/app/onboarding/AgencyInfo';
+
+jest.mock('@/lib/supabase');
+jest.mock('@/contexts/ThemeContext');
 
 const mockPush = jest.fn();
 
@@ -26,44 +24,41 @@ beforeEach(() => {
         resolved: 'light',
         setMode: jest.fn(),
     });
-    (useAuth as jest.Mock).mockReturnValue({
-        user: { id: 'user-1', full_name: 'Test Agent', phone: '+6580000004', role: 'agent' },
-    });
 });
 
 describe('AgencyInfoScreen', () => {
     it('renders without crashing', () => {
         const { getByText } = render(<AgencyInfoScreen />);
-        expect(getByText('Your Agency')).toBeTruthy();
+        expect(getByText("What's Inside")).toBeTruthy();
     });
 
     it('shows subtitle', () => {
         const { getByText } = render(<AgencyInfoScreen />);
-        expect(getByText('Here is your agency information')).toBeTruthy();
+        expect(getByText('Everything you need to grow your insurance career')).toBeTruthy();
     });
 
-    it('shows assigned manager info', () => {
+    it('shows Training Roadmap feature', () => {
         const { getByText } = render(<AgencyInfoScreen />);
-        expect(getByText('Assigned Manager')).toBeTruthy();
-        expect(getByText('Your Assigned Manager')).toBeTruthy();
+        expect(getByText('Training Roadmap')).toBeTruthy();
+        expect(getByText('Structured learning paths to build your skills')).toBeTruthy();
     });
 
-    it('shows team info', () => {
+    it('shows Events feature', () => {
+        const { getByText } = render(<AgencyInfoScreen />);
+        expect(getByText('Events')).toBeTruthy();
+        expect(getByText('Browse workshops, roadshows, and networking events')).toBeTruthy();
+    });
+
+    it('shows Exam Preparation feature', () => {
+        const { getByText } = render(<AgencyInfoScreen />);
+        expect(getByText('Exam Preparation')).toBeTruthy();
+        expect(getByText('Track your exam progress and certifications')).toBeTruthy();
+    });
+
+    it('shows Team feature', () => {
         const { getByText } = render(<AgencyInfoScreen />);
         expect(getByText('Team')).toBeTruthy();
-        expect(getByText('Lyfe Agency Team')).toBeTruthy();
-    });
-
-    it('shows licence info', () => {
-        const { getByText } = render(<AgencyInfoScreen />);
-        expect(getByText('Licence')).toBeTruthy();
-        expect(getByText('Income Insurance Ltd')).toBeTruthy();
-    });
-
-    it('shows role info', () => {
-        const { getByText } = render(<AgencyInfoScreen />);
-        expect(getByText('Role')).toBeTruthy();
-        expect(getByText('agent')).toBeTruthy();
+        expect(getByText('Connect with managers and fellow professionals')).toBeTruthy();
     });
 
     it('shows the continue button', () => {
@@ -75,10 +70,5 @@ describe('AgencyInfoScreen', () => {
         const { getByTestId } = render(<AgencyInfoScreen />);
         fireEvent.press(getByTestId('continue-button'));
         expect(mockPush).toHaveBeenCalledWith('/onboarding/FirstSteps');
-    });
-
-    it('shows the info note card', () => {
-        const { getByText } = render(<AgencyInfoScreen />);
-        expect(getByText(/Contact your manager/)).toBeTruthy();
     });
 });

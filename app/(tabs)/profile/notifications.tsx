@@ -17,7 +17,7 @@ const TYPE_SUBTITLES: Partial<Record<NotificationType, string>> = {
     event_reminder: 'Upcoming events and roadshow check-ins',
     candidate_update: 'Candidate status changes',
     lead_milestone: 'Won and lost deals',
-    agency_announcement: 'Important agency-wide messages',
+    agency_announcement: 'Important announcements',
     roadshow_pledge: 'Agent pledges during roadshows',
     new_lead: 'New leads assigned to you',
     lead_reassigned: 'Leads reassigned to or from you',
