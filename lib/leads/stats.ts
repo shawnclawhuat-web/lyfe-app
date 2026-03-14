@@ -2,6 +2,7 @@
  * Lead stats & dashboard aggregations
  */
 import type { LeadActivity, LeadStatus } from '@/types/lead';
+import { getDirectReports } from '../scope';
 import { captureError } from '../sentry';
 import { supabase } from '../supabase';
 
@@ -27,28 +28,28 @@ export async function fetchLeadStats(
     userId: string,
     isManager: boolean,
 ): Promise<{ data: LeadPipelineStats; error: string | null }> {
+    const emptyStats: LeadPipelineStats = {
+        totalLeads: 0,
+        newThisWeek: 0,
+        conversionRate: 0,
+        activeFollowUps: 0,
+        pipeline: [],
+    };
+
     let query = supabase.from('leads').select('id, status, created_at');
 
     if (!isManager) {
         query = query.eq('assigned_to', userId);
     } else {
-        // Scope to manager's own leads + their agents' leads
-        const { data: agents } = await supabase
-            .from('users')
-            .select('id')
-            .eq('reports_to', userId)
-            .eq('role', 'agent')
-            .eq('is_active', true);
-        const agentIds = ((agents || []) as { id: string }[]).map((a) => a.id);
-        query = query.in('assigned_to', [...agentIds, userId]);
+        const { data: agents, error: agentError } = await getDirectReports(userId, { roleFilter: 'agent' });
+        if (agentError) return { data: emptyStats, error: agentError };
+        const agentIds = agents.map((a) => a.id);
+        query = query.in('assigned_to', [...agentIds, userId]); // include manager's own leads
     }
 
     const { data: leads, error } = await query;
     if (error) {
-        return {
-            data: { totalLeads: 0, newThisWeek: 0, conversionRate: 0, activeFollowUps: 0, pipeline: [] },
-            error: error.message,
-        };
+        return { data: emptyStats, error: error.message };
     }
 
     const allLeads = leads || [];
@@ -97,17 +98,9 @@ export async function fetchRecentActivities(
         const { data: userLeads } = await supabase.from('leads').select('id').eq('assigned_to', userId);
         leadIdFilter = ((userLeads || []) as { id: string }[]).map((l) => l.id);
     } else {
-        const { data: agents } = await supabase
-            .from('users')
-            .select('id')
-            .eq('reports_to', userId)
-            .eq('role', 'agent')
-            .eq('is_active', true);
-        const agentIds = ((agents || []) as { id: string }[]).map((a) => a.id);
-        const { data: teamLeads } = await supabase
-            .from('leads')
-            .select('id')
-            .in('assigned_to', [...agentIds, userId]);
+        const { data: agents } = await getDirectReports(userId, { roleFilter: 'agent' });
+        const agentIds = agents.map((a) => a.id);
+        const { data: teamLeads } = await supabase.from('leads').select('id').in('assigned_to', [...agentIds, userId]);
         leadIdFilter = ((teamLeads || []) as { id: string }[]).map((l) => l.id);
     }
 
@@ -166,16 +159,9 @@ export async function getTeamLeadSummary(managerId: string): Promise<{
     };
 
     try {
-        const { data: agents, error: agentsError } = await supabase
-            .from('users')
-            .select('id')
-            .eq('reports_to', managerId)
-            .eq('role', 'agent')
-            .eq('is_active', true);
-
-        if (agentsError) return { ...emptyResult, error: agentsError.message };
-
-        const agentIds = ((agents || []) as { id: string }[]).map((a) => a.id);
+        const { data: agents, error: agentsError } = await getDirectReports(managerId, { roleFilter: 'agent' });
+        if (agentsError) return { ...emptyResult, error: agentsError };
+        const agentIds = agents.map((a) => a.id);
         if (agentIds.length === 0) return emptyResult;
 
         const { data: leads, error: leadsError } = await supabase

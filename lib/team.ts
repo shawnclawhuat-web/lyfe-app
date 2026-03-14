@@ -2,6 +2,7 @@
  * Team service — Supabase queries for team members with lead stats
  */
 import type { Lead } from '@/types/lead';
+import { getDirectReports } from './scope';
 import { captureError } from './sentry';
 import { supabase } from './supabase';
 
@@ -191,18 +192,10 @@ export async function getTeamPerformance(
         if (dateRange.start > dateRange.end) {
             return { data: emptyResult, error: 'Invalid date range: start must be before or equal to end' };
         }
-        // Get team agents
-        const { data: agents, error: agentsError } = await supabase
-            .from('users')
-            .select('id, full_name')
-            .eq('reports_to', managerId)
-            .eq('is_active', true);
-
-        if (agentsError) return { data: emptyResult, error: agentsError.message };
-
-        const agentList = (agents || []) as { id: string; full_name: string }[];
+        // No roleFilter — intentionally includes all direct reports, not just agents
+        const { data: agentList, error: agentsError } = await getDirectReports(managerId);
+        if (agentsError) return { data: emptyResult, error: agentsError };
         if (agentList.length === 0) return { data: emptyResult, error: null };
-
         const agentIds = agentList.map((a) => a.id);
 
         // Fetch leads closed in the date range

@@ -3,6 +3,7 @@
  */
 import type { Lead, LeadActivityType, LeadSource, LeadStatus, ProductInterest } from '@/types/lead';
 import { applyPageRange, resolvePage } from '../pagination';
+import { getDirectReports } from '../scope';
 import { captureError } from '../sentry';
 import { supabase } from '../supabase';
 
@@ -122,15 +123,7 @@ export async function updateLeadStatus(
 export async function fetchTeamAgents(
     managerId: string,
 ): Promise<{ data: { id: string; full_name: string }[]; error: string | null }> {
-    const { data, error } = await supabase
-        .from('users')
-        .select('id, full_name')
-        .eq('reports_to', managerId)
-        .eq('role', 'agent')
-        .eq('is_active', true);
-
-    if (error) return { data: [], error: error.message };
-    return { data: (data || []) as { id: string; full_name: string }[], error: null };
+    return getDirectReports(managerId, { roleFilter: 'agent' });
 }
 
 /**

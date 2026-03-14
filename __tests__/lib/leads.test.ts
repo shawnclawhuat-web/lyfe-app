@@ -373,6 +373,39 @@ describe('fetchLeadStats', () => {
         jest.useRealTimers();
     });
 
+    it('computes pipeline stats for manager (includes own + team leads)', async () => {
+        jest.useFakeTimers();
+        jest.setSystemTime(new Date('2026-03-08T12:00:00Z'));
+
+        // Mock users chain — returns agents reporting to manager
+        const usersChain = mockSupa.__getChain('users');
+        mockResolve(usersChain, {
+            data: [{ id: 'a1' }, { id: 'a2' }],
+            error: null,
+        });
+
+        // Mock leads chain — returns leads from agents + manager's own
+        const leadsChain = mockSupa.__getChain('leads');
+        mockResolve(leadsChain, {
+            data: [
+                { id: '1', status: 'new', created_at: '2026-03-07T00:00:00Z', assigned_to: 'a1' },
+                { id: '2', status: 'won', created_at: '2026-02-15T00:00:00Z', assigned_to: 'a2' },
+                { id: '3', status: 'contacted', created_at: '2026-03-01T00:00:00Z', assigned_to: 'mgr-1' },
+            ],
+            error: null,
+        });
+
+        const result = await fetchLeadStats('mgr-1', true);
+
+        expect(result.data.totalLeads).toBe(3);
+        expect(result.data.newThisWeek).toBe(1);
+        expect(result.data.conversionRate).toBe(100); // 1 won / 1 closed
+        expect(result.data.activeFollowUps).toBe(1); // contacted
+        expect(result.error).toBeNull();
+
+        jest.useRealTimers();
+    });
+
     it('returns zeros when no leads', async () => {
         const chain = mockSupa.__getChain('leads');
         mockResolve(chain, { data: [], error: null });
